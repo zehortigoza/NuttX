@@ -1984,8 +1984,7 @@ static int cdcuart_ioctl(FAR struct file *filep,int cmd,unsigned long arg)
       break;
 
     default:
-            
-            ret = -ENOSYS;
+      ret = -ENOTTY;
       break;
     }
 
