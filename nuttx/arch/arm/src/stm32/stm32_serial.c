@@ -1297,8 +1297,6 @@ static void up_set_format(struct uart_dev_s *dev)
       regval |= USART_CR3_CTSE;
     }
 #endif
-}
-#endif /* CONFIG_SUPPRESS_UART_CONFIG */
 
   up_serialout(priv, STM32_USART_CR3_OFFSET, regval);
 
