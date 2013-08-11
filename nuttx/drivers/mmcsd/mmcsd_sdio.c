@@ -1829,6 +1829,8 @@ static ssize_t mmcsd_flush(FAR void *dev, FAR const uint8_t *buffer,
   /* Write each block using only the single block transfer method */
 
   endblock = startblock + nblocks - 1;
+  ret = nblocks;
+
   for (block = startblock; block <= endblock; block++)
     {
       /* Write this block from the user buffer */
@@ -2996,6 +2998,7 @@ static int mmcsd_hwinitialize(FAR struct mmcsd_state_s *priv)
       mmcsd_givesem(priv);
       return -EBUSY;
     }
+
   fvdbg("Attached MMC/SD interrupts\n");
 
   /* Register a callback so that we get informed if media is inserted or

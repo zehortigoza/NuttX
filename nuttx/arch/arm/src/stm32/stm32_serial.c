@@ -1297,6 +1297,8 @@ static void up_set_format(struct uart_dev_s *dev)
       regval |= USART_CR3_CTSE;
     }
 #endif
+}
+#endif /* CONFIG_SUPPRESS_UART_CONFIG */
 
   up_serialout(priv, STM32_USART_CR3_OFFSET, regval);
 
@@ -2417,11 +2419,13 @@ void up_serialinit(void)
 
 #if CONSOLE_UART > 0
   (void)uart_register("/dev/console", &uart_devs[CONSOLE_UART - 1]->dev);
+
 #ifndef CONFIG_SERIAL_DISABLE_REORDERING
   /* If not disabled, register the console UART to ttyS0 and exclude
    * it from initializing it further down
    */
-  (void)uart_register("/dev/ttyS0",   &uart_devs[CONSOLE_UART - 1]->dev);
+
+  (void)uart_register("/dev/ttyS0", &uart_devs[CONSOLE_UART - 1]->dev);
   minor = 1;
 
   /* If we need to re-initialise the console to enable DMA do that here. */
@@ -2439,9 +2443,8 @@ void up_serialinit(void)
 
   for (i = 0; i < STM32_NUSART; i++)
     {
-        
+      /* Don't create a device for non-configured ports. */
 
-      /* Don't create a device for non configured ports */
       if (uart_devs[i] == 0)
         {
           continue;
@@ -2449,6 +2452,7 @@ void up_serialinit(void)
 
 #ifndef CONFIG_SERIAL_DISABLE_REORDERING
       /* Don't create a device for the console - we did that above */
+
       if (uart_devs[i]->dev.isconsole)
         {
           continue;
