@@ -1821,7 +1821,7 @@ static ssize_t mmcsd_flush(FAR void *dev, FAR const uint8_t *buffer,
   size_t block;
   size_t endblock;
 #endif
-  ssize_t ret = nblocks;
+  ssize_t ret;
 
   DEBUGASSERT(priv != NULL && buffer != NULL && nblocks > 0)
 
