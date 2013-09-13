@@ -623,10 +623,10 @@ static bool sam_checkreg(struct sam_dev_s *priv, bool wr, uint32_t value,
 
       /* Save information about the new access */
 
-      priv->wrlast      = wr;
-      priv->vallast   = value;
+      priv->wrlast   = wr;
+      priv->vallast  = value;
       priv->addrlast = address;
-      priv->ntimes      = 0;
+      priv->ntimes   = 0;
     }
 
   /* Return true if this is the first time that we have done this operation */
@@ -1612,10 +1612,10 @@ static void sam_clock(FAR struct sdio_dev_s *dev, enum sdio_clock_e rate)
   uint32_t regval;
   bool enable = true;
 
-  /* Fetch the current mode register and mask out the clkdiv (and pwsdiv) */
+  /* Fetch the current mode register and mask out the clkdiv+clockodd (and pwsdiv) */
 
   regval = sam_getreg(priv, SAM_HSMCI_MR_OFFSET);
-  regval &= ~(HSMCI_MR_CLKDIV_MASK | HSMCI_MR_PWSDIV_MASK);
+  regval &= ~(HSMCI_MR_CLKDIV_MASK | HSMCI_MR_PWSDIV_MASK | HSMCI_MR_CLKODD);
 
  /* These clock devisor values that must be defined in the board-specific
   * board.h header file: HSMCI_INIT_CLKDIV, HSMCI_MMCXFR_CLKDIV,
@@ -2704,8 +2704,8 @@ static void sam_callback(void *arg)
         {
           /* Yes.. queue it */
 
-           fvdbg("Queuing callback to %p(%p)\n", priv->callback, priv->cbarg);
-          (void)work_queue(HPWORK, &priv->cbwork, (worker_t)priv->callback, priv->cbarg, 0);
+           fllvdbg("Queuing callback to %p(%p)\n", priv->callback, priv->cbarg);
+          (void)work_queue(LPWORK, &priv->cbwork, (worker_t)priv->callback, priv->cbarg, 0);
         }
       else
         {
@@ -2791,7 +2791,7 @@ FAR struct sdio_dev_s *sdio_initialize(int slotno)
 #ifdef CONFIG_SAMA5_HSMCI1
   if (slotno == 1)
     {
-      /* Select HSMCI0 */
+      /* Select HSMCI1 */
 
       priv = &g_hsmci1;
 
@@ -2828,7 +2828,7 @@ FAR struct sdio_dev_s *sdio_initialize(int slotno)
 #ifdef CONFIG_SAMA5_HSMCI2
   if (slotno == 2)
     {
-      /* Select HSMCI0 */
+      /* Select HSMCI2 */
 
       priv = &g_hsmci2;
 
@@ -2931,7 +2931,7 @@ void sdio_mediachange(FAR struct sdio_dev_s *dev, bool cardinslot)
       priv->cdstatus &= ~SDIO_STATUS_PRESENT;
     }
 
-  fvdbg("cdstatus OLD: %02x NEW: %02x\n", cdstatus, priv->cdstatus);
+  fllvdbg("cdstatus OLD: %02x NEW: %02x\n", cdstatus, priv->cdstatus);
 
   /* Perform any requested callback if the status has changed */
 

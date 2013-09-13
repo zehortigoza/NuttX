@@ -46,12 +46,8 @@
 #include <errno.h>
 #include <debug.h>
 
-#ifdef CONFIG_SAMA5_SPI0
-#  include <nuttx/spi/spi.h>
-#  include <nuttx/mtd.h>
-#  include <nuttx/fs/nxffs.h>
-
-#  include "sam_spi.h"
+#ifdef CONFIG_SYSTEM_USBMONITOR
+#  include <apps/usbmonitor.h>
 #endif
 
 #include "sama5d3x-ek.h"
@@ -60,32 +56,20 @@
  * Pre-Processor Definitions
  ****************************************************************************/
 
-/* Configuration ************************************************************/
+/* Debug ********************************************************************/
 
-/* Assign minor device numbers.  We basically ignore more of the NSH
- * configuration here (NSH SLOTNO ignored completely; NSH minor extended
- * to handle more devices.
- */
-
-#ifndef CONFIG_NSH_MMCSDMINOR
-#  define CONFIG_NSH_MMCSDMINOR 0
-#endif
-
-#ifdef HAVE_HSMCI_MTD
-
-#  define HSMCI0_SLOTNO 0
-#  define HSMCI1_SLOTNO 1
-
-#  ifdef CONFIG_SAMA5_HSMCI0
-#     define HSMCI0_MINOR  CONFIG_NSH_MMCSDMINOR
-#     define HSMCI1_MINOR  (CONFIG_NSH_MMCSDMINOR+1)
-#     define AT25_MINOR    (CONFIG_NSH_MMCSDMINOR+2)
+#ifdef CONFIG_CPP_HAVE_VARARGS
+#  ifdef CONFIG_DEBUG
+#    define message(...) syslog(__VA_ARGS__)
 #  else
-#     define HSMCI1_MINOR  CONFIG_NSH_MMCSDMINOR
-#     define AT25_MINOR    (CONFIG_NSH_MMCSDMINOR+1)
+#    define message(...) printf(__VA_ARGS__)
 #  endif
 #else
-#  define AT25_MINOR CONFIG_NSH_MMCSDMINOR
+#  ifdef CONFIG_DEBUG
+#    define message syslog
+#  else
+#    define message printf
+#  endif
 #endif
 
 /****************************************************************************
@@ -102,41 +86,80 @@
 
 int nsh_archinitialize(void)
 {
-#if defined(HAVE_AT25_MTD) || defined(HAVE_HSMCI_MTD)
+#if defined(HAVE_AT25) || defined(HAVE_AT24) || defined(HAVE_HSMCI) || \
+    defined(HAVE_USBHOST) || defined(HAVE_USBMONITOR)
   int ret;
 #endif
 
+#ifdef HAVE_AT25
   /* Initialize the AT25 driver */
 
-#ifdef HAVE_AT25_MTD
   ret = sam_at25_initialize(AT25_MINOR);
   if (ret < 0)
     {
-      fdbg("ERROR: sam_at25_initialize failed: %d\n", ret);
+      message("ERROR: sam_at25_initialize failed: %d\n", ret);
       return ret;
     }
 #endif
 
-#ifdef HAVE_HSMCI_MTD
+#ifdef HAVE_AT24
+  /* Initialize the AT24 driver */
+
+  ret = sam_at24_initialize(AT24_MINOR);
+  if (ret < 0)
+    {
+      message("ERROR: sam_at24_initialize failed: %d\n", ret);
+      return ret;
+    }
+#endif
+
+#ifdef HAVE_HSMCI
 #ifdef CONFIG_SAMA5_HSMCI0
+  /* Initialize the HSMCI0 driver */
+
   ret = sam_hsmci_initialize(HSMCI0_SLOTNO, HSMCI0_MINOR);
   if (ret < 0)
     {
-      fdbg("ERROR: sam_hsmci_initialize(%d,%d) failed: %d\n",
-           HSMCI0_SLOTNO, HSMCI0_MINOR, ret);
+      message("ERROR: sam_hsmci_initialize(%d,%d) failed: %d\n",
+              HSMCI0_SLOTNO, HSMCI0_MINOR, ret);
       return ret;
     }
 #endif
 
 #ifdef CONFIG_SAMA5_HSMCI1
+  /* Initialize the HSMCI1 driver */
+
   ret = sam_hsmci_initialize(HSMCI1_SLOTNO, HSMCI1_MINOR);
   if (ret < 0)
     {
-      fdbg("ERROR: sam_hsmci_initialize(%d,%d) failed: %d\n",
-           HSMCI1_SLOTNO, HSMCI1_MINOR, ret);
+      message("ERROR: sam_hsmci_initialize(%d,%d) failed: %d\n",
+              HSMCI1_SLOTNO, HSMCI1_MINOR, ret);
       return ret;
     }
 #endif
+#endif
+
+#ifdef HAVE_USBHOST
+  /* Initialize USB host operation.  sam_usbhost_initialize() starts a thread
+   * will monitor for USB connection and disconnection events.
+   */
+
+  ret = sam_usbhost_initialize();
+  if (ret != OK)
+    {
+      message("ERROR: Failed to initialize USB host: %d\n", ret);
+      return ret;
+    }
+#endif
+
+#ifdef HAVE_USBMONITOR
+  /* Start the USB Monitor */
+
+  ret = usbmonitor_start(0, NULL);
+  if (ret != OK)
+    {
+      message("nsh_archinitialize: Start USB monitor: %d\n", ret);
+    }
 #endif
 
   return OK;

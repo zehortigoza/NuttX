@@ -321,26 +321,109 @@ static inline void sam_selectplla(void)
 }
 
 /****************************************************************************
- * Name: sam_upllsetup
+ * Name: sam_usbclockconfig
  *
  * Description:
- *   Select the PLLA output as the input clock for PCK and MCK.
+ *   Configure clocking for USB.
  *
  ****************************************************************************/
 
-static inline void sam_upllsetup(void)
+static inline void sam_usbclockconfig(void)
 {
-#ifdef CONFIG_USBDEV
+#if defined(CONFIG_SAMA5_EHCI) || defined(CONFIG_SAMA5_OHCI) || \
+    defined(CONFIG_SAMA5_UDPHS)
+
+  /* We can either get the clock from the UPLL or from PLLA.  In this latter
+   * case, however, the PLLACK frequency must be a multiple of 48MHz.
+   */
+
+#if defined(BOARD_USE_UPLL)
   uint32_t regval;
 
-  /* Setup UTMI for USB and wait for LOCKU */
+  /* The USB Host High Speed requires a 480 MHz clock (UPLLCK) for the
+   * embedded High-speed transceivers. UPLLCK is the output of the 480 MHz
+   * UTMI PLL (UPLL).  The source clock of the UTMI PLL is the Main OSC output:
+   * Either the 12MHz internal oscillator on a 12MHz crystal.  The Main OSC
+   * must be 12MHz because the UPLL has a built-in 40x multiplier.
+   *
+   * For High-speed operations, the user has to perform the following:
+   *
+   *   1) Enable UHP peripheral clock, bit (1 << AT91C_ID_UHPHS) in
+   *      PMC_PCER register.
+   *   2) Write CKGR_PLLCOUNT field in PMC_UCKR register.
+   *   3) Enable UPLL, bit AT91C_CKGR_UPLLEN in PMC_UCKR register.
+   *   4) Wait until UTMI_PLL is locked. LOCKU bit in PMC_SR register
+   *   5) Enable BIAS, bit AT91C_CKGR_BIASEN in PMC_UCKR register.
+   *   6) Select UPLLCK as Input clock of OHCI part, USBS bit in PMC_USB
+   *      register.
+   *   7) Program the OHCI clocks (UHP48M and UHP12M) with USBDIV field in
+   *      PMC_USB register. USBDIV must be 9 (division by 10) if UPLLCK is
+   *      selected.
+   *   8) Enable OHCI clocks, UHP bit in PMC_SCER register.
+   *
+   * Steps 2 through 7 performed here.  1 and 8 are performed in the EHCI
+   * driver is initialized.
+   */
 
-  regval = getreg32(SAM_PMC_CKGR_UCKR);
-  regval |= (BOARD_CKGR_UCKR_UPLLCOUNT | PMC_CKGR_UCKR_UPLLEN);
+  /* 2) Write CKGR_PLLCOUNT field in PMC_UCKR register. */
+
+  regval = PMC_CKGR_UCKR_UPLLCOUNT(BOARD_CKGR_UCKR_UPLLCOUNT);
   putreg32(regval, SAM_PMC_CKGR_UCKR);
 
+  /* 3) Enable UPLL, bit AT91C_CKGR_UPLLEN in PMC_UCKR register. */
+
+  regval |= PMC_CKGR_UCKR_UPLLEN;
+  putreg32(regval, SAM_PMC_CKGR_UCKR);
+
+  /* 4) Wait until UTMI_PLL is locked. LOCKU bit in PMC_SR register */
+
   sam_pmcwait(PMC_INT_LOCKU);
-#endif
+
+  /* 5) Enable BIAS, bit AT91C_CKGR_BIASEN in PMC_UCKR register. */
+
+  regval |= PMC_CKGR_UCKR_BIASCOUNT(BOARD_CKGR_UCKR_BIASCOUNT);
+  putreg32(regval, SAM_PMC_CKGR_UCKR);
+
+  regval |= PMC_CKGR_UCKR_BIASEN;
+  putreg32(regval, SAM_PMC_CKGR_UCKR);
+
+  /* 6) Select UPLLCK as Input clock of OHCI part, USBS bit in PMC_USB
+   *    register.
+   */
+
+  regval = PMC_USB_USBS_UPLL;
+  putreg32(regval, SAM_PMC_USB);
+
+  /* 7) Program the OHCI clocks (UHP48M and UHP12M) with USBDIV field in
+   *    PMC_USB register. USBDIV must be 9 (division by 10) if UPLLCK is
+   *    selected.
+   */
+
+  regval |= PMC_USB_USBDIV(9);
+  putreg32(regval, SAM_PMC_USB);
+
+#else /* BOARD_USE_UPLL */
+  /* For OHCI Full-speed operations only, the user has to perform the
+   * following:
+   *
+   *   1) Enable UHP peripheral clock, bit (1 << AT91C_ID_UHPHS) in PMC_PCER
+   *      register.
+   *   2) Select PLLACK as Input clock of OHCI part, USBS bit in PMC_USB
+   *      register.
+   *   3) Program the OHCI clocks (UHP48M and UHP12M) with USBDIV field in
+   *      PMC_USB register. USBDIV value is calculated regarding the PLLACK
+   *      value and USB Full-speed accuracy.
+   *   4) Enable the OHCI clocks, UHP bit in PMC_SCER register.
+   *
+   * Steps 2 and 3 are done here.  1 and 2 are performed with the OHCI
+   * driver is initialized.
+   */
+
+  putreg32(BOARD_OHCI_INPUT | BOARD_OHCI_DIVIDER << PMC_USB_USBDIV_SHIFT,
+          SAM_PMC_USB);
+
+#endif /* BOARD_USE_UPLL */
+#endif /* CONFIG_SAMA5_EHCI ||CONFIG_SAMA5_OHCI) || CONFIG_SAMA5_UDPHS */
 }
 
 /****************************************************************************
@@ -353,7 +436,7 @@ static inline void sam_upllsetup(void)
  * Description:
  *   Called to initialize the SAM3/4.  This does whatever setup is needed to
  *   put the SoC in a usable state.  This includes the initialization of
- *   clocking using the settings in board.h.  (After power-on reset, the SAM3/4
+ *   clocking using the settings in board.h.  (After power-on reset, the SAMA5
  *   is initially running on a 12MHz internal RC clock).  This function also
  *   performs other low-level chip initialization of the chip including master
  *   clock, IRQ & watchdog configuration.
@@ -512,9 +595,9 @@ void sam_clockconfig(void)
 
       sam_selectplla();
 
-      /* Setup UTMI for USB */
+      /* Setup USB clocking */
 
-      sam_upllsetup();
+      sam_usbclockconfig();
     }
 #endif /* CONFIG_SAMA5_BOOT_ISRAM || CONFIG_SAMA5_BOOT_CS0FLASH */
 }

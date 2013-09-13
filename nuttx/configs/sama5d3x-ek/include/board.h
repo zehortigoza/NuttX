@@ -47,102 +47,29 @@
  ************************************************************************************/
 
 /* Clocking *************************************************************************/
-/* After power-on reset, the sam3u device is running on a 4MHz internal RC.  These
- * definitions will configure clocking
- *
- *   MAINOSC:  Frequency = 12MHz (crysta)
- *   PLLA: PLL Divider = 1, Multiplier = 66 to generate PLLACK = 792MHz
- *   Master Clock (MCK): Source = PLLACK/2, Prescalar = 1, MDIV = 3 to generate
-*      MCK      =  132MHz
- *     CPU clock = 396MHz
+/* After power-on reset, the SAMA5 device is running on a 12MHz internal RC.  These
+ * definitions will configure operational clocking.
  */
 
-/* Main oscillator register settings.
+#if !defined(CONFIG_SAMA5_OHCI) || defined(CONFIG_SAMA5_EHCI)
+/* This is the configuration provided in the Atmel example code.  This setup results
+ * in a CPU clock of 396MHz.
  *
- *   The start up time should be should be:
- *   Start Up Time = 8 * MOSCXTST / SLCK = 56 Slow Clock Cycles.
+ * In this configuration, UPLL is the source of the UHPHS clock (if enabled).
  */
 
-#define BOARD_CKGR_MOR_MOSCXTST    (62 << PMC_CKGR_MOR_MOSCXTST_SHIFT) /* Start-up Time */
+#  include <arch/board/board_396MHz.h>
 
-/* PLLA configuration.
- *
- *   Divider = 1
- *   Multipler = 66
+#else
+/* OHCI Only.  This is an alternative slower configuration that will produce a 48MHz
+ * USB clock with the required accuracy using only PLLA.  When PPLA is used to clock
+ * OHCI, an additional requirement is the PLLACK be a multiple of 48MHz.  This setup
+ * results in a CPU clock of 384MHz.
  */
 
-#define BOARD_CKGR_PLLAR_COUNT     (63 << PMC_CKGR_PLLAR_COUNT_SHIFT)
-#define BOARD_CKGR_PLLAR_OUT       (0)
-#define BOARD_CKGR_PLLAR_MUL       (65 << PMC_CKGR_PLLAR_MUL_SHIFT)
-#define BOARD_CKGR_PLLAR_DIV       PMC_CKGR_PLLAR_DIV_BYPASS
+#  include <arch/board/board_384MHz.h>
 
-/* PMC master clock register settings.
- *
- *  Master/Processor Clock Source Selection = PLLA
- *  Master/Processor Clock Prescaler        = 1
- *  PLLA Divider                            = 2
- *  Master Clock Division (MDIV)            = 3
- *
- *  NOTE: Bit PLLADIV2 must always be set to 1 when MDIV is set to 3.
- *
- *  Prescaler input                         = 792MHz / 2 = 396MHz
- *  Prescaler output                        = 792MHz / 1 = 396MHz
- *  Processor Clock (PCK)                   = 396MHz
- *  Master clock (MCK)                      = 396MHz / 3 = 132MHz
- */
-
-#define BOARD_PMC_MCKR_CSS         PMC_MCKR_CSS_PLLA
-#define BOARD_PMC_MCKR_PRES        PMC_MCKR_PRES_DIV1
-#define BOARD_PMC_MCKR_PLLADIV     PMC_MCKR_PLLADIV2
-#define BOARD_PMC_MCKR_MDIV        PMC_MCKR_MDIV_PCKDIV3
-
-/* USB UTMI PLL start-up time */
-
-#define BOARD_CKGR_UCKR_UPLLCOUNT  (3 << PMC_CKGR_UCKR_UPLLCOUNT_SHIFT)
-
-/* Resulting frequencies */
-
-#define BOARD_MAINOSC_FREQUENCY    (12000000)  /* MAINOSC: 12MHz crystal on-board */
-#define BOARD_PLLA_FREQUENCY       (792000000) /* PLLACK:  66 * 12Mhz / 1 */
-#define BOARD_PCK_FREQUENCY        (396000000) /* CPU:     PLLACK / 2 / 1  */
-#define BOARD_MCK_FREQUENCY        (132000000) /* MCK:     PLLACK / 2 / 1 / 3 */
-
-/* HSMCI clocking
- *
- * Multimedia Card Interface clock (MCCK or MCI_CK) is Master Clock (MCK)
- * divided by (2*(CLKDIV+1)).
- *
- *   MCI_SPEED = MCK / (2*(CLKDIV+1))
- *   CLKDIV = MCI / MCI_SPEED / 2 - 1
- *
- * Where CLKDIV has a range of 0-255.
- */
-
-/* MCK = 96MHz, CLKDIV = 119, MCI_SPEED = 96MHz / 2 * (119+1) = 400 KHz */
-
-#define HSMCI_INIT_CLKDIV          (119 << HSMCI_MR_CLKDIV_SHIFT)
-
-/* MCK = 96MHz, CLKDIV = 3, MCI_SPEED = 96MHz / 2 * (3+1) = 12 MHz */
-
-#define HSMCI_MMCXFR_CLKDIV        (3 << HSMCI_MR_CLKDIV_SHIFT)
-
-/* MCK = 96MHz, CLKDIV = 1, MCI_SPEED = 96MHz / 2 * (1+1) = 24 MHz */
-
-#define HSMCI_SDXFR_CLKDIV         (1 << HSMCI_MR_CLKDIV_SHIFT)
-#define HSMCI_SDWIDEXFR_CLKDIV     HSMCI_SDXFR_CLKDIV
-
-/* FLASH wait states
- *
- * FWS Max frequency
- *     1.62V 1.8V
- * --- ----- ------
- *  0  24MHz 27MHz
- *  1  40MHz 47MHz
- *  2  72MHz 84MHz
- *  3  84MHz 96MHz
- */
-
-#define BOARD_FWS                  3
+#endif
 
 /* LED definitions ******************************************************************/
 /* There are two LEDs on the SAMA5D3 series-CM board that can be controlled

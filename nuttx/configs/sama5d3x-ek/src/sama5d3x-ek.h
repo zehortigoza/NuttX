@@ -55,33 +55,39 @@
  ************************************************************************************/
 /* Configuration ************************************************************/
 
-#define HAVE_HSMCI_MTD  1
-#define HAVE_AT25_MTD   1
+#define HAVE_HSMCI      1
+#define HAVE_AT24       1
+#define HAVE_AT25       1
+#define HAVE_USBHOST    1
+#define HAVE_USBDEV     1
+#define HAVE_USBMONITOR 1
 
+/* HSMCI */
 /* Can't support MMC/SD if the card interface(s) are not enable */
 
 #if !defined(CONFIG_SAMA5_HSMCI0) && !defined(CONFIG_SAMA5_HSMCI1)
-#  undef HAVE_HSMCI_MTD
+#  undef HAVE_HSMCI
 #endif
 
 /* Can't support MMC/SD features if mountpoints are disabled */
 
-#if defined(HAVE_HSMCI_MTD) && defined(CONFIG_DISABLE_MOUNTPOINT)
+#if defined(HAVE_HSMCI) && defined(CONFIG_DISABLE_MOUNTPOINT)
 #  warning Mountpoints disabled.  No MMC/SD support
-#  undef HAVE_HSMCI_MTD
+#  undef HAVE_HSMCI
 #endif
 
 /* We need PIO interrupts on PIOD to support card detect interrupts */
 
-#if defined(HAVE_HSMCI_MTD) && !defined(CONFIG_SAMA5_PIOD_IRQ)
+#if defined(HAVE_HSMCI) && !defined(CONFIG_SAMA5_PIOD_IRQ)
 #  warning PIOD interrupts not enabled.  No MMC/SD support.
-#  undef HAVE_HSMCI_MTD
+#  undef HAVE_HSMCI
 #endif
 
+/* AT25 Serial FLASH */
 /* Can't support the AT25 device if it SPI0 or AT25 support are not enabled */
 
 #if !defined(CONFIG_SAMA5_SPI0) || !defined(CONFIG_MTD_AT25)
-#  undef HAVE_AT25_MTD
+#  undef HAVE_AT25
 #endif
 
 /* Can't support AT25 features if mountpoints are disabled or if we were not
@@ -89,21 +95,160 @@
  */
 
 #if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5_AT25_AUTOMOUNT)
-#  undef HAVE_AT25_MTD
+#  undef HAVE_AT25
 #endif
 
 /* If we are going to mount the AT25, then they user must also have told
  * us what to do with it by setting one of these.
  */
 
+#ifndef CONFIG_FS_NXFFS
+#  undef CONFIG_SAMA5_AT25_NXFFS
+#endif
+
 #if !defined(CONFIG_SAMA5_AT25_FTL) && !defined(CONFIG_SAMA5_AT25_NXFFS)
-#  undef HAVE_AT25_MTD
+#  undef HAVE_AT25
 #endif
 
 #if defined(CONFIG_SAMA5_AT25_FTL) && defined(CONFIG_SAMA5_AT25_NXFFS)
 #  warning Both CONFIG_SAMA5_AT25_FTL and CONFIG_SAMA5_AT25_NXFFS are set
 #  warning Ignoring CONFIG_SAMA5_AT25_NXFFS
 #  undef CONFIG_SAMA5_AT25_NXFFS
+#endif
+
+/* AT24 Serial EEPROM
+ *
+ * A AT24C512 Serial EEPPROM was used for tested I2C.  There are other I2C/TWI
+ * devices on-board, but the serial EEPROM is the simplest test.
+ *
+ * There is, however, no AT24 EEPROM on board the SAMA5D3x-EK:  The Serial
+ * EEPROM was mounted on an external adaptor board and connected to the
+ * SAMA5D3x-EK thusly:
+ *
+ *   - VCC -- VCC
+ *   - GND -- GND
+ *   - TWCK0(PA31) -- SCL
+ *   - TWD0(PA30)  -- SDA
+ *
+ * By default, PA30 and PA31 are SWJ-DP pins, it can be used as a pin for TWI
+ * peripheral in the end application.
+ */
+
+#define AT24_BUS 0
+
+#if !defined(CONFIG_MTD_AT24XX) || !defined(CONFIG_SAMA5_TWI0)
+#  undef HAVE_AT24
+#endif
+
+/* Can't support AT25 features if mountpoints are disabled or if we were not
+ * asked to mount the AT25 part
+ */
+
+#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5_AT24_AUTOMOUNT)
+#  undef HAVE_AT24
+#endif
+
+/* If we are going to mount the AT25, then they user must also have told
+ * us what to do with it by setting one of these.
+ */
+
+#ifndef CONFIG_FS_NXFFS
+#  undef CONFIG_SAMA5_AT24_NXFFS
+#endif
+
+#if !defined(CONFIG_SAMA5_AT24_FTL) && !defined(CONFIG_SAMA5_AT24_NXFFS)
+#  undef HAVE_AT24
+#endif
+
+#if defined(CONFIG_SAMA5_AT24_FTL) && defined(CONFIG_SAMA5_AT24_NXFFS)
+#  warning Both CONFIG_SAMA5_AT24_FTL and CONFIG_SAMA5_AT24_NXFFS are set
+#  warning Ignoring CONFIG_SAMA5_AT24_NXFFS
+#  undef CONFIG_SAMA5_AT24_NXFFS
+#endif
+
+/* Assign minor device numbers.  We will also use MINOR number 0 for the AT25.
+ * It should appear as /dev/mtdblock0
+ */
+
+#ifdef HAVE_AT25
+#  define AT25_MINOR 0
+#  define AT24_MINOR 1
+#else
+#  define AT24_MINOR 0
+#endif
+
+/* MMC/SD minor numbers:  The NSH device minor extended is extened to support
+ * two devices.  If CONFIG_NSH_MMCSDMINOR is zero, these will be:  /dev/mmcsd0
+ * and /dev/mmcsd1.
+ */
+
+#ifndef CONFIG_NSH_MMCSDMINOR
+#  define CONFIG_NSH_MMCSDMINOR 0
+#endif
+
+#ifdef HAVE_HSMCI
+
+#  define HSMCI0_SLOTNO 0
+#  define HSMCI1_SLOTNO 1
+
+#  ifdef CONFIG_SAMA5_HSMCI0
+#     define HSMCI0_MINOR  CONFIG_NSH_MMCSDMINOR
+#     define HSMCI1_MINOR  (CONFIG_NSH_MMCSDMINOR+1)
+#  else
+#     define HSMCI1_MINOR  CONFIG_NSH_MMCSDMINOR
+#  endif
+#else
+#endif
+
+/* USB Host / USB Device */
+/* Either CONFIG_SAMA5_UHPHS or CONFIG_SAMA5_UDPHS must be defined, or there is
+ * no USB of any kind.
+ */
+
+#if !defined(CONFIG_SAMA5_UHPHS)
+#  undef CONFIG_SAMA5_OHCI
+#  undef CONFIG_SAMA5_EHCI
+#endif
+
+#if !defined(CONFIG_SAMA5_UDPHS)
+#  undef HAVE_USBDEV
+#endif
+
+/* CONFIG_USBDEV and CONFIG_USBHOST must also be defined */
+
+#if !defined(CONFIG_USBDEV)
+#  undef HAVE_USBDEV
+#endif
+
+#if defined(CONFIG_USBHOST)
+#  if !defined(CONFIG_SAMA5_OHCI) && !defined(CONFIG_SAMA5_EHCI)
+#    warning CONFIG_USBHOST is defined, but neither CONFIG_SAMA5_OHCI nor CONFIG_SAMA5_EHCI are defined
+#  endif
+#else
+#  undef CONFIG_SAMA5_OHCI
+#  undef CONFIG_SAMA5_EHCI
+#endif
+
+#if !defined(CONFIG_SAMA5_OHCI) && !defined(CONFIG_SAMA5_EHCI)
+#  undef HAVE_USBHOST
+#endif
+
+/* Check if we should enable the USB monitor before starting NSH */
+
+#ifndef CONFIG_SYSTEM_USBMONITOR
+#  undef HAVE_USBMONITOR
+#endif
+
+#ifndef HAVE_USBDEV
+#  undef CONFIG_USBDEV_TRACE
+#endif
+
+#ifndef HAVE_USBHOST
+#  undef CONFIG_USBHOST_TRACE
+#endif
+
+#if !defined(CONFIG_USBDEV_TRACE) && !defined(CONFIG_USBHOST_TRACE)
+#  undef HAVE_USBMONITOR
 #endif
 
 /* LEDs *****************************************************************************/
@@ -189,6 +334,81 @@
 #define PIO_MCI1_CD  (PIO_INPUT | PIO_CFG_DEFAULT | PIO_CFG_DEGLITCH | \
                       PIO_INT_BOTHEDGES | PIO_PORT_PIOD | PIO_PIN18)
 #define IRQ_MCI1_CD   SAM_IRQ_PD18
+
+/* USB Ports ************************************************************************/
+/* The SAMA5D3 series-MB features three USB communication ports:
+ *
+ *   1. Port A Host High Speed (EHCI) and Full Speed (OHCI) multiplexed with
+ *      USB Device High Speed Micro AB connector, J20
+ *
+ *   2. Port B Host High Speed (EHCI) and Full Speed (OHCI) standard type A
+ *      connector, J19 upper port
+ *
+ *   3. Port C Host Full Speed (OHCI) only standard type A connector, J19
+ *      lower port
+ *
+ * All three USB host ports are equipped with 500 mA high-side power switch
+ * for self-powered and buspowered applications. The USB device port feature
+ * VBUS inserts detection function.
+ *
+ * Port A
+ *
+ *   PIO  Signal Name Function
+ *   ---- ----------- -------------------------------------------------------
+ *   PD29  VBUS_SENSE VBus detection
+ *   PD25  EN5V_USBA  VBus power enable (via MN15 AIC1526 Dual USB High-Side
+ *                    Power Switch.  The other channel of the switch is for
+ *                    the LCD)
+ */
+
+#define PIO_USBA_VBUS_SENSE \
+                     (PIO_INPUT | PIO_CFG_PULLUP | PIO_CFG_DEGLITCH | \
+                      PIO_INT_BOTHEDGES | PIO_PORT_PIOD | PIO_PIN29)
+#define IRQ_USBA_VBUS_SENSE \
+                     SAM_IRQ_PD29
+
+#define PIO_USBA_VBUS_ENABLE \
+                     (PIO_OUTPUT | PIO_CFG_DEFAULT | PIO_OUTPUT_CLEAR | \
+                      PIO_PORT_PIOD | PIO_PIN25)
+
+/* Port B
+ *
+ *   PIO  Signal Name Function
+ *   ---- ----------- -------------------------------------------------------
+ *   PD26 EN5V_USBB   VBus power enable (via MN14 AIC1526 Dual USB High-Side
+ *                    Power Switch).  To the A1 pin of J19 Dual USB A
+ *                    connector
+ */
+
+#define PIO_USBB_VBUS_ENABLE \
+                     (PIO_OUTPUT | PIO_CFG_DEFAULT | PIO_OUTPUT_CLEAR | \
+                      PIO_PORT_PIOD | PIO_PIN26)
+
+/* Port C
+ *
+ *   PIO  Signal Name Function
+ *   ---- ----------- -------------------------------------------------------
+ *   PD27 EN5V_USBC   VBus power enable (via MN14 AIC1526 Dual USB High-Side
+ *                    Power Switch).  To the B1 pin of J19 Dual USB A
+ *                    connector
+ */
+
+#define PIO_USBC_VBUS_ENABLE \
+                     (PIO_OUTPUT | PIO_CFG_DEFAULT | PIO_OUTPUT_CLEAR | \
+                      PIO_PORT_PIOD | PIO_PIN27)
+
+/*  Both Ports B and C
+ *
+ *   PIO  Signal Name Function
+ *   ---- ----------- -------------------------------------------------------
+ *   PD28 OVCUR_USB   Combined overrcurrent indication from port A and B
+ */
+
+#define PIO_USBBC_VBUS_OVERCURRENT \
+                     (PIO_INPUT | PIO_CFG_PULLUP | PIO_CFG_DEGLITCH | \
+                      PIO_INT_BOTHEDGES | PIO_PORT_PIOD | PIO_PIN28)
+#define IRQ_USBBC_VBUS_OVERCURRENT \
+                     SAM_IRQ_PD28
 
 /* SPI Chip Selects *****************************************************************/
 /* Both the Ronetix and Embest versions of the SAMAD3x CPU modules include an
@@ -278,12 +498,24 @@ void sam_sdram_config(void);
  * Name: sam_at25_initialize
  *
  * Description:
- *   Initialize and configure the AT25 SPI Flash
+ *   Initialize and configure the AT25 serial FLASH
  *
  ****************************************************************************/
 
-#ifdef HAVE_AT25_MTD
+#ifdef HAVE_AT25
 int sam_at25_initialize(int minor);
+#endif
+
+/****************************************************************************
+ * Name: sam_at24_initialize
+ *
+ * Description:
+ *   Initialize and configure the AT24 serial EEPROM
+ *
+ ****************************************************************************/
+
+#ifdef HAVE_AT24
+int sam_at24_initialize(int minor);
 #endif
 
 /****************************************************************************
@@ -294,7 +526,7 @@ int sam_at25_initialize(int minor);
  *
  ****************************************************************************/
 
-#ifdef HAVE_HSMCI_MTD
+#ifdef HAVE_HSMCI
 int sam_hsmci_initialize(int slotno, int minor);
 #endif
 
@@ -306,7 +538,7 @@ int sam_hsmci_initialize(int slotno, int minor);
  *
  ************************************************************************************/
 
-#ifdef HAVE_HSMCI_MTD
+#ifdef HAVE_HSMCI
 bool sam_cardinserted(int slotno);
 #endif
 
@@ -318,8 +550,34 @@ bool sam_cardinserted(int slotno);
  *
  ************************************************************************************/
 
-#ifdef HAVE_HSMCI_MTD
+#ifdef HAVE_HSMCI
 bool sam_writeprotected(int slotno);
+#endif
+
+/************************************************************************************
+ * Name: sam_usbinitialize
+ *
+ * Description:
+ *   Called from sam_usbinitialize very early in inialization to setup USB-related
+ *   GPIO pins for the STM32F4Discovery board.
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_SAMA5_UHPHS) || defined(CONFIG_SAMA5_UDPHS)
+void weak_function sam_usbinitialize(void);
+#endif
+
+/****************************************************************************************************
+ * Name: stm32_usbhost_initialize
+ *
+ * Description:
+ *   Called at application startup time to initialize the USB host functionality. This function will
+ *   start a thread that will monitor for device connection/disconnection events.
+ *
+ ****************************************************************************************************/
+
+#ifdef HAVE_USBHOST
+int sam_usbhost_initialize(void);
 #endif
 
 /************************************************************************************

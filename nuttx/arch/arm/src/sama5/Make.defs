@@ -115,6 +115,19 @@ else
 endif
 endif
 
+ifeq ($(CONFIG_SAMA5_UHPHS),y)
+ifeq ($(CONFIG_SAMA5_OHCI),y)
+CHIP_CSRCS += sam_ohci.c
+endif
+ifeq ($(CONFIG_SAMA5_EHCI),y)
+CHIP_CSRCS += sam_ehci.c
+endif
+endif
+
+ifeq ($(CONFIG_SAMA5_UDPHS),y)
+CHIP_CSRCS += sam_udphs.c
+endif
+
 ifeq ($(CONFIG_SAMA5_HSMCI0),y)
 CHIP_CSRCS += sam_hsmci.c
 else
@@ -124,5 +137,25 @@ else
 ifeq ($(CONFIG_SAMA5_HSMCI2),y)
 CHIP_CSRCS += sam_hsmci.c
 endif
+endif
+endif
+
+ifeq ($(CONFIG_SAMA5_TWI0),y)
+CHIP_CSRCS += sam_twi.c
+else
+ifeq ($(CONFIG_SAMA5_TWI1),y)
+CHIP_CSRCS += sam_twi.c
+else
+ifeq ($(CONFIG_SAMA5_TWI2),y)
+CHIP_CSRCS += sam_twi.c
+endif
+endif
+endif
+
+ifeq ($(CONFIG_USBHOST_TRACE),y)
+CHIP_CSRCS += sam_usbhost.c
+else
+ifeq ($(CONFIG_DEBUG_USB),y)
+CHIP_CSRCS += sam_usbhost.c
 endif
 endif

@@ -207,7 +207,7 @@ static int uart_putxmitchar(FAR uart_dev_t *dev, int ch, bool oktoblock)
         }
 
       /* The buffer is full and no data is available now.  Should be block,
-       * waiting for the the hardware to remove some data from the TX
+       * waiting for the hardware to remove some data from the TX
        * buffer?
        */
 
@@ -289,7 +289,8 @@ static int uart_putxmitchar(FAR uart_dev_t *dev, int ch, bool oktoblock)
  * Name: uart_irqwrite
  ************************************************************************************/
 
-static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev, FAR const char *buffer, size_t buflen)
+static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev, FAR const char *buffer,
+                                    size_t buflen)
 {
   ssize_t ret = buflen;
 
@@ -321,9 +322,9 @@ static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev, FAR const char *buffer,
 static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
                           size_t buflen)
 {
-  FAR struct inode *inode  = filep->f_inode;
-  FAR uart_dev_t   *dev    = inode->i_private;
-  ssize_t           nread  = buflen;
+  FAR struct inode *inode    = filep->f_inode;
+  FAR uart_dev_t   *dev      = inode->i_private;
+  ssize_t           nwritten = buflen;
   bool              oktoblock;
   int               ret;
   char              ch;
@@ -452,7 +453,44 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
 
       /* Put the character into the transmit buffer */
 
-      ret = uart_putxmitchar(dev, ch, oktoblock);
+      if (ret == OK)
+        {
+          ret = uart_putxmitchar(dev, ch, oktoblock);
+        }
+
+      /* uart_putxmitchar() might return an error under one of two
+       * conditions:  (1) The wait for buffer space might have been
+       * interrupted by a signal (ret should be -EINTR), (2) if
+       * CONFIG_SERIAL_REMOVABLE is defined, then uart_putxmitchar()
+       * might also return if the serial device was disconnected
+       * (with -ENOTCONN), or (3) if O_NONBLOCK is specified, then
+       * then uart_putxmitchar() might return -EAGAIN if the output
+       * TX buffer is full.
+       */
+
+      if (ret < 0)
+        {
+          /* POSIX requires that we return -1 and errno set if no data was
+           * transferred.  Otherwise, we return the number of bytes in the
+           * interrupted transfer.
+           */
+
+          if (buflen < nwritten)
+            {
+              /* Some data was transferred.  Return the number of bytes that
+               * were successfully transferred.
+               */
+
+              nwritten -= buflen;
+            }
+          else
+            {
+              /* No data was transferred. Return the negated errno value.
+               * The VFS layer will set the errno value appropriately).
+               */
+ 
+              nwritten = ret;
+            }
 
       if (ret != OK)
         { 
@@ -467,7 +505,7 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
     }
 
   uart_givesem(&dev->xmit.sem);
-  return nread;
+  return nwritten;
 }
 
 /************************************************************************************

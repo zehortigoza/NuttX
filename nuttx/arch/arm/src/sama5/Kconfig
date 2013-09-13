@@ -259,7 +259,7 @@ config SAMA5_SPI_DMATHRESHOLD
 	---help---
 		When SPI DMA is enabled, small DMA transfers will still be performed
 		by polling logic.  But we need a threshold value to determine what
-		is small.  That value is provided by CONFIG_SAMA5_SPI_DMATHRESHOLD.
+		is small.  That value is provided by SAMA5_SPI_DMATHRESHOLD.
 
 config SAMA5_SPI_DMADEBUG
 	bool "SPI DMA transfer debug"
@@ -280,6 +280,36 @@ config SAMA5_SPI_REGDEBUG
 
 endmenu # SPI device driver options
 endif # SAMA5_SPI0 || SAMA5_SPI1
+
+if SAMA5_TWI0 || SAMA5_TWI1 || SAMA5_TWI2
+
+menu "TWI device driver options"
+
+config SAMA5_TWI0_FREQUENCY
+	int "TWI0 Frequency"
+	default 100000
+	depends on SAMA5_TWI0
+
+config SAMA5_TWI1_FREQUENCY
+	int "TWI1 Frequency"
+	default 100000
+	depends on SAMA5_TWI1
+
+config SAMA5_TWI2_FREQUENCY
+	int "TWI2 Frequency"
+	default 100000
+	depends on SAMA5_TWI2
+
+config SAMA5_TWI_REGDEBUG
+	bool "TWI register level debug"
+	depends on DEBUG
+	default n
+	---help---
+		Output detailed register-level TWI device debug information.
+		Very invasive! Requires also DEBUG.
+
+endmenu # TWI device driver options
+endif # SAMA5_TWI0 || SAMA5_TWI1 || SAMA5_TWI2
 
 if SAMA5_HSMCI0 || SAMA5_HSMCI1 || SAMA5_HSMCI2
 menu "HSMCI device driver options"
@@ -334,6 +364,146 @@ config SAMA5_HSMCI_REGDEBUG
 
 endmenu # HSMCI device driver options
 endif # SAMA5_HSMCI0 || SAMA5_HSMCI1 || SAMA5_HSMCI2
+
+if SAMA5_UDPHS
+menu "USB High Speed Device Controller driver (DCD) options"
+
+config UDPHS_SCATTERGATHER
+	bool
+	default n
+	---help---
+		Scatter gather DMA is not yet supported
+
+config SAMA5_UDPHS_NDTDS
+	int "Number of UDPHS DMA transfer descriptors"
+	default 9
+	depends on UDPHS_SCATTERGATHER
+	---help---
+		DMA tranfer descriptors are allocated in a pool at boot time.  This
+		setting provides the number of DMA transfer descriptors to be
+		allocated.
+
+config SAMA5_UDPHS_PREALLOCATE
+	bool "Pre-allocate DMA transfer descriptors"
+	default y
+	depends on UDPHS_SCATTERGATHER
+	---help---
+		If this option is selected then DMA tranfer descriptors will be
+		pre-allocated in .bss.  Otherwise, the descriptors will be allocated
+		at start-up time with kmalloc().  This might be important if a larger
+		memory pool is available after startup.
+
+config SAMA5_UDPHS_REGDEBUG
+	bool "Enable low-level UPPHS register debug"
+	default n
+	depends on DEBUG
+
+endmenu # USB High Speed Host Device driver (DCD) options
+endif # SAMA5_UDPHS
+
+if SAMA5_UHPHS
+menu "USB High Speed Host Controller driver (HCD) options"
+
+config SAMA5_OHCI
+	bool "Full/low speed OHCI support"
+	default n
+	---help---
+		Build support for the SAMA5 USB full speed Open Host Controller
+		Interface (OHCI).
+
+if SAMA5_OHCI
+config SAMA5_OHCI_NEDS
+	int "Number of endpoint descriptors"
+	default 6
+
+config SAMA5_OHCI_NTDS
+	int "Number of transfer descriptors"
+	default 9
+
+config SAMA5_OHCI_TDBUFFERS
+	int "Number of transfer descriptor buffers"
+	default 6
+
+config SAMA5_OHCI_TDBUFSIZE
+	int "Size of one transfer descriptor buffer"
+	default 128
+	---help---
+		The size of one transfer descriptor (TD) buffer in bytes.  The TD
+		buffer size must be an even number of 32-bit words
+
+config SAMA5_OHCI_REGDEBUG
+	bool "Enable low-level OHCI register debug"
+	default n
+	depends on DEBUG
+
+endif # SAMA5_OHCI
+
+config SAMA5_EHCI
+	bool "High speed EHCI support"
+	default n
+	---help---
+		Build support for the SAMA5 USB high speed Enhanced Host Controller
+		Interface (EHCI).  If low/full speed is needed too, then you must
+		also enable the OHCI controller.
+
+if SAMA5_EHCI
+
+config SAMA5_EHCI_NQHS
+	int "Number of Queue Head (QH) structures"
+	default 4
+	---help---
+		Configurable number of Queue Head (QH) structures.  The default is
+		one per Root hub port plus one for EP0 (4).
+
+config SAMA5_EHCI_NQTDS
+	int "Number of Queue Element Transfer Descriptor (qTDs)"
+	default 6
+	---help---
+		Configurable number of Queue Element Transfer Descriptor (qTDs).
+		The default is one per root hub plus three from EP0 (6).
+
+config SAMA5_EHCI_BUFSIZE
+	int "Size of one request/descriptor buffer"
+	default 128
+	---help---
+		The size of one request/descriptor buffer in bytes.  The TD buffe
+		size must be an even number of 32-bit words and must be large enough
+		to hangle the largest transfer via a SETUP request.
+
+config SAMA5_EHCI_PREALLOCATE
+	bool "Preallocate descriptor pool"
+	default y
+	---help---
+		Select this option to pre-allocate EHCI queue and descriptor
+		structure pools in .bss.  Otherwise, these pools will be
+		dynamically allocated using kmemalign().
+
+config SAMA5_EHCI_REGDEBUG
+	bool "Enable low-level EHCI register debug"
+	default n
+	depends on DEBUG
+
+endif # SAMA5_EHCI
+
+if SAMA5_OHCI || SAMA5_EHCI
+
+config SAMA5_UHPHS_RHPORT1
+	bool "Use Port A"
+	default y
+	depends on !SAMA5_UDPHS
+
+config SAMA5_UHPHS_RHPORT2
+	bool "Use Port B"
+	default y
+
+config SAMA5_UHPHS_RHPORT3
+	bool "Use Port C"
+	default y
+
+endif # SAMA5_OHCI || SAMA5_EHCI
+
+endmenu # USB High Speed Host Controller driver (HCD) options
+endif # SAMA5_UHPHS
 
 menu "External Memory Configuration"
 
