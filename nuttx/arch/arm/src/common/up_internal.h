@@ -171,6 +171,14 @@
 
 #endif
 
+/* This is the value used to mark the stack for subsequent stack monitoring
+ * logic.
+ */
+
+#define STACK_COLOR    0xdeadbeef
+#define INTSTACK_COLOR 0xdeadbeef
+#define HEAP_COLOR     'h'
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -204,9 +212,10 @@ extern const uint32_t g_idle_topstack;
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
 #if defined(CONFIG_ARCH_CORTEXM0) || defined(CONFIG_ARCH_CORTEXM3) || \
     defined(CONFIG_ARCH_CORTEXM4)
-extern uint32_t g_intstackbase;
+extern uint32_t g_intstackalloc; /* Allocated stack base */
+extern uint32_t g_intstackbase;  /* Initial top of interrupt stack */
 #  else
-extern uint32_t g_userstack;
+extern uint32_t g_intstackbase;
 #  endif
 #endif
 
@@ -404,9 +413,18 @@ int  up_timerisr(int irq, uint32_t *regs);
 
 /* Low level serial output **************************************************/
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 void up_lowputc(char ch);
 void up_puts(const char *str);
 void up_lowputs(const char *str);
+
+#ifdef __cplusplus
+}
+#endif
 
 #if CONFIG_NFILE_DESCRIPTORS > 0
 void up_earlyserialinit(void);
@@ -484,26 +502,10 @@ void up_usbuninitialize(void);
 void up_rnginitialize(void);
 #endif
 
-/****************************************************************************
- * Name: up_check_stack
- *
- * Description:
- *   Determine (approximately) how much stack has been used be searching the
- *   stack memory for a high water mark.  That is, the deepest level of the
- *   stack that clobbered some recognizable marker in the stack memory.
- *
- * Input Parameters:
- *   None
- *
- * Returned value:
- *   The estimated amount of stack space used.
- *
- ****************************************************************************/
+/* Debug ********************************************************************/
 
 #if defined(CONFIG_DEBUG) && defined(CONFIG_DEBUG_STACK)
-size_t up_check_stack(void);
-size_t up_check_tcbstack(FAR struct tcb_s);
-size_t up_check_tcbstack_remain(FAR struct tcb_s);
+void up_stack_color(FAR void *stackbase, size_t nbytes);
 #endif
 
 #endif /* __ASSEMBLY__ */

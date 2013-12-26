@@ -33,8 +33,8 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_SAMA5_SAMA5D3X_MEMORYMAP_H
-#define __ARCH_ARM_SRC_SAMA5_SAMA5D3X_MEMORYMAP_H
+#ifndef __ARCH_ARM_SRC_SAMA5_CHIP_SAMA5D3X_MEMORYMAP_H
+#define __ARCH_ARM_SRC_SAMA5_CHIP_SAMA5D3X_MEMORYMAP_H
 
 /************************************************************************************
  * Included Files
@@ -104,7 +104,7 @@
 #  define SAM_SPI0_OFFSET        0x00004000 /* 0x00004000-0x00007fff: SPI0 */
 #  define SAM_SSC0_OFFSET        0x00008000 /* 0x00008000-0x0000bfff: SSC0 */
 #  define SAM_CAN0_OFFSET        0x0000c000 /* 0x0000c000-0x0000ffff: CAN0 */
-#  define SAM_TC012_OFFSET       0x00010000 /* 0x00010000-0x00013fff: TC0, TC1, TC2 */
+#  define SAM_TC012_OFFSET       0x00010000 /* 0x00010000-0x00013fff: TC channels 0, 1, and 2 */
 #  define SAM_TWI0_OFFSET        0x00014000 /* 0x00014000-0x00017fff: TWI0 */
 #  define SAM_TWI1_OFFSET        0x00018000 /* 0x00018000-0x0001bfff: TWI1 */
 #  define SAM_USART0_OFFSET      0x0001c000 /* 0x0001c000-0x0001ffff: USART0 */
@@ -123,7 +123,7 @@
 #  define SAM_SPI1_OFFSET        0x00008000 /* 0x00008000-0x0000bfff: SPI1 */
 #  define SAM_SSC1_OFFSET        0x0000c000 /* 0x0000c000-0x0000ffff: SSC1 */
 #  define SAM_CAN1_OFFSET        0x00010000 /* 0x00010000-0x00013fff: CAN1 */
-#  define SAM_TC345_OFFSET       0x00014000 /* 0x00014000-0x00017fff: TC3, TC4, TC5 */
+#  define SAM_TC345_OFFSET       0x00014000 /* 0x00014000-0x00017fff: TC channels 3, 4, and 5 */
 #  define SAM_TSADC_OFFSET       0x00018000 /* 0x00018000-0x0001bfff: TSADC */
 #  define SAM_TWI2_OFFSET        0x0001c000 /* 0x0001c000-0x0001ffff: TWI2 */
 #  define SAM_USART2_OFFSET      0x00020000 /* 0x00020000-0x00023fff: USART2 */
@@ -204,6 +204,18 @@
 #define SAMA5_EBICS2_SIZE        MKULONG(CONFIG_SAMA5_EBICS2_SIZE)
 #define SAMA5_EBICS3_SIZE        MKULONG(CONFIG_SAMA5_EBICS3_SIZE)
 
+#define SAMA5_EBICS0_HEAP_OFFSET MKULONG(CONFIG_SAMA5_EBICS0_HEAP_OFFSET)
+#define SAMA5_DDRCS_HEAP_OFFSET  MKULONG(CONFIG_SAMA5_DDRCS_HEAP_OFFSET)
+#define SAMA5_EBICS1_HEAP_OFFSET MKULONG(CONFIG_SAMA5_EBICS1_HEAP_OFFSET)
+#define SAMA5_EBICS2_HEAP_OFFSET MKULONG(CONFIG_SAMA5_EBICS2_HEAP_OFFSET)
+#define SAMA5_EBICS3_HEAP_OFFSET MKULONG(CONFIG_SAMA5_EBICS3_HEAP_OFFSET)
+
+#define SAMA5_EBICS0_HEAP_SIZE   MKULONG(CONFIG_SAMA5_EBICS0_HEAP_SIZE)
+#define SAMA5_DDRCS_HEAP_SIZE    MKULONG(CONFIG_SAMA5_DDRCS_HEAP_SIZE)
+#define SAMA5_EBICS1_HEAP_SIZE   MKULONG(CONFIG_SAMA5_EBICS1_HEAP_SIZE)
+#define SAMA5_EBICS2_HEAP_SIZE   MKULONG(CONFIG_SAMA5_EBICS2_HEAP_SIZE)
+#define SAMA5_EBICS3_HEAP_SIZE   MKULONG(CONFIG_SAMA5_EBICS3_HEAP_SIZE)
+
 /* Convert size in bytes to number of sections (in Mb). */
 
 #define _NSECTIONS(b)            (((b)+0x000fffff) >> 20)
@@ -242,7 +254,6 @@
 
 #define SAM_BOOTMEM_MMUFLAGS     MMU_ROMFLAGS
 #define SAM_ROM_MMUFLAGS         MMU_ROMFLAGS
-#define SAM_NFCSRAM_MMUFLAGS     MMU_IOFLAGS
 #define SAM_ISRAM_MMUFLAGS       MMU_MEMFLAGS
 #define SAM_SMD_MMUFLAGS         MMU_MEMFLAGS
 #define SAM_UDPHSRAM_MMUFLAGS    MMU_IOFLAGS
@@ -251,13 +262,62 @@
 #define SAM_AXIMX_MMUFLAGS       MMU_IOFLAGS
 #define SAM_DAP_MMUFLAGS         MMU_IOFLAGS
 
-#define SAM_EBICS0_MMUFLAGS      MMU_MEMFLAGS
-#define SAM_DDRCS_MMUFLAGS       MMU_MEMFLAGS
-#define SAM_EBICS1_MMUFLAGS      MMU_MEMFLAGS
-#define SAM_EBICS2_MMUFLAGS      MMU_MEMFLAGS
-#define SAM_EBICS3_MMUFLAGS      MMU_MEMFLAGS
-#define SAM_NFCCR_MMUFLAGS       MMU_IOFLAGS
+/* If the NFC is not being used, the NFC SRAM can be used as general purpose
+ * SRAM (cached).  If the NFC is used, then the NFC SRAM should be treated
+ * as an I/O devices (uncached).
+ */
 
+#ifdef CONFIG_SAMA5_HAVE_NAND
+#  define SAM_NFCSRAM_MMUFLAGS   MMU_IOFLAGS
+#else
+#  define SAM_NFCSRAM_MMUFLAGS   MMU_MEMFLAGS
+#endif
+
+/* SDRAM is a special case because it requires non-cached access of its
+ * initial configuration, then cached access thereafter.
+ */
+
+#define SAM_DDRCS_MMUFLAGS       MMU_MEMFLAGS
+
+/* The external memory regions may support all access if they host SRAM,
+ * PSRAM, or SDRAM.  NAND memory requires write access for NAND control and
+ * so should be uncached.
+ */
+
+#if defined(CONFIG_SAMA5_EBICS0_SRAM) || defined(CONFIG_SAMA5_EBICS0_PSRAM) || \
+    defined(CONFIG_SAMA5_EBICS0_NAND)
+#  define SAM_EBICS0_MMUFLAGS    MMU_MEMFLAGS
+#elif defined(CONFIG_SAMA5_EBICS0_NAND)
+#  define SAM_EBICS0_MMUFLAGS    MMU_IOFLAGS
+#else
+#  define SAM_EBICS0_MMUFLAGS    MMU_ROMFLAGS
+#endif
+
+#if defined(CONFIG_SAMA5_EBICS1_SRAM) || defined(CONFIG_SAMA5_EBICS1_PSRAM)
+#  define SAM_EBICS1_MMUFLAGS    MMU_MEMFLAGS
+#elif defined(CONFIG_SAMA5_EBICS1_NAND)
+#  define SAM_EBICS2_MMUFLAGS    MMU_IOFLAGS
+#else
+#  define SAM_EBICS1_MMUFLAGS    MMU_ROMFLAGS
+#endif
+
+#if defined(CONFIG_SAMA5_EBICS2_SRAM) || defined(CONFIG_SAMA5_EBICS2_PSRAM)
+#  define SAM_EBICS2_MMUFLAGS    MMU_MEMFLAGS
+#elif defined(CONFIG_SAMA5_EBICS2_NAND)
+#  define SAM_EBICS2_MMUFLAGS    MMU_IOFLAGS
+#else
+#  define SAM_EBICS2_MMUFLAGS    MMU_ROMFLAGS
+#endif
+
+#if defined(CONFIG_SAMA5_EBICS3_SRAM) || defined(CONFIG_SAMA5_EBICS3_PSRAM)
+#  define SAM_EBICS3_MMUFLAGS    MMU_MEMFLAGS
+#elif defined(CONFIG_SAMA5_EBICS3_NAND)
+#  define SAM_EBICS3_MMUFLAGS    MMU_IOFLAGS
+#else
+#  define SAM_EBICS3_MMUFLAGS    MMU_ROMFLAGS
+#endif
+
+#define SAM_NFCCR_MMUFLAGS       MMU_IOFLAGS
 #define SAM_PERIPHA_MMUFLAGS     MMU_IOFLAGS
 #define SAM_PERIPHB_MMUFLAGS     MMU_IOFLAGS
 #define SAM_SYSC_MMUFLAGS        MMU_IOFLAGS
@@ -400,86 +460,88 @@
  * And, if so, then its size must agree with the configured size.
  */
 
-#if defined(CONFIG_SAMA5_EBICS0) && defined(CONFIG_SAMA5_EBICS0_NOR) && \
-    defined (CONFIG_SAMA5_BOOT_CS0FLASH)
+#  if defined(CONFIG_SAMA5_EBICS0) && defined(CONFIG_SAMA5_EBICS0_NOR) && \
+      defined (CONFIG_SAMA5_BOOT_CS0FLASH)
 
-#  if CONFIG_SAMA5_EBICS0_SIZE != CONFIG_FLASH_SIZE
-#    error CS0 FLASH size disagreement
+#    if CONFIG_SAMA5_EBICS0_SIZE != CONFIG_FLASH_SIZE
+#      error CS0 FLASH size disagreement
+#    endif
+
+#    undef CONFIG_SAMA5_BOOT_CS1FLASH
+#    undef CONFIG_SAMA5_BOOT_CS2FLASH
+#    undef CONFIG_SAMA5_BOOT_CS3FLASH
+
+#  elif defined(CONFIG_SAMA5_EBICS1) && defined(CONFIG_SAMA5_EBICS1_NOR) && \
+        defined (CONFIG_SAMA5_BOOT_CS1FLASH)
+
+#    if CONFIG_SAMA5_EBICS1_SIZE != CONFIG_FLASH_SIZE
+#      error CS1 FLASH size disagreement
+#    endif
+
+#    undef CONFIG_SAMA5_BOOT_CS0FLASH
+#    undef CONFIG_SAMA5_BOOT_CS2FLASH
+#    undef CONFIG_SAMA5_BOOT_CS3FLASH
+
+#  elif defined(CONFIG_SAMA5_EBICS2) && defined(CONFIG_SAMA5_EBICS2_NOR) && \
+        defined (CONFIG_SAMA5_BOOT_CS2FLASH)
+
+#    if CONFIG_SAMA2_EBICS0_SIZE != CONFIG_FLASH_SIZE
+#      error CS2 FLASH size disagreement
+#    endif
+
+#    undef CONFIG_SAMA5_BOOT_CS0FLASH
+#    undef CONFIG_SAMA5_BOOT_CS1FLASH
+#    undef CONFIG_SAMA5_BOOT_CS3FLASH
+
+#  elif defined(CONFIG_SAMA5_EBICS3) && defined(CONFIG_SAMA5_EBICS3_NOR) && \
+        defined (CONFIG_SAMA5_BOOT_CS3FLASH)
+
+#    if CONFIG_SAMA5_EBICS3_SIZE != CONFIG_FLASH_SIZE
+#      error CS3 FLASH size disagreement
+#    endif
+
+#    undef CONFIG_SAMA5_BOOT_CS0FLASH
+#    undef CONFIG_SAMA5_BOOT_CS1FLASH
+#    undef CONFIG_SAMA5_BOOT_CS2FLASH
+
+#  else
+#    error CONFIG_BOOT_RUNFROMFLASH=y, but no bootable NOR flash defined
+
+#    undef CONFIG_SAMA5_BOOT_CS0FLASH
+#    undef CONFIG_SAMA5_BOOT_CS1FLASH
+#    undef CONFIG_SAMA5_BOOT_CS2FLASH
+#    undef CONFIG_SAMA5_BOOT_CS3FLASH
+
 #  endif
 
-#  undef CONFIG_SAMA5_BOOT_CS1FLASH
-#  undef CONFIG_SAMA5_BOOT_CS2FLASH
-#  undef CONFIG_SAMA5_BOOT_CS3FLASH
-
-#elif defined(CONFIG_SAMA5_EBICS1) && defined(CONFIG_SAMA5_EBICS1_NOR) && \
-      defined (CONFIG_SAMA5_BOOT_CS1FLASH)
-
-#  if CONFIG_SAMA5_EBICS1_SIZE != CONFIG_FLASH_SIZE
-#    error CS1 FLASH size disagreement
-#  endif
-
-#  undef CONFIG_SAMA5_BOOT_CS0FLASH
-#  undef CONFIG_SAMA5_BOOT_CS2FLASH
-#  undef CONFIG_SAMA5_BOOT_CS3FLASH
-
-#elif defined(CONFIG_SAMA5_EBICS2) && defined(CONFIG_SAMA5_EBICS2_NOR) && \
-      defined (CONFIG_SAMA5_BOOT_CS2FLASH)
-
-#  if CONFIG_SAMA2_EBICS0_SIZE != CONFIG_FLASH_SIZE
-#    error CS2 FLASH size disagreement
-#  endif
-
-#  undef CONFIG_SAMA5_BOOT_CS0FLASH
-#  undef CONFIG_SAMA5_BOOT_CS1FLASH
-#  undef CONFIG_SAMA5_BOOT_CS3FLASH
-
-#elif defined(CONFIG_SAMA5_EBICS3) && defined(CONFIG_SAMA5_EBICS3_NOR) && \
-      defined (CONFIG_SAMA5_BOOT_CS3FLASH)
-
-#  if CONFIG_SAMA5_EBICS3_SIZE != CONFIG_FLASH_SIZE
-#    error CS3 FLASH size disagreement
-#  endif
-
-#  undef CONFIG_SAMA5_BOOT_CS0FLASH
-#  undef CONFIG_SAMA5_BOOT_CS1FLASH
-#  undef CONFIG_SAMA5_BOOT_CS2FLASH
-
-#else
-#  error CONFIG_BOOT_RUNFROMFLASH=y, but no bootable NOR flash defined
-
-#  undef CONFIG_SAMA5_BOOT_CS0FLASH
-#  undef CONFIG_SAMA5_BOOT_CS1FLASH
-#  undef CONFIG_SAMA5_BOOT_CS2FLASH
-#  undef CONFIG_SAMA5_BOOT_CS3FLASH
-
-#endif
-
-/* Set up the NOR FLASH region as the NUTTX .text region */
+  /* Set up the NOR FLASH region as the NUTTX .text region */
 
 #  define NUTTX_TEXT_VADDR       (CONFIG_FLASH_VSTART & 0xfff00000)
 #  define NUTTX_TEXT_PADDR       (CONFIG_FLASH_START & 0xfff00000)
 #  define NUTTX_TEXT_PEND        ((CONFIG_FLASH_END + 0x000fffff) & 0xfff00000)
 #  define NUTTX_TEXT_SIZE        (NUTTX_TEXT_PEND - NUTTX_TEXT_PADDR)
 
-/* In the default configuration, the primary RAM use for .bss and .data
- * is the internal SRAM.
- */
+  /* In the default configuration, the primary RAM use for .bss and .data
+   * is the internal SRAM.
+   */
 
 #  define NUTTX_RAM_VADDR        (CONFIG_RAM_VSTART & 0xfff00000)
 #  define NUTTX_RAM_PADDR        (CONFIG_RAM_START & 0xfff00000)
 #  define NUTTX_RAM_PEND         ((CONFIG_RAM_END + 0x000fffff) & 0xfff00000)
 #  define NUTTX_RAM_SIZE         (NUTTX_RAM_PEND - NUTTX_RAM_PADDR)
 
-#else
-/* Otherwise we are running from some kind of RAM (ISRAM or SDRAM).
- * Setup the RAM region as the NUTTX .txt, .bss, and .data region.
- */
+#else /* CONFIG_BOOT_RUNFROMFLASH */
+
+  /* Otherwise we are running from some kind of RAM (ISRAM or SDRAM).
+   * Setup the RAM region as the NUTTX .txt, .bss, and .data region.
+   */
 
 #  define NUTTX_TEXT_VADDR       (CONFIG_RAM_VSTART & 0xfff00000)
 #  define NUTTX_TEXT_PADDR       (CONFIG_RAM_START & 0xfff00000)
 #  define NUTTX_TEXT_PEND        ((CONFIG_RAM_END + 0x000fffff) & 0xfff00000)
 #  define NUTTX_TEXT_SIZE        (NUTTX_TEXT_PEND - NUTTX_TEXT_PADDR)
-#endif
+
+#endif /* CONFIG_BOOT_RUNFROMFLASH */
 
 /* MMU Page Table Location
  *
@@ -501,6 +563,7 @@
 
 #undef PGTABLE_IN_HIGHSRAM
 #undef PGTABLE_IN_LOWSRAM
+#undef ARMV7A_PGTABLE_MAPPING
 
 #if !defined(PGTABLE_BASE_PADDR) || !defined(PGTABLE_BASE_VADDR)
 
@@ -531,7 +594,7 @@
    * in the way at that position.
    */
 
-#if defined(CONFIG_BOOT_RUNFROMISRAM) && defined(CONFIG_ARCH_LOWVECTORS)
+#  if defined(CONFIG_BOOT_RUNFROMISRAM) && defined(CONFIG_ARCH_LOWVECTORS)
 
   /* In this case, table must lie at the top 16Kb of ISRAM1 (or ISRAM0 if ISRAM1
    * is not available in this architecture)
@@ -541,18 +604,19 @@
    */
 
 #    if SAM_ISRAM1_SIZE > 0
-#        define PGTABLE_BASE_PADDR (SAM_ISRAM1_PADDR+SAM_ISRAM1_SIZE-PGTABLE_SIZE)
-#        ifndef CONFIG_PAGING
-#          define PGTABLE_BASE_VADDR (SAM_ISRAM1_VADDR+SAM_ISRAM1_SIZE-PGTABLE_SIZE)
-#        endif
+#      define PGTABLE_BASE_PADDR (SAM_ISRAM1_PADDR+SAM_ISRAM1_SIZE-PGTABLE_SIZE)
+#      ifndef CONFIG_PAGING
+#        define PGTABLE_BASE_VADDR (SAM_ISRAM1_VADDR+SAM_ISRAM1_SIZE-PGTABLE_SIZE)
+#      endif
 #    else
-#        define PGTABLE_BASE_PADDR (SAM_ISRAM0_PADDR+SAM_ISRAM0_SIZE-PGTABLE_SIZE)
-#        ifndef CONFIG_PAGING
-#          define PGTABLE_BASE_VADDR (SAM_ISRAM0_VADDR+SAM_ISRAM0_SIZE-PGTABLE_SIZE)
-#        endif
+#      define PGTABLE_BASE_PADDR (SAM_ISRAM0_PADDR+SAM_ISRAM0_SIZE-PGTABLE_SIZE)
+#      ifndef CONFIG_PAGING
+#        define PGTABLE_BASE_VADDR (SAM_ISRAM0_VADDR+SAM_ISRAM0_SIZE-PGTABLE_SIZE)
+#      endif
 #    endif
 #    define PGTABLE_IN_HIGHSRAM   1
-#  else
+
+#  else /* CONFIG_BOOT_RUNFROMISRAM && CONFIG_ARCH_LOWVECTORS */
 
   /* Otherwise, the vectors lie at another location (perhaps in NOR FLASH, perhaps
    * elsewhere in internal SRAM).  The page table will then be positioned at
@@ -564,8 +628,19 @@
 #      define PGTABLE_BASE_VADDR  SAM_ISRAM0_VADDR
 #    endif
 #    define PGTABLE_IN_LOWSRAM    1
+
+#  endif /* CONFIG_BOOT_RUNFROMISRAM && CONFIG_ARCH_LOWVECTORS */
+
+  /* In either case, the page table lies in ISRAM.  If ISRAM is not the
+   * primary RAM region, then we will need to set-up a special mapping for
+   * the page table at boot time.
+   */
+
+#  if NUTTX_RAM_PADDR != SAM_ISRAM_PSECTION
+#    define ARMV7A_PGTABLE_MAPPING 1
 #  endif
-#endif
+
+#endif /* !PGTABLE_BASE_PADDR || !PGTABLE_BASE_VADDR */
 
 /* Level 2 Page table start addresses.
  *
@@ -598,28 +673,28 @@
  */
 
 #ifndef CONFIG_ARCH_LOWVECTORS
-/* Vector L2 page table offset/size */
+  /* Vector L2 page table offset/size */
 
 #  define VECTOR_L2_OFFSET        0x000002000
 #  define VECTOR_L2_SIZE          0x000000400
 
-/* Vector L2 page table base addresses */
+  /* Vector L2 page table base addresses */
 
 #  define VECTOR_L2_PBASE         (PGTABLE_BASE_PADDR+VECTOR_L2_OFFSET)
 #  define VECTOR_L2_VBASE         (PGTABLE_BASE_VADDR+VECTOR_L2_OFFSET)
 
-/* Vector L2 page table end addresses */
+  /* Vector L2 page table end addresses */
 
 #  define VECTOR_L2_END_PADDR     (VECTOR_L2_PBASE+VECTOR_L2_SIZE)
 #  define VECTOR_L2_END_VADDR     (VECTOR_L2_VBASE+VECTOR_L2_SIZE)
 
-/* Paging L2 page table offset/size */
+  /* Paging L2 page table offset/size */
 
 #  define PGTABLE_L2_OFFSET       0x000002400
 #  define PGTABLE_L2_SIZE         0x000001800
 
 #else
-/* Paging L2 page table offset/size */
+  /* Paging L2 page table offset/size */
 
 #  define PGTABLE_L2_OFFSET       0x000002000
 #  define PGTABLE_L2_SIZE         0x000001c00
@@ -647,11 +722,15 @@
  */
 
 #define VECTOR_TABLE_SIZE         0x00010000
+
 #ifdef CONFIG_ARCH_LOWVECTORS  /* Vectors located at 0x0000:0000  */
+
 #  define SAM_VECTOR_PADDR        SAM_ISRAM0_PADDR
 #  define SAM_VECTOR_VSRAM        SAM_ISRAM0_VADDR
 #  define SAM_VECTOR_VADDR        0x00000000
+
 #else  /* Vectors located at 0xffff:0000 -- this probably does not work */
+
 #  ifdef SAM_ISRAM1_SIZE >= VECTOR_TABLE_SIZE
 #    define SAM_VECTOR_PADDR      (SAM_ISRAM1_PADDR+SAM_ISRAM1_SIZE-VECTOR_TABLE_SIZE)
 #    define SAM_VECTOR_VSRAM      (SAM_ISRAM1_VADDR+SAM_ISRAM1_SIZE-VECTOR_TABLE_SIZE)
@@ -660,6 +739,7 @@
 #    define SAM_VECTOR_VSRAM      (SAM_ISRAM0_VADDR+SAM_ISRAM0_SIZE-VECTOR_TABLE_SIZE)
 #  endif
 #  define SAM_VECTOR_VADDR        0xffff0000
+
 #endif
 
 /************************************************************************************
@@ -674,4 +754,4 @@
  * Public Functions
  ************************************************************************************/
 
-#endif /* __ARCH_ARM_SRC_SAMA5_SAMA5D3X_MEMORYMAP_H */
+#endif /* __ARCH_ARM_SRC_SAMA5_CHIP_SAMA5D3X_MEMORYMAP_H */

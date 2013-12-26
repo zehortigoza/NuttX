@@ -131,127 +131,10 @@ examples/cc3000
 
   This is a test for the TI CC3000 wireless networking module.
 
-examples/cdcacm
-^^^^^^^^^^^^^^^
+examples/configdata
+^^^^^^^^^^^^^^^^^^^
 
-  This very simple example shows how a USB CDC/ACM serial can be dynamically
-  connected and disconnected from a host.  This example can only be used as
-  an NSH built-int command.  If built-in, then two new NSH commands will be
-  supported:
-
-    1. sercon - Connect the CDC/ACM serial device
-    2. serdis - Disconnect the CDC/ACM serial device
-
-  Configuration prequisites (not complete):
-
-    CONFIG_USBDEV=y                 : USB device support must be enabled
-    CONFIG_CDCACM=y                 : The CDC/ACM driver must be built
-    CONFIG_NSH_BUILTIN_APPS         : NSH built-in application support must be enabled
-
-  Configuration options specific to this example:
-
-    CONFIG_EXAMPLES_CDCACM_DEVMINOR : The minor number of the CDC/ACM device.
-                                    : i.e., the 'x' in /dev/ttyACMx
-
-  If CONFIG_USBDEV_TRACE is enabled (or CONFIG_DEBUG and CONFIG_DEBUG_USB, or
-  CONFIG_USBDEV_TRACE), then the example code will also initialize the USB trace
-  output.  The amount of trace output can be controlled using:
-
-  CONFIG_EXAMPLES_CDCACM_TRACEINIT
-    Show initialization events
-  CONFIG_EXAMPLES_CDCACM_TRACECLASS
-    Show class driver events
-  CONFIG_EXAMPLES_CDCACM_TRACETRANSFERS
-    Show data transfer events
-  CONFIG_EXAMPLES_CDCACM_TRACECONTROLLER
-    Show controller events
-  CONFIG_EXAMPLES_CDCACM_TRACEINTERRUPTS
-    Show interrupt-related events.
-
-  Note:  This example is only enables or disable USB CDC/ACM via the NSH
-  'sercon' and 'serdis' command.  It will enable and disable tracing per
-  the settings before enabling and after disabling the CDC/ACM device. It
-  will not, however, monitor buffered trace data in the interim.  If
-  CONFIG_USBDEV_TRACE is defined (and the debug options are not), other
-  application logic will need to monitor the buffered trace data.
-
-examples/composite
-^^^^^^^^^^^^^^^^^^
-
-  This example test a USB composite device.  The only supported composite is
-  CDC/ACM serial with a USB mass storage device.
-
-  Required overall configuration:
-
-  CONFIG_USBDEV=y           - USB device support
-  CONFIG_USBDEV_COMPOSITE=y - USB composite device support
-  CONFIG_COMPOSITE_IAD=y    - Interface associate descriptor needed
-
-  CONFIG_CDCACM=y           - USB CDC/ACM serial device support
-  CONFIG_CDCACM_COMPOSITE=y - USB CDC/ACM serial composite device support
-  CONFIG_CDCACM_IFNOBASE=0  - CDC/ACM interfaces start with number 0
-  CONFIG_CDCACM_STRBASE=4   - Base of string numbers (not really needed)
-  CONFIG_CDCACM_EPINTIN=1   - Endpoint numbers must be unique
-  CONFIG_CDCACM_EPBULKIN=2
-  CONFIG_CDCACM_EPBULKOUT=3
-
-  CONFIG_USBMSC             - USB mass storage device support
-  CONFIG_USBMSC_COMPOSITE=y - USB mass storage composite device support
-  CONFIG_USBMSC_IFNOBASE=2  - USB mass storage interfaces start with number 2
-  CONFIG_USBMSC_STRBASE=4   - Base of string numbers (needed)
-  CONFIG_USBMSC_EPBULKOUT=4 - Endpoint numbers must be unique
-  CONFIG_USBMSC_EPBULKIN=5
-
-  CONFIG_NSH_BUILTIN_APPS
-    This example can be built as two NSH "built-in" commands if this option
-    is selected: 'conn' will connect the USB composite device; 'msdis'
-    will disconnect the USB composite device.
-
-  Configuration options unique to this example:
-
-  CONFIG_EXAMPLES_COMPOSITE_DEBUGMM
-    Enables some debug tests to check for memory usage and memory leaks.
-
-  CONFIG_EXAMPLES_COMPOSITE_NLUNS
-    Defines the number of logical units (LUNs) exported by the USB storage
-    driver.  Each LUN corresponds to one exported block driver (or partition
-    of a block driver).  May be 1, 2, or 3.  Default is 1.
-  CONFIG_EXAMPLES_COMPOSITE_DEVMINOR1
-    The minor device number of the block driver for the first LUN. For
-    example, N in /dev/mmcsdN.  Used for registering the block driver. Default
-    is zero.
-  CONFIG_EXAMPLES_COMPOSITE_DEVPATH1
-    The full path to the registered block driver.  Default is "/dev/mmcsd0"
-  CONFIG_EXAMPLES_COMPOSITE_DEVMINOR2 and CONFIG_EXAMPLES_COMPOSITE_DEVPATH2
-    Similar parameters that would have to be provided if CONFIG_EXAMPLES_COMPOSITE_NLUNS
-    is 2 or 3.  No defaults.
-  CONFIG_EXAMPLES_COMPOSITE_DEVMINOR3 and CONFIG_EXAMPLES_COMPOSITE_DEVPATH2
-    Similar parameters that would have to be provided if CONFIG_EXAMPLES_COMPOSITE_NLUNS
-    is 3.  No defaults.
-  CONFIG_EXAMPLES_COMPOSITE_BUFLEN. Default 256.
-
-  CONFIG_EXAMPLES_COMPOSITE_TTYUSB - The minor number of the USB serial device.
-    Default is zero (corresponding to /dev/ttyUSB0 or /dev/ttyACM0).  Default is zero.
-  CCONFIG_EXAMPLES_COMPOSITE_SERDEV - The string corresponding to
-    CONFIG_EXAMPLES_COMPOSITE_TTYUSB.  The default is "/dev/ttyUSB0" (for the PL2303
-    emulation) or "/dev/ttyACM0" (for the CDC/ACM serial device).
-  CONFIG_EXAMPLES_COMPOSITE_BUFSIZE - The size of the serial I/O buffer in
-    bytes.  Default 256 bytes.
-
-  If CONFIG_USBDEV_TRACE is enabled (or CONFIG_DEBUG and CONFIG_DEBUG_USB), then
-  the example code will also manage the USB trace output.  The amount of trace output
-  can be controlled using:
-
-  CONFIG_EXAMPLES_COMPOSITE_TRACEINIT
-    Show initialization events
-  CONFIG_EXAMPLES_COMPOSITE_TRACECLASS
-    Show class driver events
-  CONFIG_EXAMPLES_COMPOSITE_TRACETRANSFERS
-    Show data transfer events
-  CONFIG_EXAMPLES_COMPOSITE_TRACECONTROLLER
-    Show controller events
-  CONFIG_EXAMPLES_COMPOSITE_TRACEINTERRUPTS
-    Show interrupt-related events.
+  This is a Unit Test for the MTD configuration data driver
 
 examples/cxxtest
 ^^^^^^^^^^^^^^^^
@@ -597,7 +480,6 @@ examples/hidkbd
       able and control ASCII characters will be provided to the user.
       Requires CONFIG_HIDKBD_ENCODED && CONFIG_LIB_KBDCODEC
 
-endif
 examples/igmp
 ^^^^^^^^^^^^^
 
@@ -617,6 +499,53 @@ examples/igmp
       Multicast group address
   * CONFIG_EXAMPLES_UIPLIB
       The UIP library is needed
+
+examples/adc
+^^^^^^^^^^^^
+
+  A mindlessly simple test of an I2C driver.  It reads an write garbage data to the
+  I2C transmitter and/or received as fast possible.
+
+  This test depends on these specific I2S/AUDIO/NSH configurations settings (your
+  specific I2S settings might require additional settings).
+
+    CONFIG_I2S - Enabled I2S support
+    CONFIG_AUDIO - Enabled audio support
+    CONFIG_AUDIO_DEVICES - Enable audio device support
+    CONFIG_AUDIO_I2SCHAR = Enabled support for the I2S character device
+    CONFIG_NSH_BUILTIN_APPS - Build the I2S test as an NSH built-in function.
+      Default: Built as a standalone problem
+
+  Specific configuration options for this example include:
+
+    CONFIG_EXAMPLES_I2SCHAR - Enables the I2C test
+    CONFIG_EXAMPLES_I2SCHAR_DEVPATH - The default path to the ADC device.
+      Default: /dev/i2schar0
+    CONFIG_EXAMPLES_I2SCHAR_TX - This should be set if the I2S device supports
+      a transmitter.
+    CONFIG_EXAMPLES_I2SCHAR_TXBUFFERS - This is the default number of audio
+      buffers to send before the TX transfers terminate.  When both TX and
+      RX transfers terminate, the task exits (and, if an NSH builtin, the
+      i2schar command returns).  This number can be changed from the NSH
+      command line.
+    CONFIG_EXAMPLES_I2SCHAR_TXSTACKSIZE - This is the stack size to use when
+      starting the transmitter thread.  Default 1536.
+    CONFIG_EXAMPLES_I2SCHAR_RX - This should be set if the I2S device supports
+      a transmitter.
+    CONFIG_EXAMPLES_I2SCHAR_RXBUFFERS - This is the default number of audio
+      buffers to receive before the RX transfers terminate.  When both TX and
+      RX transfers terminate, the task exits (and, if an NSH builtin, the
+      i2schar command returns).  This number can be changed from the NSH
+      command line.
+    CONFIG_EXAMPLES_I2SCHAR_RXSTACKSIZE - This is the stack size to use when
+      starting the receiver thread.  Default 1536.
+    CONFIG_EXAMPLES_I2SCHAR_BUFSIZE - The size of the data payload in one
+      audio buffer.  Applies to both TX and RX audio buffers.
+    CONFIG_EXAMPLES_I2SCHAR_DEVINIT - Define if architecture-specific I2S
+      device initialize is available.  If defined, the the platform specific
+      code must provide a function i2schar_devinit() that will be called
+      each time that this test executes.  Not available in the kernel build
+      mode.
 
 examples/json
 ^^^^^^^^^^^^^
@@ -1429,6 +1358,28 @@ examples/qencoder
       is defined, then this value is the default delay if no other delay is
       provided on the command line.  Default:  100 milliseconds
 
+examples/random
+^^^^^^^^^^^^^^^
+
+  This is a very simply test of /dev/random.  It simple collects random
+  numbers and displays them on the console.
+
+  Prerequistes:
+
+    CONFIG_DEV_RANDOM - Support for /dev/random must be enabled in order
+      to select this example.
+
+  Configuration:
+
+    CONFIG_EXAMPLES_RANDOM - Enables the /dev/random test
+    CONFIG_EXAMPLES_MAXSAMPLES - This is the size of the /dev/random I/O
+      buffer in units of 32-bit samples.  Careful!  This buffer is allocated
+      on the stack as needed! Default 64.
+    CONFIG_EXAMPLES_NSAMPLES; - When you execute the rand command, a number
+      of samples ranging from 1 to EXAMPLES_MAXSAMPLES may be specified.  If
+      no argument is specified, this is the default number of samples that\
+      will be collected and displayed.  Default 8
+
 examples/relays
 ^^^^^^^^^^^^^^^
 
@@ -1824,83 +1775,6 @@ examples/usbserial
 
     The host and target will exchange are variety of very small and very large
     serial messages.
-
-examples/usbmsc
-^^^^^^^^^^^^^^^
-
-  This example registers a block device driver, then exports the block
-  the device using the USB storage class driver.  In order to use this
-  example, your board-specific logic must provide the function:
-
-    void usbmsc_archinitialize(void);
-
-  This function will be called by the example/usbmsc in order to
-  do the actual registration of the block device drivers.  For examples
-  of the implementation of usbmsc_archinitialize() see
-  configs/mcu123-lpc124x/src/up_usbmsc.c or
-  configs/stm3210e-eval/src/usbmsc.c
-
-  Configuration options:
-
-  CONFIG_NSH_BUILTIN_APPS
-    This example can be built as two NSH "built-in" commands if this option
-    is selected: 'msconn' will connect the USB mass storage device; 'msdis'
-    will disconnect the USB storage device.
-  CONFIG_EXAMPLES_USBMSC_NLUNS
-    Defines the number of logical units (LUNs) exported by the USB storage
-    driver.  Each LUN corresponds to one exported block driver (or partition
-    of a block driver).  May be 1, 2, or 3.  Default is 1.
-  CONFIG_EXAMPLES_USBMSC_DEVMINOR1
-    The minor device number of the block driver for the first LUN. For
-    example, N in /dev/mmcsdN.  Used for registering the block driver. Default
-    is zero.
-  CONFIG_EXAMPLES_USBMSC_DEVPATH1
-    The full path to the registered block driver.  Default is "/dev/mmcsd0"
-  CONFIG_EXAMPLES_USBMSC_DEVMINOR2 and CONFIG_EXAMPLES_USBMSC_DEVPATH2
-    Similar parameters that would have to be provided if CONFIG_EXAMPLES_USBMSC_NLUNS
-    is 2 or 3.  No defaults.
-  CONFIG_EXAMPLES_USBMSC_DEVMINOR3 and CONFIG_EXAMPLES_USBMSC_DEVPATH3
-    Similar parameters that would have to be provided if CONFIG_EXAMPLES_USBMSC_NLUNS
-    is 3.  No defaults.
-  CONFIG_EXAMPLES_USBMSC_DEBUGMM
-    Enables some debug tests to check for memory usage and memory leaks.
-
-  If CONFIG_USBDEV_TRACE is enabled (or CONFIG_DEBUG and CONFIG_DEBUG_USB), then
-  the example code will also manage the USB trace output.  The amount of trace output
-  can be controlled using:
-
-  CONFIG_EXAMPLES_USBMSC_TRACEINIT
-    Show initialization events
-  CONFIG_EXAMPLES_USBMSC_TRACECLASS
-    Show class driver events
-  CONFIG_EXAMPLES_USBMSC_TRACETRANSFERS
-    Show data transfer events
-  CONFIG_EXAMPLES_USBMSC_TRACECONTROLLER
-    Show controller events
-  CONFIG_EXAMPLES_USBMSC_TRACEINTERRUPTS
-    Show interrupt-related events.
-
-  Error results are always shown in the trace output
-
-  NOTE 1: When built as an NSH add-on command (CONFIG_NSH_BUILTIN_APPS=y),
-  Caution should be used to assure that the SD drive (or other storage device) is
-  not in use when the USB storage device is configured.  Specifically, the SD
-  driver should be unmounted like:
-
-  nsh> mount -t vfat /dev/mmcsd0 /mnt/sdcard # Card is mounted in NSH
-  ...
-  nsh> umount /mnd/sdcard                    # Unmount before connecting USB!!!
-  nsh> msconn                                # Connect the USB storage device
-  ...
-  nsh> msdis                                 # Disconnect USB storate device
-  nsh> mount -t vfat /dev/mmcsd0 /mnt/sdcard # Restore the mount
-
-  Failure to do this could result in corruption of the SD card format.
-
-  NOTE 2: This test exercises internal USB device driver interfaces.  As such,
-  it relies on internal OS interfaces that are not normally available to a
-  user-space program.  As a result, this example cannot be used if a
-  NuttX is built as a protected, supervisor kernel (CONFIG_NUTTX_KERNEL).
 
 examples/usbterm
 ^^^^^^^^^^^^^^^^

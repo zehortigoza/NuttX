@@ -49,7 +49,7 @@
 # if !defined(CONFIG_DISABLE_MOUNTPOINT)
 #   ifdef CONFIG_FS_READABLE /* Need at least one filesytem in configuration */
 #     include <sys/mount.h>
-#     include <nuttx/ramdisk.h>
+#     include <nuttx/fs/ramdisk.h>
 #   endif
 #   ifdef CONFIG_FS_FAT
 #     include <nuttx/fs/mkfatfs.h>
@@ -104,6 +104,7 @@ typedef int (*direntry_handler_t)(FAR struct nsh_vtbl_s *, const char *,
  * Private Data
  ****************************************************************************/
 
+#if CONFIG_NFILE_DESCRIPTORS > 0
 /* Common buffer for file I/O.  Note the use of this common buffer precludes
  * multiple copies of NSH running concurrently.  It should be allocated per
  * NSH instance and retained in the "vtbl" as is done for the telnet
@@ -111,6 +112,7 @@ typedef int (*direntry_handler_t)(FAR struct nsh_vtbl_s *, const char *,
  */
 
 static char g_iobuffer[IOBUFFERSIZE];
+#endif
 
 /****************************************************************************
  * Public Data
@@ -142,6 +144,7 @@ static void trim_dir(char *arg)
  * Name: nsh_getdirpath
  ****************************************************************************/
 
+#if CONFIG_NFILE_DESCRIPTORS > 0
 static char *nsh_getdirpath(const char *path, const char *file)
 {
   /* Handle the case where all that is left is '/' */
@@ -158,6 +161,7 @@ static char *nsh_getdirpath(const char *path, const char *file)
   g_iobuffer[PATH_MAX] = '\0';
   return strdup(g_iobuffer);
 }
+#endif
 
 /****************************************************************************
  * Name: foreach_direntry
@@ -232,7 +236,8 @@ static inline int ls_specialdir(const char *dir)
  ****************************************************************************/
 
 #if CONFIG_NFILE_DESCRIPTORS > 0
-static int ls_handler(FAR struct nsh_vtbl_s *vtbl, const char *dirpath, struct dirent *entryp, void *pvarg)
+static int ls_handler(FAR struct nsh_vtbl_s *vtbl, FAR const char *dirpath,
+                      FAR struct dirent *entryp, FAR void *pvarg)
 {
   unsigned int lsflags = (unsigned int)pvarg;
   int ret;
@@ -244,18 +249,19 @@ static int ls_handler(FAR struct nsh_vtbl_s *vtbl, const char *dirpath, struct d
       struct stat buf;
 
       /* stat the file */
-      if (entryp != NULL) 
-      {
+
+      if (entryp != NULL)
+        {
           char *fullpath = nsh_getdirpath(dirpath, entryp->d_name);
           ret = stat(fullpath, &buf);
           free(fullpath);
-      } 
-      else 
-      {
-          /* a NULL entryp signifies that we are running ls on a
-             single file */
+        }
+      else
+        {
+          /* A NULL entryp signifies that we are running ls on a single file */
+
           ret = stat(dirpath, &buf);
-      }
+        }
 
       if (ret != 0)
         {
@@ -333,29 +339,31 @@ static int ls_handler(FAR struct nsh_vtbl_s *vtbl, const char *dirpath, struct d
         }
     }
 
-  /* then provide the filename that is common to normal and verbose output */
+  /* Then provide the filename that is common to normal and verbose output */
 
-  if (entryp != NULL) 
-  {
+  if (entryp != NULL)
+    {
 #ifdef CONFIG_NSH_FULLPATH
       nsh_output(vtbl, " %s/%s", arg, entryp->d_name);
 #else
       nsh_output(vtbl, " %s", entryp->d_name);
 #endif
-      if (DIRENT_ISDIRECTORY(entryp->d_type) && !ls_specialdir(entryp->d_name))
-      {
+      if (DIRENT_ISDIRECTORY(entryp->d_type) &&
+          !ls_specialdir(entryp->d_name))
+        {
           nsh_output(vtbl, "/\n");
-      }
+        }
       else
-      {
+        {
           nsh_output(vtbl, "\n");
-      }
-  } 
-  else 
-  {
-      /* a single file */
+        }
+    }
+  else
+    {
+      /* A single file */
+
       nsh_output(vtbl, " %s\n", dirpath);
-  }
+    }
 
   return OK;
 }
@@ -864,6 +872,7 @@ errout_with_paths:
     {
       free(filepath);
     }
+
   return ret;
 }
 #endif
@@ -877,12 +886,12 @@ errout_with_paths:
 #ifndef CONFIG_NSH_DISABLE_LS
 int cmd_ls(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
 {
+  struct stat st;
   const char *relpath;
   unsigned int lsflags = 0;
   char *fullpath;
   bool badarg = false;
   int ret;
-  struct stat st;
 
   /* Get the ls options */
 
@@ -947,22 +956,34 @@ int cmd_ls(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
       return ERROR;
     }
 
-  /* see if it is a single file */
-  if (stat(fullpath, &st) == 0 && !S_ISDIR(st.st_mode)) {
-      /* pass a null dirent to ls_handler to signify that this is a
-         single file */
+  /* See if it is a single file */
+
+  if (stat(fullpath, &st) < 0)
+    {
+      nsh_output(vtbl, g_fmtcmdfailed, argv[0], "stat", NSH_ERRNO);
+      ret = ERROR;
+    }
+  else if (!S_ISDIR(st.st_mode))
+    {
+      /* Pass a null dirent to ls_handler to signify that this is a single
+       * file
+       */
+
       ret = ls_handler(vtbl, fullpath, NULL, (void*)lsflags);
-  } else {
+    }
+  else
+    {
       /* List the directory contents */
+
       nsh_output(vtbl, "%s:\n", fullpath);
       ret = foreach_direntry(vtbl, "ls", fullpath, ls_handler, (void*)lsflags);
       if (ret == OK && (lsflags & LSFLAGS_RECURSIVE) != 0)
-      {
+        {
           /* Then recurse to list each directory within the directory */
 
           ret = foreach_direntry(vtbl, "ls", fullpath, ls_recursive, (void*)lsflags);
-      }
-  }
+        }
+    }
 
   nsh_freefullpath(fullpath);
   return ret;
@@ -988,6 +1009,7 @@ int cmd_mkdir(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
         {
           nsh_output(vtbl, g_fmtcmdfailed, argv[0], "mkdir", NSH_ERRNO);
         }
+
       nsh_freefullpath(fullpath);
     }
   return ret;
@@ -1004,18 +1026,80 @@ int cmd_mkdir(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
 int cmd_mkfatfs(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
 {
   struct fat_format_s fmt = FAT_FORMAT_INITIALIZER;
-  char *fullpath = nsh_getfullpath(vtbl, argv[1]);
+  FAR char *fullpath;
+  bool badarg;
+  int option;
   int ret = ERROR;
 
-  if (fullpath)
+  /* mkfatfs [-F <fatsize>] <block-driver> */
+
+  badarg = false;
+  while ((option = getopt(argc, argv, ":F:")) != ERROR)
     {
-      ret = mkfatfs(fullpath, &fmt);
-      if (ret < 0)
+      switch (option)
         {
-          nsh_output(vtbl, g_fmtcmdfailed, argv[0], "mkfatfs", NSH_ERRNO);
+          case 'F':
+            fmt.ff_fattype = atoi(optarg);
+            if (fmt.ff_fattype != 0  && fmt.ff_fattype != 12 &&
+                fmt.ff_fattype != 16 && fmt.ff_fattype != 32)
+              {
+                nsh_output(vtbl, g_fmtargrange, argv[0]);
+                badarg = true;
+              }
+            break;
+
+         case ':':
+            nsh_output(vtbl, g_fmtargrequired, argv[0]);
+            badarg = true;
+            break;
+
+          case '?':
+          default:
+            nsh_output(vtbl, g_fmtarginvalid, argv[0]);
+            badarg = true;
+            break;
         }
-      nsh_freefullpath(fullpath);
     }
+
+  /* If a bad argument was encountered, then return without processing the command */
+
+  if (badarg)
+    {
+      return ERROR;
+    }
+
+  /* There should be exactly one parameter left on the command-line */
+
+  if (optind == argc-1)
+    {
+      fullpath = nsh_getfullpath(vtbl, argv[optind]);
+      if (!fullpath)
+        {
+          nsh_output(vtbl, g_fmtcmdfailed, argv[0], "nsh_getfullpath",
+                     NSH_ERRNO);
+          return ERROR;
+        }
+    }
+  else if (optind >= argc)
+    {
+      nsh_output(vtbl, g_fmttoomanyargs, argv[0]);
+      return ERROR;
+    }
+  else
+    {
+      nsh_output(vtbl, g_fmtargrequired, argv[0]);
+      return ERROR;
+    }
+
+  /* Now format the FAT file system */
+
+  ret = mkfatfs(fullpath, &fmt);
+  if (ret < 0)
+    {
+      nsh_output(vtbl, g_fmtcmdfailed, argv[0], "mkfatfs", NSH_ERRNO);
+    }
+
+  nsh_freefullpath(fullpath);
   return ret;
 }
 #endif
@@ -1039,8 +1123,10 @@ int cmd_mkfifo(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
         {
           nsh_output(vtbl, g_fmtcmdfailed, argv[0], "mkfifo", NSH_ERRNO);
         }
+
       nsh_freefullpath(fullpath);
     }
+
   return ret;
 }
 #endif
@@ -1107,7 +1193,7 @@ int cmd_mkrd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
       return ERROR;
     }
 
-  /* There should be exactly on parameter left on the command-line */
+  /* There should be exactly one parameter left on the command-line */
 
   if (optind == argc-1)
     {
@@ -1147,6 +1233,7 @@ int cmd_mkrd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
       free(buffer);
       return ERROR;
     }
+
   return ret;
 
 errout_with_fmt:
@@ -1269,8 +1356,10 @@ int cmd_rm(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
         {
           nsh_output(vtbl, g_fmtcmdfailed, argv[0], "unlink", NSH_ERRNO);
         }
+
       nsh_freefullpath(fullpath);
     }
+
   return ret;
 }
 #endif
@@ -1294,8 +1383,10 @@ int cmd_rmdir(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
         {
           nsh_output(vtbl, g_fmtcmdfailed, argv[0], "rmdir", NSH_ERRNO);
         }
+
       nsh_freefullpath(fullpath);
     }
+
   return ret;
 }
 #endif

@@ -64,11 +64,11 @@
 #  undef HAVE_AT25
 #endif
 
-#ifndef CONFIG_EXAMPLES_USBMSC_DEVMINOR1
-#  define CONFIG_EXAMPLES_USBMSC_DEVMINOR1 0
+#ifndef CONFIG_SYSTEM_USBMSC_DEVMINOR1
+#  define CONFIG_SYSTEM_USBMSC_DEVMINOR1 0
 #endif
 
-#if CONFIG_EXAMPLES_USBMSC_DEVMINOR1 != AT25_MINOR
+#if CONFIG_SYSTEM_USBMSC_DEVMINOR1 != AT25_MINOR
 #  error Confusion in the assignment of minor device numbers
 #  undef HAVE_AT25
 #endif
@@ -110,10 +110,10 @@ int usbmsc_archinitialize(void)
   /* Initialize the AT25 MTD driver */
 
 #ifdef HAVE_AT25
-  int ret = sam_at25_initialize(AT25_MINOR);
+  int ret = sam_at25_automount(AT25_MINOR);
   if (ret < 0)
     {
-      message("ERROR: sam_at25_initialize failed: %d\n", ret);
+      message("ERROR: sam_at25_automount failed: %d\n", ret);
     }
 
   return ret;

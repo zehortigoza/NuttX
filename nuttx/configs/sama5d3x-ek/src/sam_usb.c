@@ -1,5 +1,5 @@
 /************************************************************************************
- * configs/sama5d3x-ek/src/up_usb.c
+ * configs/sama5d3x-ek/src/sam_usb.c
  *
  *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -90,7 +90,7 @@ static struct usbhost_connection_s *g_ehciconn;
 /* Overcurrent interrupt handler */
 
 #if defined(HAVE_USBHOST) && defined(CONFIG_SAMA5_PIOD_IRQ)
-static xcpt_t *g_ochandler;
+static xcpt_t g_ochandler;
 #endif
 
 /************************************************************************************
@@ -309,7 +309,9 @@ int sam_usbhost_initialize(void)
   int ret;
 
   /* First, register all of the class drivers needed to support the drivers
-   * that we care about:
+   * that we care about
+   *
+   * Register theUSB host Mass Storage Class:
    */
 
   ret = usbhost_storageinit();
@@ -317,6 +319,16 @@ int sam_usbhost_initialize(void)
     {
       udbg("ERROR: Failed to register the mass storage class: %d\n", ret);
     }
+
+  /* Register the USB host HID keyboard class driver */
+
+  ret = usbhost_kbdinit();
+  if (ret != OK)
+    {
+      udbg("ERROR: Failed to register the KBD class\n");
+    }
+
+  /* Then get an instance of the USB host interface. */
 
 #ifdef CONFIG_SAMA5_OHCI
   /* Get an instance of the USB OHCI interface */
@@ -330,7 +342,7 @@ int sam_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  pid = TASK_CREATE("usbhost", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
+  pid = TASK_CREATE("OHCI Monitor", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
                     (main_t)ohci_waiter, (FAR char * const *)NULL);
   if (pid < 0)
     {
@@ -351,7 +363,7 @@ int sam_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  pid = TASK_CREATE("usbhost", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
+  pid = TASK_CREATE("EHCI Monitor", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
                     (main_t)ehci_waiter, (FAR char * const *)NULL);
   if (pid < 0)
     {
@@ -476,8 +488,8 @@ xcpt_t sam_setup_overcurrent(xcpt_t handler)
 
   /* Get the old button interrupt handler and save the new one */
 
-  oldhandler = *g_ochandler;
-  *g_ochandler = handler;
+  oldhandler  = g_ochandler;
+  g_ochandler = handler;
 
   /* Configure the interrupt */
 
@@ -515,4 +527,4 @@ void sam_usbsuspend(FAR struct usbdev_s *dev, bool resume)
 }
 #endif
 
-#endif /* CONFIG_SAMA5_UHPHS || CONFIG_SAMA5_UDPHS*/
+#endif /* CONFIG_SAMA5_UHPHS || CONFIG_SAMA5_UDPHS */

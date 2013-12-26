@@ -60,7 +60,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/i2c.h>
-#include <nuttx/mtd.h>
+#include <nuttx/mtd/mtd.h>
 
 #ifdef CONFIG_MTD_AT24XX
 
@@ -428,6 +428,12 @@ FAR struct mtd_dev_s *at24c_initialize(FAR struct i2c_dev_s *dev)
       priv->mtd.ioctl  = at24c_ioctl;
       priv->dev        = dev;
     }
+
+  /* Register the MTD with the procfs system if enabled */
+
+#ifdef CONFIG_MTD_REGISTRATION
+  mtd_register(&priv->mtd, "at24xx");
+#endif
 
   /* Return the implementation-specific state structure as the MTD device */
 

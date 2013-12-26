@@ -58,9 +58,12 @@
 #define HAVE_HSMCI      1
 #define HAVE_AT24       1
 #define HAVE_AT25       1
+#define HAVE_NAND       1
 #define HAVE_USBHOST    1
 #define HAVE_USBDEV     1
 #define HAVE_USBMONITOR 1
+#define HAVE_NETWORK    1
+#define HAVE_CAMERA     1
 
 /* HSMCI */
 /* Can't support MMC/SD if the card interface(s) are not enable */
@@ -81,6 +84,51 @@
 #if defined(HAVE_HSMCI) && !defined(CONFIG_SAMA5_PIOD_IRQ)
 #  warning PIOD interrupts not enabled.  No MMC/SD support.
 #  undef HAVE_HSMCI
+#endif
+
+/* NAND FLASH */
+/* Can't support the NAND device if NAND flash is not configured on EBI CS3 */
+
+#ifndef CONFIG_SAMA5_EBICS3_NAND
+#  undef HAVE_NAND
+#endif
+
+/* Can't support NAND features if mountpoints are disabled or if we were not
+ * asked to mount the NAND part
+ */
+
+#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5_NAND_AUTOMOUNT)
+#  undef HAVE_NAND
+#endif
+
+/* Can't support NAND if the MTD feature is not enabled */
+
+#if !defined(CONFIG_MTD) || !defined(CONFIG_MTD_NAND)
+#  undef HAVE_NAND
+#endif
+
+/* If we are going to mount the NAND, then they user must also have told
+ * us what to do with it by setting one of CONFIG_SAMA5_NAND_FTL or
+ * CONFIG_SAMA5_NAND_NXFFS.
+ */
+
+#ifndef CONFIG_MTD
+#  undef CONFIG_SAMA5_NAND_NXFFS
+#  undef CONFIG_SAMA5_NAND_FTL
+#endif
+
+#if !defined(CONFIG_FS_NXFFS) || !defined(CONFIG_NXFFS_NAND)
+#  undef CONFIG_SAMA5_NAND_NXFFS
+#endif
+
+#if !defined(CONFIG_SAMA5_NAND_FTL) && !defined(CONFIG_SAMA5_NAND_NXFFS)
+#  undef HAVE_NAND
+#endif
+
+#if defined(CONFIG_SAMA5_NAND_FTL) && defined(CONFIG_SAMA5_NAND_NXFFS)
+#  warning Both CONFIG_SAMA5_NAND_FTL and CONFIG_SAMA5_NAND_NXFFS are set
+#  warning Ignoring CONFIG_SAMA5_NAND_NXFFS
+#  undef CONFIG_SAMA5_NAND_NXFFS
 #endif
 
 /* AT25 Serial FLASH */
@@ -166,15 +214,28 @@
 #  undef CONFIG_SAMA5_AT24_NXFFS
 #endif
 
-/* Assign minor device numbers.  We will also use MINOR number 0 for the AT25.
- * It should appear as /dev/mtdblock0
+/* Assign minor device numbers.  For example, if we also use MINOR number 0
+ * for the AT25, it should appear as /dev/mtdblock0
  */
 
-#ifdef HAVE_AT25
-#  define AT25_MINOR 0
-#  define AT24_MINOR 1
+#define _NAND_MINOR 0
+
+#ifdef HAVE_NAND
+#  define NAND_MINOR  _NAND_MINOR
+#  define _AT25_MINOR (_NAND_MINOR+1)
 #else
-#  define AT24_MINOR 0
+#  define _AT25_MINOR _NAND_MINOR
+#endif
+
+#ifdef HAVE_AT25
+#  define AT25_MINOR  _AT25_MINOR
+#  define _AT24_MINOR (_AT25_MINOR+1)
+#else
+#  define _AT24_MINOR _AT25_MINOR
+#endif
+
+#ifdef HAVE_AT24
+#  define AT24_MINOR  _AT24_MINOR
 #endif
 
 /* MMC/SD minor numbers:  The NSH device minor extended is extened to support
@@ -249,6 +310,30 @@
 
 #if !defined(CONFIG_USBDEV_TRACE) && !defined(CONFIG_USBHOST_TRACE)
 #  undef HAVE_USBMONITOR
+#endif
+
+/* Networking */
+
+#if !defined(CONFIG_NET) || (!defined(CONFIG_SAMA5_EMAC) && !defined(CONFIG_SAMA5_GMAC))
+#  undef HAVE_NETWORK
+#endif
+
+/* Camera */
+
+#define OV2640_BUS 1
+
+#ifndef CONFIG_SAMA5_OV2640_DEMO
+#  undef HAVE_CAMERA
+#endif
+
+#if defined(HAVE_CAMERA) && !defined(CONFIG_SAMA5_ISI)
+#  warning OV2640 camera demo requires CONFIG_SAMA5_ISI
+#  undef HAVE_CAMERA
+#endif
+
+#if defined(HAVE_CAMERA) && !defined(CONFIG_SAMA5_TWI1)
+#  warning OV2640 camera demo requires CONFIG_SAMA5_TWI1
+#  undef HAVE_CAMERA
 #endif
 
 /* LEDs *****************************************************************************/
@@ -410,6 +495,53 @@
 #define IRQ_USBBC_VBUS_OVERCURRENT \
                      SAM_IRQ_PD28
 
+/* Ethernet */
+
+#ifdef CONFIG_SAMA4_EMAC
+ /* ETH1: Ethernet 10/100 (EMAC) Port
+  *
+  * The main board contains a MICREL PHY device (KSZ8051) operating at 10/100 Mbps.
+  * The board supports MII and RMII interface modes.
+  *
+  * The two independent PHY devices embedded on CM and MB boards are connected to
+  * independent RJ-45 connectors with built-in magnetic and status LEDs.
+  *
+  * At the De-Assertion of Reset:
+  *   PHY ADD[2:0]:001
+  *   CONFIG[2:0]:001,Mode:RMII
+  *   Duplex Mode:Half Duplex
+  *   Isolate Mode:Disable
+  *   Speed Mode:100Mbps
+  *   Nway Auto-Negotiation:Enable
+  *
+  * The KSZ8051 PHY interrtup is available on PE30 INT_ETH1
+  */
+
+#define PIO_INT_ETH1 (PIO_INPUT | PIO_CFG_PULLUP | PIO_CFG_DEGLITCH | \
+                      PIO_INT_BOTHEDGES | PIO_PORT_PIOE | PIO_PIN30)
+#define IRQ_INT_ETH1 SAM_IRQ_PE30
+
+#endif
+
+#ifdef CONFIG_SAMA4_GMAC
+  /* ETH0: Tri-Speed Ethernet PHY
+   *
+   * The SAMA5D3 series-CM board is equipped with a MICREL PHY devices (MICREL
+   * KSZ9021/31) operating at 10/100/1000 Mbps. The board supports RGMII interface
+   * mode. The Ethernet interface consists of 4 pairs of low voltage differential
+   * pair signals designated from GRX± and GTx± plus control signals for link
+   * activity indicators. These signals can be used to connect to a 10/100/1000
+   * BaseT RJ45 connector integrated on the main board.
+   *
+   * The KSZ9021/31 interrupt is available on PB35 INT_GETH0
+   */
+
+#define PIO_INT_ETH0 (PIO_INPUT | PIO_CFG_PULLUP | PIO_CFG_DEGLITCH | \
+                      PIO_INT_BOTHEDGES | PIO_PORT_PIOB | PIO_PIN25)
+#define IRQ_INT_ETH0 SAM_IRQ_PB25
+
+#endif
+
 /* SPI Chip Selects *****************************************************************/
 /* Both the Ronetix and Embest versions of the SAMAD3x CPU modules include an
  * Atmel AT25DF321A, 32-megabit, 2.7-volt SPI serial flash.  The SPI
@@ -495,7 +627,19 @@ void sam_sdram_config(void);
 #endif
 
 /****************************************************************************
- * Name: sam_at25_initialize
+ * Name: sam_nand_automount
+ *
+ * Description:
+ *   Initialize and configure the NAND on CS3
+ *
+ ****************************************************************************/
+
+#ifdef HAVE_NAND
+int sam_nand_automount(int minor);
+#endif
+
+/****************************************************************************
+ * Name: sam_at25_automount
  *
  * Description:
  *   Initialize and configure the AT25 serial FLASH
@@ -503,11 +647,11 @@ void sam_sdram_config(void);
  ****************************************************************************/
 
 #ifdef HAVE_AT25
-int sam_at25_initialize(int minor);
+int sam_at25_automount(int minor);
 #endif
 
 /****************************************************************************
- * Name: sam_at24_initialize
+ * Name: sam_at24_automount
  *
  * Description:
  *   Initialize and configure the AT24 serial EEPROM
@@ -515,7 +659,7 @@ int sam_at25_initialize(int minor);
  ****************************************************************************/
 
 #ifdef HAVE_AT24
-int sam_at24_initialize(int minor);
+int sam_at24_automount(int minor);
 #endif
 
 /****************************************************************************
@@ -559,7 +703,7 @@ bool sam_writeprotected(int slotno);
  *
  * Description:
  *   Called from sam_usbinitialize very early in inialization to setup USB-related
- *   GPIO pins for the STM32F4Discovery board.
+ *   PIO pins for the SAMA5D3x-EK board.
  *
  ************************************************************************************/
 
@@ -581,11 +725,41 @@ int sam_usbhost_initialize(void);
 #endif
 
 /************************************************************************************
+ * Name: sam_netinitialize
+ *
+ * Description:
+ *   Configure board resources to support networking.
+ *
+ ************************************************************************************/
+
+#ifdef HAVE_NETWORK
+void weak_function sam_netinitialize(void);
+#endif
+
+/************************************************************************************
  * Name: up_ledinit
  ************************************************************************************/
 
 #ifdef CONFIG_ARCH_LEDS
 void up_ledinit(void);
+#endif
+
+/************************************************************************************
+ * Name: nsh_archinitialize
+ *
+ * Description:
+ *   Perform architecture specific initialization for NSH.
+ *
+ *   CONFIG_NSH_ARCHINIT=y :
+ *     Called from the NSH library
+ *
+ *   CONFIG_BOARD_INITIALIZE=y, CONFIG_NSH_LIBRARY=y, && CONFIG_NSH_ARCHINIT=n :
+ *     Called from board_initialize().
+ *
+ ************************************************************************************/
+
+#ifdef CONFIG_NSH_LIBRARY
+int nsh_archinitialize(void);
 #endif
 
 #endif /* __ASSEMBLY__ */

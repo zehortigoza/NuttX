@@ -49,6 +49,7 @@
 #include "pg_macros.h"
 
 #include "chip.h"
+#include "up_internal.h"
 
 	.file	"arm_pghead.S"
 
@@ -246,8 +247,33 @@ __start:
 	teq		r0, r2
 	bne		.Lpgtableclear
 
+#ifdef ARMV7A_PGTABLE_MAPPING
+	/* If the page table does not lie in the same address space as does the
+	 * mapped RAM in either case.  So we will need to create a special
+	 * mapping for the page table.
+	 *
+	 * Load information needed to map the page table.  After the ldmia, we
+	 * will have
+	 *
+	 *   R1 = The aligned, physical base address of the page table
+	 *   R2 = The aligned, virtual base address of the page table
+	 *   R3 = The MMU flags to use with the .text space mapping
+	 *   R5 = The physical address of the L1 page table (from above)
+	 *
+	 * The value in R1 could have been obtained by simply masking R5.
+	 */
+
+	adr		r0, .LCptinfo			/* Address of page table description */
+	ldmia	r0, {r1, r2, r3}		/* Load the page table description */
+
+	/* A single page is sufficient to map the page table */
+
+	orr		r0, r1, r3				/* OR MMU flags into physical address */
+	str		r0, [r5, r2, lsr #18]	/* Map using the virtual address as an index */
+#endif
+
 	/* Create identity mapping for first MB of the .text section to support
-	 * this startup logic executing out of the physical address space.  This
+	 * this start-up logic executing out of the physical address space.  This
 	 * identity mapping will be removed by .Lvstart (see below).  Of course,
 	 * we would only do this if the physical-virtual mapping is not already
 	 * the identity mapping.
@@ -317,8 +343,11 @@ __start:
 	 */
 
 	mov		r0, #0
-	mcr		CP15_ICIALLUIS(r0)	/* Invalidate entire instruction cache Inner Shareable */
-	mcr		CP15_TLBIALLIS(r0)	/* Invalidate entire Unified TLB Inner Shareable */
+	mcr		CP15_TLBIALL(r0,c7)	/* Invalidate the entire unified TLB */
+	mcr		CP15_TLBIALL(r0,c6)
+	mcr		CP15_TLBIALL(r0,c5)
+	mcr		CP15_BPIALL(r0)		/* Invalidate entire branch prediction array */
+	mcr		CP15_ICIALLU(r0)	/* Invalidate I-cache */
 
 	/* Load the page table address.
 	 *
@@ -334,8 +363,9 @@ __start:
 	 *   r4 = Address of the base of the L1 table
 	 */
 
-	mcr		CP15_TTBR0(r4)
-	mcr		CP15_TTBR1(r4)
+	orr		r1, r4, #0x48
+	mcr		CP15_TTBR0(r1)
+	mcr		CP15_TTBR1(r1)
 
 	/* Set the TTB control register (TTBCR) to indicate that we are using
 	 * TTBR0.  r0 still holds the value of zero.
@@ -395,8 +425,11 @@ __start:
 	 *   SCTLR_Z     Bit 11: Program flow prediction control always enabled on A5
 	 */
 
-	orr		r0, r0, #(SCTLR_M /* | SCTLR_Z */)
-	
+	orr		r0, r0, #(SCTLR_M)
+#ifndef CONFIG_ARCH_CORTEXA5
+	orr		r0, r0, #(SCTLR_Z)
+#endif
+
 	/* Position vectors to 0xffff0000 if so configured.
 	 *
 	 *   SCTLR_V    Bit 13: High vectors
@@ -412,7 +445,8 @@ __start:
 	 *                      replacement strategy.
 	 */
 
-#ifndef CPU_CACHE_ROUND_ROBIN
+#if defined(CPU_CACHE_ROUND_ROBIN) && !defined(CONFIG_ARCH_CORTEXA5)
+	orr		r0, r0, #(SCTLR_RR)
 #endif
 
 	/* Dcache enable
@@ -480,6 +514,23 @@ __start:
 .LCvstart:
 	.long	.Lvstart
 	.size	.LCvstart, . -.LCvstart
+
+#ifdef ARMV7A_PGTABLE_MAPPING
+	/* Page table region description.  The order of these fields must not
+	 * change because the values are loaded using ldmia:
+	 *
+	 * 1) The aligned, physical base address of the page table
+	 * 2) The aligned, virtual base address of the page table
+	 * 3) The MMU flags to use with the .text space mapping
+	 */
+
+	.type	.LCptinfo, %object
+.LCptinfo:
+	.long	(PGTABLE_BASE_PADDR & 0xfff00000)	/* Physical base address */
+	.long	(PGTABLE_BASE_VADDR & 0xfff00000)	/* Virtual base address */
+	.long	MMU_MEMFLAGS						/* MMU flags for text section in RAM */
+	.size	.LCptinfo, . -.LCptinfo
+#endif
 
 	/* The aligned, physical base address of the .text section */
 
@@ -654,10 +705,26 @@ __start:
 
 	bl		up_boot
 
+#ifdef CONFIG_DEBUG_STACK
+	/* Write a known value to the IDLE thread stack to support stack
+	 * monitoring logic
+	 */
+
+	adr		r3, .Lstkinit
+	ldmia	r3, {r0, r1, r2}	/* R0 = start of IDLE stack; R1 = Size of tack; R2 = coloration */
+
+2:								/* Top of the loop */
+	sub		r1, r1, #1			/* R1 = Number of words remaining */
+	cmp		r1, #0				/* Check (nwords == 0) */
+	str		r2, [r0], #4		/* Save stack color word, increment stack address */
+	bne		2b					/* Bottom of the loop */
+
+#endif
+
 	/* Finally branch to the OS entry point */
 
-	mov		lr, #0
-	b		os_start
+	mov		lr, #0				/* LR = return address (none) */
+	b		os_start			/* Branch to os_start */
 
 	/* Text-section constants:
 	 *
@@ -678,27 +745,36 @@ __start:
 
 	.type	.Ldataspan, %object
 .Ldataspan:
-	.long	PG_L1_DATA_VADDR	/* Virtual address in the L1 table */
-	.long	PG_L2_DATA_PBASE	/* Physical address of the start of the L2 page table */
-	.long	PG_DATA_NPAGES		/* Number of pages in the data region */
-	.long	PG_L2_DATA_NPAGE1	/* The number of text pages in the first page table */
-	.long	MMU_L1_DATAFLAGS	/* L1 MMU flags to use */
+	.long	PG_L1_DATA_VADDR		/* Virtual address in the L1 table */
+	.long	PG_L2_DATA_PBASE		/* Physical address of the start of the L2 page table */
+	.long	PG_DATA_NPAGES			/* Number of pages in the data region */
+	.long	PG_L2_DATA_NPAGE1		/* The number of text pages in the first page table */
+	.long	MMU_L1_DATAFLAGS		/* L1 MMU flags to use */
 	.size	.Ldataspan, . -.Ldataspan
 
 	.type	.Ldatamap, %object
 .Ldatamap:
-	.long	PG_L2_DATA_VADDR	/* Virtual address in the L2 table */
-	.long	PG_DATA_PBASE		/* Physical address of data memory  */
-	.long	PG_DATA_NPAGES		/* Number of pages in the data region */
-	.long	MMU_L2_DATAFLAGS	/* L2 MMU flags to use */
+	.long	PG_L2_DATA_VADDR		/* Virtual address in the L2 table */
+	.long	PG_DATA_PBASE			/* Physical address of data memory  */
+	.long	PG_DATA_NPAGES			/* Number of pages in the data region */
+	.long	MMU_L2_DATAFLAGS		/* L2 MMU flags to use */
 	.size	.Ldatamap, . -.Ldatamap
 
 	.type	.Ldatainit, %object
 .Ldatainit:
-	.long	_eronly			/* Where .data defaults are stored in FLASH */
-	.long	_sdata			/* Where .data needs to reside in SDRAM */
+	.long	_eronly					/* Where .data defaults are stored in FLASH */
+	.long	_sdata					/* Where .data needs to reside in SDRAM */
 	.long	_edata
 	.size	.Ldatainit, . -.Ldatainit
+
+#ifdef CONFIG_DEBUG_STACK
+	.type	.Lstkinit, %object
+.Lstkinit:
+	.long	_ebss					/* Beginning of the IDLE stack, then words of IDLE stack */
+	.long	(CONFIG_IDLETHREAD_STACKSIZE >> 2)
+	.long	STACK_COLOR				/* Stack coloration word */
+	.size	.Lstkinit, . -.Lstkinit
+#endif
 
 	.size	.Lvstart, .-.Lvstart
 

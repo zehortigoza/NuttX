@@ -240,14 +240,6 @@ struct uart_dev_s
   struct pollfd *fds[CONFIG_SERIAL_NPOLLWAITERS];
 #endif
 
-  /* Terminal control flags */
-
-#ifdef CONFIG_SERIAL_TERMIOS
-  tcflag_t  tc_iflag;        /* Input modes */
-  tcflag_t  tc_oflag;        /* Output modes */
-  tcflag_t  tc_lflag;        /* Local modes */
-#endif
-
 };
 
 typedef struct uart_dev_s uart_dev_t;

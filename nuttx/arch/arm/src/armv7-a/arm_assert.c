@@ -121,7 +121,7 @@ static void up_stackdump(uint32_t sp, uint32_t stack_base)
     }
 }
 #else
-# define up_stackdump()
+#  define up_stackdump(sp,stack_base)
 #endif
 
 /****************************************************************************
@@ -186,7 +186,7 @@ static void up_dumpstate(void)
   /* Get the limits on the interrupt stack memory */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
-  istackbase = (uint32_t)&g_userstack;
+  istackbase = (uint32_t)&g_intstackbase;
   istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~3) - 4;
 
   /* Show interrupt stack info */
@@ -200,6 +200,13 @@ static void up_dumpstate(void)
    * stack?
    */
 
+  if (sp > istackbase || sp <= istackbase - istacksize)
+    {
+      if (up_interrupt_context())
+        {
+          lldbg("ERROR: Stack pointer is not within interrupt stack\n");
+        }
+    }
   if (sp <= istackbase && sp > istackbase - istacksize)
     {
       /* Yes.. dump the interrupt stack */
@@ -210,7 +217,7 @@ static void up_dumpstate(void)
        * at the base of the interrupt stack.
        */
 
-      sp = g_userstack;
+      sp = g_intstackbase;
       lldbg("sp:     %08x\n", sp);
     }
 
@@ -231,9 +238,12 @@ static void up_dumpstate(void)
 
   if (sp > ustackbase || sp <= ustackbase - ustacksize)
     {
-#if !defined(CONFIG_ARCH_INTERRUPTSTACK) || CONFIG_ARCH_INTERRUPTSTACK < 4
-      lldbg("ERROR: Stack pointer is not within allocated stack\n");
+#if defined(CONFIG_ARCH_INTERRUPTSTACK) && CONFIG_ARCH_INTERRUPTSTACK > 3
+      if (!up_interrupt_context())
 #endif
+        {
+          lldbg("ERROR: Stack pointer is not within allocated stack\n");
+        }
     }
   else
     {

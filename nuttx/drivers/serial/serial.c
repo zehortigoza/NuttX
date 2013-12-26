@@ -405,7 +405,6 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
   uart_disabletxint(dev);
   for (; buflen; buflen--)
     {
-
       ch  = *buffer++;
       ret = OK;
 
@@ -491,6 +490,7 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
  
               nwritten = ret;
             }
+        }
 
       if (ret != OK)
         { 
@@ -1282,7 +1282,6 @@ void uart_datareceived(FAR uart_dev_t *dev)
   /* Notify all poll/select waiters that they can read from the recv buffer */
 
   uart_pollnotify(dev, POLLIN);
-
 }
 
 /************************************************************************************

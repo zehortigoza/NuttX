@@ -83,6 +83,12 @@ ifneq ($(CONFIG_NFILE_STREAMS),0)
 CSRCS	+= fs_fdopen.c 
 endif
 
+# Support for sendfile()
+
+ifeq ($(CONFIG_NET_SENDFILE),y)
+CSRCS += fs_sendfile.c
+endif
+
 # System logging to a character device (or file)
 
 ifeq ($(CONFIG_SYSLOG),y)
@@ -105,6 +111,7 @@ include nxffs/Make.defs
 include nfs/Make.defs
 include smartfs/Make.defs
 include binfs/Make.defs
+include procfs/Make.defs
 
 endif
 endif
@@ -116,7 +123,7 @@ OBJS	= $(AOBJS) $(COBJS)
 
 BIN		= libfs$(LIBEXT)
 
-SUBDIRS	= mmap fat romfs nxffs nfs binfs
+SUBDIRS	= mmap fat romfs nxffs nfs binfs procfs
 
 all:	$(BIN)
 

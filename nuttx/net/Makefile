@@ -39,10 +39,10 @@ ifeq ($(CONFIG_NET),y)
 
 # Basic networking support
 
-SOCK_ASRCS =
-SOCK_CSRCS = bind.c connect.c getsockname.c recv.c recvfrom.c socket.c \
-		  sendto.c net_sockets.c net_close.c net_dup.c net_dup2.c net_clone.c \
-		  net_vfcntl.c
+SOCK_ASRCS  =
+SOCK_CSRCS  = bind.c connect.c getsockname.c recv.c recvfrom.c socket.c
+SOCK_CSRCS += sendto.c net_sockets.c net_close.c net_dup.c net_dup2.c 
+SOCK_CSRCS += net_clone.c net_vfcntl.c
 
 # TCP/IP support
 
@@ -62,10 +62,23 @@ endif
 endif
 endif
 
+# Routing table support
+
+ifeq ($(CONFIG_NET_ROUTE),y)
+SOCK_CSRCS += net_addroute.c net_allocroute.c net_delroute.c
+SOCK_CSRCS += net_foreachroute.c net_router.c netdev_router.c
+endif
+
 # Support for network access using streams
 
 ifneq ($(CONFIG_NFILE_STREAMS),0)
 SOCK_CSRCS += net_checksd.c
+endif
+
+# Support for sendfile()
+
+ifeq ($(CONFIG_NET_SENDFILE),y)
+SOCK_CSRCS += net_sendfile.c
 endif
 
 # Support for operations on network devices

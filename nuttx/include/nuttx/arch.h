@@ -362,7 +362,7 @@ void up_release_pending(void);
  *
  * Description:
  *   Called when the priority of a running or
- *   ready-to-run task changes and the reprioritization will 
+ *   ready-to-run task changes and the reprioritization will
  *   cause a context switch.  Two cases:
  *
  *   1) The priority of the currently running task drops and the next
@@ -987,6 +987,30 @@ void sched_process_timer(void);
 void irq_dispatch(int irq, FAR void *context);
 
 /****************************************************************************
+ * Name: up_check_stack and friends
+ *
+ * Description:
+ *   Determine (approximately) how much stack has been used be searching the
+ *   stack memory for a high water mark.  That is, the deepest level of the
+ *   stack that clobbered some recognizable marker in the stack memory.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned value:
+ *   The estimated amount of stack space used.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_DEBUG) && defined(CONFIG_DEBUG_STACK)
+struct tcb_s;
+size_t up_check_tcbstack(FAR struct tcb_s *tcb);
+ssize_t up_check_tcbstack_remain(FAR struct tcb_s *tcb);
+size_t up_check_stack(void);
+ssize_t up_check_stack_remain(void);
+#endif
+
+/****************************************************************************
  * Board-specific button interfaces exported by the board-specific logic
  ****************************************************************************/
 
@@ -1086,6 +1110,26 @@ void relays_powermodes(uint32_t relays_stat);
  ****************************************************************************/
 
 int up_putc(int ch);
+
+/****************************************************************************
+ * Name: up_getc
+ *
+ * Description:
+ *   Get one character on the console
+ *
+ ****************************************************************************/
+
+int up_getc(void);
+
+/****************************************************************************
+ * Name: up_puts
+ *
+ * Description:
+ *   Output a string on the console
+ *
+ ****************************************************************************/
+
+void up_puts(FAR const char *str);
 
 #ifdef __cplusplus
 }

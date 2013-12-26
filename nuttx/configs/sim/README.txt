@@ -165,6 +165,9 @@ I never did get networking to work on the sim target.  It tries to use the tap d
 (/dev/net/tun) to emulate an Ethernet NIC, but I never got it correctly integrated
 with the NuttX networking (I probably should try using raw sockets instead).
 
+Update:  Max Holtzberg reports to me that the tap device actually does work properly,
+but not in an NSH configuration because of stdio operations freeze the simulation.
+
 X11 Issues
 ----------
 There is an X11-based framebuffer driver that you can use exercise the NuttX graphics
@@ -187,6 +190,11 @@ X11.  See the discussion "Stack Size Issues" above.
 
 Configurations
 ^^^^^^^^^^^^^^
+
+configdata
+  Description
+  -----------
+  A unit test for the MTD configuration data driver.
 
 cxxtest
 
@@ -444,7 +452,7 @@ nx11
   2. You must first up_fbinitialize() before calling up_simtouchscreen()
      or you will get a crash.
 
-  3. Call sim_tcuninintialize() when you are finished with the
+  3. Call sim_tcunininitializee() when you are finished with the
      simulated touchscreen.
 
   4. Enable CONFIG_DEBUG_INPUT=y for touchscreen debug output.

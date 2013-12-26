@@ -41,6 +41,7 @@
  ************************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/usb/usbhost_trace.h>
 
 #ifdef CONFIG_USBHOST
 
@@ -66,6 +67,7 @@
  * Public Types
  ************************************************************************************/
 
+#ifdef HAVE_USBHOST_TRACE
 enum usbhost_trace1codes_e
 {
   __TRACE1_BASEVALUE = 0,           /* This will force the first value to be 1 */
@@ -79,7 +81,7 @@ enum usbhost_trace1codes_e
   OHCI_TRACE1_TDALLOC_FAILED,       /* OHCI ERROR: Failed to allocate TD */
   OHCI_TRACE1_IRQATTACH,            /* OHCI ERROR: Failed to attach IRQ */
 
-#ifdef CONFIG_USBHOST_TRACE_VERBOSE
+#ifdef HAVE_USBHOST_TRACE_VERBOSE
   OHCI_VTRACE1_PHYSED,              /* OHCI physed */
   OHCI_VTRACE1_VIRTED,              /* OHCI ed */
   OHCI_VTRACE1_CSC,                 /* OHCI Connect Status Change */
@@ -123,7 +125,7 @@ enum usbhost_trace1codes_e
   EHCI_TRACE1_RUN_FAILED,           /* EHCI ERROR: EHCI Failed to run */
   EHCI_TRACE1_IRQATTACH_FAILED,     /* EHCI ERROR: Failed to attach IRQ */
 
-#ifdef CONFIG_USBHOST_TRACE_VERBOSE
+#ifdef HAVE_USBHOST_TRACE_VERBOSE
   EHCI_VTRACE1_PORTSC_CSC,          /* EHCI Connect Status Change */
   EHCI_VTRACE1_PORTSC_CONNALREADY,  /* EHCI Already connected */
   EHCI_VTRACE1_PORTSC_DISCALREADY,  /* EHCI Already disconnected */
@@ -146,7 +148,7 @@ enum usbhost_trace1codes_e
   OHCI_TRACE2_EDENQUEUE_FAILED,     /* OHCI ERROR: Failed to queue ED for transfer type */
   OHCI_TRACE2_CLASSENUM_FAILED,     /* OHCI usbhost_enumerate() failed */
 
-#ifdef CONFIG_USBHOST_TRACE_VERBOSE
+#ifdef HAVE_USBHOST_TRACE_VERBOSE
   OHCI_VTRACE2_INTERVAL,            /* OHCI interval */
   OHCI_VTRACE2_MININTERVAL,         /* OHCI MIN interval/offset */
   OHCI_VTRACE2_RHPORTST,            /* OHCI RHPORTST */
@@ -168,7 +170,7 @@ enum usbhost_trace1codes_e
   EHCI_TRACE2_EPIOERROR,            /* EHCI ERROR: EP TOKEN */
   EHCI_TRACE2_CLASSENUM_FAILED,     /* EHCI usbhost_enumerate() failed */
 
-#ifdef CONFIG_USBHOST_TRACE_VERBOSE
+#ifdef HAVE_USBHOST_TRACE_VERBOSE
   EHCI_VTRACE2_ASYNCXFR,            /* EHCI Async transfer */
   EHCI_VTRACE2_INTRXFR,             /* EHCI Interrupt Transfer */
   EHCI_VTRACE2_IOCCHECK,            /* EHCI IOC */
@@ -187,13 +189,15 @@ enum usbhost_trace1codes_e
   __TRACE2_NSTRINGS                 /* Total number of enumeration values */
 };
 
-#define TRACE1_FIRST     ((int)__TRACE1_BASEVALUE + 1)
-#define TRACE1_INDEX(id) ((int)(id) - TRACE1_FIRST)
-#define TRACE1_NSTRINGS  TRACE1_INDEX(__TRACE1_NSTRINGS)
+#  define TRACE1_FIRST     ((int)__TRACE1_BASEVALUE + 1)
+#  define TRACE1_INDEX(id) ((int)(id) - TRACE1_FIRST)
+#  define TRACE1_NSTRINGS  TRACE1_INDEX(__TRACE1_NSTRINGS)
 
-#define TRACE2_FIRST     ((int)__TRACE1_NSTRINGS + 1)
-#define TRACE2_INDEX(id) ((int)(id) - TRACE2_FIRST)
-#define TRACE2_NSTRINGS  TRACE2_INDEX(__TRACE2_NSTRINGS)
+#  define TRACE2_FIRST     ((int)__TRACE1_NSTRINGS + 1)
+#  define TRACE2_INDEX(id) ((int)(id) - TRACE2_FIRST)
+#  define TRACE2_NSTRINGS  TRACE2_INDEX(__TRACE2_NSTRINGS)
+
+#endif
 
 /************************************************************************************
  * Public Data
@@ -226,7 +230,7 @@ extern "C"
  *
  * Input Parameters:
  *   controller -- If the device supports more than one USB OHCI interface, then
- *     this identifies which controller is being intialized.  Normally, this
+ *     this identifies which controller is being initializeed.  Normally, this
  *     is just zero.
  *
  * Returned Value:
@@ -270,7 +274,7 @@ int sam_ohci_tophalf(int irq, FAR void *context);
  *
  * Input Parameters:
  *   controller -- If the device supports more than one EHCI interface, then
- *     this identifies which controller is being intialized.  Normally, this
+ *     this identifies which controller is being initializeed.  Normally, this
  *     is just zero.
  *
  * Returned Value:

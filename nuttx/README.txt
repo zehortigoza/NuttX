@@ -20,7 +20,7 @@ README
   o Shells
   o Building NuttX
     - Building
-    - Re-building 
+    - Re-building
     - Build Targets and Options
     - Native Windows Build
     - Installing GNUWin32
@@ -47,7 +47,7 @@ Installing Cygwin
      discussion "Native Windows Build" below).
 
   Some Cygwin installation tips:
-  
+
   1. Install at C:\cygwin
 
   2. Install EVERYTHING:  "Only the minimal base packages from the
@@ -58,7 +58,7 @@ Installing Cygwin
      provide you with the opportunity to install every Cygwin package.
      Be advised that this will download and install hundreds of megabytes
      to your computer."
-     
+
      If you use the "default" installation, you will be missing many
      of the Cygwin utilities that you will need to build NuttX.  The
      build will fail in numerous places because of missing packages.
@@ -100,10 +100,10 @@ Semi-Optional apps/ Package
   should exactly match the version of the NuttX tarball).  Again, you
   might want to rename the directory to simply apps/ to match what
   you read in the documentation
-  
+
   After unpacking the apps tarball, you will have two directories side
   by side like this:
-  
+
              |
         +----+----+
         |         |
@@ -128,7 +128,7 @@ Installation Directories with Spaces in the Path
 
   I work around spaces in the home directory name, by creating a
   new directory that does not contain any spaces, such as /home/nuttx.
-  Then I install NuttX in /home/nuttx and always build from 
+  Then I install NuttX in /home/nuttx and always build from
   /home/nuttx/nuttx-code.
 
 Downloading from Repositories
@@ -191,7 +191,7 @@ Notes about Header Files
     header file then you should also define CONFIG_ARCH_MATH_H=y in your
     NuttX Configuration file.  If CONFIG_ARCH_MATH_H is selected, then the
     top-level Makefile will copy the stub math.h header file from
-    include/nuttx/matn.h to include/math.h where it will become the system
+    include/nuttx/math.h to include/math.h where it will become the system
     math.h header file.  The stub math.h header file does nothing other
     than to include that archicture-specific math.h header file as the
     system math.h header file.
@@ -300,7 +300,7 @@ NuttX Configuration Tool
 
   WARNING:  Never do 'make menuconfig' on a configuration that has
   not been converted to use the kconfig-frontends tools!  This will
-  damage your configuration (see 
+  damage your configuration (see
   http://www.nuttx.org/doku.php?id=wiki:howtos:convertconfig).
 
   The 'menuconfig' make target depends on two things:
@@ -410,7 +410,7 @@ Converting Older Configurations to use the Configuration Tool
              cp configs/<board>/<condfiguration>/defconfig .config
              make menuconfig  (Just exit and save the new .config file)
              tools/cmpconfig configs/<board>/<condfiguration>/defconfig .config | grep file1
- 
+
            The final grep will show settings in the old defconfig file that
            do not appear in the new .config file (or have a different value
            in the new .config file).  In the new configuration, you will
@@ -495,7 +495,7 @@ NuttX Configuration Tool under DOS
           the Cygwin kconfig-mconf running in the Windows console.  The
           following change to the top-level Kconfig file seems to work
           around these problems:
-  
+
           config APPSDIR
               string
           -   option env="APPSDIR"
@@ -605,7 +605,7 @@ Building
   arguments on the make command.  Read ${TOPDIR}/configs/<board-name>/README.txt
   to see if that applies to your target.
 
-Re-building 
+Re-building
 -----------
 
   Re-building is normally simple -- just type make again.
@@ -623,9 +623,9 @@ Re-building
   build is still using the version of the file in the copied directory, not
   your modified file! To work around this annoying behavior, do the
   following when you re-build:
-   
+
      make clean_context all
-   
+
   This 'make' command will remove of the copied directories, re-copy them,
   then make NuttX.
 
@@ -743,7 +743,7 @@ Native Windows Build
   the you not install the optional MSYS components as there may be conflicts.
 
   This capability should still be considered a work in progress because:
- 
+
   (1) It has not been verfied on all targets and tools, and
   (2) it still lacks some of the creature-comforts of the more mature environments
       (like 'make menuconfig' support.  See the section "NuttX Configuration Tool
@@ -883,7 +883,7 @@ Window Native Toolchain Issues
      If you are building natively on Windows, then no such conflict exists
      and the best selection is:
 
-       MKDEP                = $(TOPDIR)/tools/mkdeps.exe 
+       MKDEP                = $(TOPDIR)/tools/mkdeps.exe
 
 General Pre-built Toolchain Issues
 
@@ -898,7 +898,7 @@ General Pre-built Toolchain Issues
   then you may incounter these:
 
   4. Header Files.  Most pre-built toolchains will build with a foreign C
-     library (usually newlib, but maybe uClibc or glibc if you are using a 
+     library (usually newlib, but maybe uClibc or glibc if you are using a
      Linux toolchain).  This means that the header files from the foreign
      C library will be built into the toolchain.  So if you "include <stdio.h>",
      you will get the stdio.h from the incompatible, foreign C library and
@@ -906,7 +906,7 @@ General Pre-built Toolchain Issues
 
      This can cause really confusion in the buildds and you must always be
      sure the -nostdinc is included in the CFLAGS.  That will assure that
-     you take the include files only from 
+     you take the include files only from
 
   5. Libraries.  What was said above header files applies to libraries.
      You do not want to include code from the libraries of any foreign
@@ -974,6 +974,8 @@ nuttx
  |   |       |- z80/README.txt
  |   |       `- z180/README.txt, z180_mmu.txt
  |   `- README.txt
+ |- audio/
+ |   `-README.txt
  |- configs/
  |   |- amber/
  |   |   `- README.txt
@@ -984,6 +986,8 @@ nuttx
  |   |- c5471evm/
  |   |   `- README.txt
  |   |- cloudctrl
+ |   |   `- README.txt
+ |   |- compal_e86
  |   |   `- README.txt
  |   |- compal_e88
  |   |   `- README.txt
@@ -1030,6 +1034,8 @@ nuttx
  |   |   `- README.txt
  |   |- lpcxpresso-lpc1768/
  |   |   `- README.txt
+ |   |- maple/
+ |   |   `- README.txt
  |   |- mbed/
  |   |   `- README.txt
  |   |- mcu123-lpc214x/
@@ -1055,6 +1061,10 @@ nuttx
  |   |   `- README.txt
  |   |- olimex-lpc2378/
  |   |   `- README.txt
+ |   |- olimex-lpc-h3131/
+ |   |   `- README.txt
+ |   |- olimex-stm32-p207/
+ |   |   `- README.txt
  |   |- olimex-strp711/
  |   |   `- README.txt
  |   |- open1788/
@@ -1062,6 +1072,8 @@ nuttx
  |   |- p112/
  |   |   `- README.txt
  |   |- pcblogic-pic32mx/
+ |   |   `- README.txt
+ |   |- pcduino-a10/
  |   |   `- README.txt
  |   |- pic32-starterkit/
  |   |   `- README.txt
@@ -1089,6 +1101,8 @@ nuttx
  |   |   `- README.txt
  |   |- skp16c26/
  |   |   `- README.txt
+ |   |- spark/
+ |   |   `- README.txt
  |   |- stm3210e-eval/
  |   |   |- RIDE/README.txt
  |   |   `- README.txt
@@ -1106,6 +1120,8 @@ nuttx
  |   |   `- README.txt
  |   |- stm32ldiscovery/
  |   |   `- README.txt
+ |   |- stm32f429i-disco/
+ |   |   `- README.txt
  |   |- sure-pic32mx/
  |   |   `- README.txt
  |   |- teensy/
@@ -1115,6 +1131,8 @@ nuttx
  |   |- ubw32/
  |   |   `- README.txt
  |   |- us7032evb1/
+ |   |   `- README.txt
+ |   |- viewtool-stm32f107/
  |   |   `- README.txt
  |   |- vsn/
  |   |   |- src/README.txt
@@ -1141,15 +1159,23 @@ nuttx
  |- drivers/
  |   |- lcd/
  |   |   `- README.txt
+ |   |- mtd/
+ |   |   `- README.txt
  |   |- sercomm/
  |   |   `- README.txt
  |   |- syslog/
  |   |   `- README.txt
  |   `- README.txt
  |- fs/
+ |   |- binfs/
+ |   |   `- README.txt
  |   |- mmap/
  |   |   `- README.txt
- |   `- nxffs/
+ |   |- nxffs/
+ |   |   `- README.txt
+ |   |- smartfs/
+ |   |   `- README.txt
+ |   `- procfs/
  |       `- README.txt
  |- graphics/
  |   `- README.txt
@@ -1194,9 +1220,15 @@ apps
  |- NxWidgets/
  |   `- README.txt
  |- system/
+ |   |- cdcacm
+ |   |  `- README.txt
  |   |- i2c
  |   |  `- README.txt
  |   |- install
+ |   |  `- README.txt
+ |   |- nxplayer
+ |   |  `- README.txt
+ |   |- usbmsc
  |   |  `- README.txt
  |   `- zmodem
  |      `- README.txt

@@ -57,8 +57,8 @@
 #include <nuttx/fs/fat.h>
 #include <nuttx/fs/dirent.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/mtd.h>
-#include <nuttx/smart.h>
+#include <nuttx/mtd/mtd.h>
+#include <nuttx/fs/smart.h>
 
 #include "smartfs.h"
 

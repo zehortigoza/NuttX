@@ -11,7 +11,7 @@ config BOARD_INITIALIZE
 		custom initialization logic:
 
 		1) <arch>_boardinitialize():  This function is used only for
-		initialize of very low-level things like configuration of
+		initialization of very low-level things like configuration of
 		GPIO pins, power setting.  The OS has not been initialized
 		at this point, so you cannot allocate memory or initialize
 		device drivers at this phase.
@@ -38,6 +38,20 @@ config MSEC_PER_TICK
 		The default system timer is 100Hz or MSEC_PER_TICK=10.  This setting
 		may be defined to inform NuttX that the processor hardware is providing
 		system timer interrupts at some interrupt interval other than 10 msec.
+
+config SYSTEM_TIME64
+	bool "64-bit system clock"
+	default n
+	---help---
+		The system timer is incremented at the rate determined by
+		MSEC_PER_TICK, typically at 100Hz. The count at any given time is
+		then the "uptime" in units of system timer ticks.  By default, the
+		system time is 32-bits wide.  Those defaults provide a range of about
+		13.6 years which is probably a sufficient range for "uptime".
+
+		However, if the system timer rate is significantly higher than 100Hz
+		and/or if a very long "uptime" is required, then this option can be
+		selected to support a 64-bit wide timer.
 
 config RR_INTERVAL
 	int "Round robin timeslice (MSEC)"

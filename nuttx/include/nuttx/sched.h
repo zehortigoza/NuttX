@@ -221,7 +221,7 @@ typedef struct msgq_s msgq_t;
 
 /* struct child_status_s *********************************************************/
 /* This structure is used to maintin information about child tasks.
- * pthreads work differently, they have join information.  This is 
+ * pthreads work differently, they have join information.  This is
  * only for child tasks.
  */
 
@@ -623,6 +623,10 @@ FAR struct tcb_s *sched_self(void);
  */
 
 void sched_foreach(sched_foreach_t handler, FAR void *arg);
+
+/* Give a task ID, look up the corresponding TCB */
+
+FAR struct tcb_s *sched_gettcb(pid_t pid);
 
 /* File system helpers **********************************************************/
 /* These functions all extract lists from the group structure assocated with the

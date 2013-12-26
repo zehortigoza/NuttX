@@ -1,7 +1,7 @@
 /****************************************************************************
  * include/nuttx/sdio.h
  *
- *   Copyright (C) 2009, 2011-2012 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2009, 2011-2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -107,7 +107,7 @@
                                * -Addressed Command, R2 response 31:16=RCA */
 #  define MMCSD_CMDIDX10  10  /* SEND_CID: Asks card to send its card identification (CID)
                                * -Addressed Command, R2 response 31:16=RCA */
-#  define MMC_CMDIDX11    11  /* READ_DAT_UNTIL_STOP   
+#  define MMC_CMDIDX11    11  /* READ_DAT_UNTIL_STOP
                                * -Addressed data transfer command, R1 response 31:0=DADR */
 #  define MMCSD_CMDIDX12  12  /* STOP_TRANSMISSION: Forces the card to stop transmission
                                * -Addressed Command, R1b response */
@@ -725,8 +725,9 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SDIO_DMA
-#  define SDIO_DMAPREFLIGHT(dev,buffer,len) ((dev)->dmapreflight?(dev)->dmapreflight(dev,buffer,len):OK)
+#if defined(CONFIG_SDIO_DMA) && defined(CONFIG_SDIO_PREFLIGHT)
+#  define SDIO_DMAPREFLIGHT(dev,buffer,len) \
+    ((dev)->dmapreflight?(dev)->dmapreflight(dev,buffer,len):OK)
 #else
 #  define SDIO_DMAPREFLIGHT(dev,buffer,len) (OK)
 #endif
@@ -871,8 +872,10 @@ struct sdio_dev_s
 
 #ifdef CONFIG_SDIO_DMA
   bool  (*dmasupported)(FAR struct sdio_dev_s *dev);
+#ifdef CONFIG_SDIO_PREFLIGHT
   int   (*dmapreflight)(FAR struct sdio_dev_s *dev, FAR uint8_t *buffer,
           size_t buflen);
+#endif
   int   (*dmarecvsetup)(FAR struct sdio_dev_s *dev, FAR uint8_t *buffer,
           size_t buflen);
   int   (*dmasendsetup)(FAR struct sdio_dev_s *dev, FAR const uint8_t *buffer,

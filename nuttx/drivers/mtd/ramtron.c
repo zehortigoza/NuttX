@@ -69,7 +69,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/spi/spi.h>
-#include <nuttx/mtd.h>
+#include <nuttx/mtd/mtd.h>
 
 /************************************************************************************
  * Pre-processor Definitions
@@ -688,6 +688,12 @@ FAR struct mtd_dev_s *ramtron_initialize(FAR struct spi_dev_s *dev)
           priv = NULL;
         }
     }
+
+  /* Register the MTD with the procfs system if enabled */
+
+#ifdef CONFIG_MTD_REGISTRATION
+  mtd_register(&priv->mtd, "ramtron");
+#endif
 
   /* Return the implementation-specific state structure as the MTD device */
 

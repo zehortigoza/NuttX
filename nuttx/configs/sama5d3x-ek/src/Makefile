@@ -1,5 +1,5 @@
 ############################################################################
-# configs/sam4s-xplained/src/Makefile
+# configs/sama5d3x-ek/src/Makefile
 #
 #   Copyright (C) 2013 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -58,8 +58,12 @@ ifeq ($(CONFIG_SAMA5_DDRCS),y)
 CSRCS += sam_sdram.c
 endif
 
-ifeq ($(CONFIG_SAMA5_BOOT_CS0FLASH),y)
+ifeq ($(CONFIG_SAMA5_EBICS0_NOR),y)
 CSRCS += sam_norflash.c
+endif
+
+ifeq ($(CONFIG_SAMA5_EBICS3_NAND),y)
+CSRCS += sam_nandflash.c
 endif
 
 ifeq ($(CONFIG_SAMA5_NOR_MAIN),y)
@@ -94,12 +98,54 @@ CSRCS += sam_usb.c
 endif
 endif
 
+ifeq ($(CONFIG_SAMA5_EMAC),y)
+CSRCS += sam_ethernet.c
+else
+ifeq ($(CONFIG_SAMA5_GMAC),y)
+CSRCS += sam_ethernet.c
+endif
+endif
+
 ifeq ($(CONFIG_NSH_ARCHINIT),y)
 CSRCS += sam_nsh.c
 endif
 
+ifeq ($(CONFIG_ADC),y)
+CSRCS += sam_adc.c
+endif
+
+ifeq ($(CONFIG_PWM),y)
+CSRCS += sam_pwm.c
+endif
+
+ifeq ($(CONFIG_CAN),y)
+CSRCS += sam_can.c
+endif
+
+ifeq ($(CONFIG_AUDIO_I2SCHAR),y)
+ifeq ($(CONFIG_SAMA5_SSC0),y)
+CSRCS += sam_i2schar.c
+else
+ifeq ($(CONFIG_SAMA5_SSC1),y)
+CSRCS += sam_i2schar.c
+endif
+endif
+endif
+
 ifeq ($(CONFIG_USBMSC),y)
 CSRCS += sam_usbmsc.c
+endif
+
+ifeq ($(CONFIG_ARCH_FPU),y)
+CSRCS += sam_ostest.c
+endif
+
+ifeq ($(CONFIG_SAMA5_TSD),y)
+CSRCS += sam_touchscreen.c
+endif
+
+ifeq ($(CONFIG_VIDEO_OV2640),y)
+CSRCS += sam_ov2640.c
 endif
 
 ifeq ($(CONFIG_ARCH_LEDS),y)

@@ -354,12 +354,13 @@ enum spi_dev_e
   SPIDEV_FLASH,       /* Select SPI FLASH device */
   SPIDEV_ETHERNET,    /* Select SPI ethernet device */
   SPIDEV_DISPLAY,     /* Select SPI LCD/OLED display device */
+  SPIDEV_CAMERA,      /* Select SPI imaging device */
   SPIDEV_WIRELESS,    /* Select SPI Wireless device */
   SPIDEV_TOUCHSCREEN, /* Select SPI touchscreen device */
   SPIDEV_EXPANDER,    /* Select SPI I/O expander device */
   SPIDEV_MUX,         /* Select SPI multiplexer device */
   SPIDEV_AUDIO_DATA,  /* Select SPI audio codec device data port */
-  SPIDEV_AUDIO_CTRL,  /* Select SPI audio codec device control port */
+  SPIDEV_AUDIO_CTRL   /* Select SPI audio codec device control port */
 };
 
 /* Certain SPI devices may required differnt clocking modes */

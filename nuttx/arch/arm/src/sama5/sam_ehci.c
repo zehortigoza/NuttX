@@ -421,7 +421,7 @@ static uint32_t g_framelist[FRAME_LIST_SIZE] __attribute__ ((aligned(4096)));
 #else
 static uint32_t *g_framelist;
 #endif
-#endif
+#endif /* CONFIG_USBHOST_INT_DISABLE */
 
 #ifdef CONFIG_SAMA5_EHCI_PREALLOCATE
 /* Pools of pre-allocated data structures.  These will all be linked into the
@@ -580,7 +580,7 @@ static uint32_t sam_swap32(uint32_t value)
 static void sam_printreg(volatile uint32_t *regaddr, uint32_t regval,
                           bool iswrite)
 {
-  lldbg("%p%s%08x\n", regaddr, iswrite ? "<-" : "->", regval);
+  lldbg("%08x%s%08x\n", (uintptr_t)regaddr, iswrite ? "<-" : "->", regval);
 }
 #endif
 
@@ -2699,10 +2699,11 @@ static inline void sam_portsc_bottomhalf(void)
         }
 
       /* Clear all pending port interrupt sources by writing a '1' to the
-       * corresponding bit in the PORTSC register.
+       * corresponding bit in the PORTSC register.  In addition, we need
+       * to preserve the values of all R/W bits (RO bits don't matter)
        */
 
-      sam_putreg(portsc & EHCI_PORTSC_ALLINTS, &HCOR->portsc[rhpndx]);
+      sam_putreg(portsc, &HCOR->portsc[rhpndx]);
     }
 }
 
@@ -3144,7 +3145,7 @@ static int sam_enumerate(FAR struct usbhost_connection_s *conn, int rhpndx)
       regval |= EHCI_PORTSC_OWNER;
       sam_putreg(regval, &HCOR->portsc[rhpndx]);
 
-#ifdef CONFIG_SAMA5_OHCI
+#if 0 /* #ifdef CONFIG_SAMA5_OHCI */
       /* Give the port to the OHCI controller. Zero is the reset value for
        * all ports; one makes the corresponding port available to OHCI.
        */
@@ -3156,6 +3157,7 @@ static int sam_enumerate(FAR struct usbhost_connection_s *conn, int rhpndx)
 
       /* And return a failure */
 
+      rhport->connected = false;
       return -EPERM;
     }
   else
@@ -3264,7 +3266,7 @@ static int sam_enumerate(FAR struct usbhost_connection_s *conn, int rhpndx)
       regval |= EHCI_PORTSC_OWNER;
       sam_putreg(regval, &HCOR->portsc[rhpndx]);
 
-#ifdef CONFIG_SAMA5_OHCI
+#if 0 /* #ifdef CONFIG_SAMA5_OHCI */
       /* Give the port to the OHCI controller. Zero is the reset value for
        * all ports; one makes the corresponding port available to OHCI.
        */
@@ -3276,6 +3278,7 @@ static int sam_enumerate(FAR struct usbhost_connection_s *conn, int rhpndx)
 
       /* And return a failure */
 
+      rhport->connected = false;
       return -EPERM;
     }
 
@@ -3919,12 +3922,19 @@ static int sam_reset(void)
   uint32_t regval;
   unsigned int timeout;
 
+  /* Make sure that the EHCI is halted:  "When [the Run/Stop] bit is set to 0,
+   * the Host Controller completes the current transaction on the USB and then
+   * halts. The HC Halted bit in the status register indicates when the Hos
+   * Controller has finished the transaction and has entered the stopped state..."
+   */
+
+  sam_putreg(0, &HCOR->usbcmd);
+
   /* "... Software should not set [HCRESET] to a one when the HCHalted bit in
    *  the USBSTS register is a zero. Attempting to reset an actively running
    *   host controller will result in undefined behavior."
    */
 
-  sam_putreg(0, &HCOR->usbcmd);
   timeout = 0;
   do
     {
@@ -3933,7 +3943,7 @@ static int sam_reset(void)
       up_udelay(1);
       timeout++;
 
-      /* Get the current valud of the USBSTS register.  This loop will terminate
+      /* Get the current value of the USBSTS register.  This loop will terminate
        * when either the timeout exceeds one millisecond or when the HCHalted
        * bit is no longer set in the USBSTS register.
        */
@@ -3965,7 +3975,7 @@ static int sam_reset(void)
       up_udelay(5);
       timeout += 5;
 
-      /* Get the current valud of the USBCMD register.  This loop will terminate
+      /* Get the current value of the USBCMD register.  This loop will terminate
        * when either the timeout exceeds one second or when the HCReset
        * bit is no longer set in the USBSTS register.
        */
@@ -3990,7 +4000,7 @@ static int sam_reset(void)
  *
  * Input Parameters:
  *   controller -- If the device supports more than one EHCI interface, then
- *     this identifies which controller is being intialized.  Normally, this
+ *     this identifies which controller is being initialized.  Normally, this
  *     is just zero.
  *
  * Returned Value:
@@ -4036,7 +4046,7 @@ FAR struct usbhost_connection_s *sam_ehci_initialize(int controller)
 #ifdef CONFIG_SAMA5_EHCI_PREALLOCATE
   DEBUGASSERT(((uintptr_t)g_framelist & 0xfff) == 0);
 #endif
-#endif
+#endif /* CONFIG_USBHOST_INT_DISABLE */
 
   /* SAMA5 Configuration *******************************************************/
   /* For High-speed operations, the user has to perform the following:
@@ -4172,7 +4182,7 @@ FAR struct usbhost_connection_s *sam_ehci_initialize(int controller)
     }
 #endif
 
-#ifndef CONFIG_SAMA5_EHCI_PREALLOCATE
+#if !defined(CONFIG_SAMA5_EHCI_PREALLOCATE) && !defined(CONFIG_USBHOST_INT_DISABLE)
   /* Allocate the periodic framelist  */
 
   g_framelist = (uint32_t *)

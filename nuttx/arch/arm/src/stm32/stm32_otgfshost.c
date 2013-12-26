@@ -65,7 +65,7 @@
 
 #include "stm32_usbhost.h"
 
-#if defined(CONFIG_USBHOST) && defined(CONFIG_STM32_OTGFS)
+#if defined(CONFIG_USBHOST) && (defined(CONFIG_STM32_OTGFS) || defined(CONFIG_STM32_OTGFS2))
 
 /*******************************************************************************
  * Definitions
@@ -161,6 +161,13 @@
 
 #ifndef MAX
 #  define  MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
+/* For OTGFS2 mode (FS mode of HS module), remap the IRQ number *****************/
+
+#ifdef CONFIG_STM32_OTGFS2
+#  undef  STM32_IRQ_OTGFS
+#  define STM32_IRQ_OTGFS   STM32_IRQ_OTGHS
 #endif
 
 /*******************************************************************************
@@ -4248,7 +4255,7 @@ static inline int stm32_hw_initialize(FAR struct stm32_usbhost_s *priv)
  *
  * Input Parameters:
  *   controller -- If the device supports more than USB host controller, then
- *     this identifies which controller is being intialized.  Normally, this
+ *     this identifies which controller is being initialized.  Normally, this
  *     is just zero.
  *
  * Returned Value:
@@ -4310,9 +4317,15 @@ FAR struct usbhost_connection_s *stm32_otgfshost_initialize(int controller)
    * *Pins may vary from device-to-device.
    */
 
+#ifdef CONFIG_STM32_OTGFS2
+  stm32_configgpio(GPIO_OTGFS2_DM);
+  stm32_configgpio(GPIO_OTGFS2_DP);
+  stm32_configgpio(GPIO_OTGFS2_ID);   /* Only needed for OTG */
+#else
   stm32_configgpio(GPIO_OTGFS_DM);
   stm32_configgpio(GPIO_OTGFS_DP);
   stm32_configgpio(GPIO_OTGFS_ID);    /* Only needed for OTG */
+#endif
 
   /* SOF output pin configuration is configurable */
 

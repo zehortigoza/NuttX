@@ -196,7 +196,7 @@
 	  backspace or a DEL character as a backspace (i.e., deleting the character
 	  to the left of the cursor).  This makes NSH less dependent on particular
 	  keyboard mappings of the Backspace key.  Submitted by Mike Smith.
-	* apps/examples/cdcacm:  An example that illustrates how the CDC/ACM driver
+	* apps/system/cdcacm:  An example that illustrates how the CDC/ACM driver
 	  may to connected and disconnected through software control.
 	* apps/examples/nsh/nsh_main.c:  If available, call up_cxxinitialize() to
 	  initialize all statically defined C++ classes.
@@ -616,7 +616,7 @@
 	  compare two files for equivalence.  Returns an indication if the files
 	  differ.  Contributed by Andrew Tridgell (via Lorenz Meier) (2013-7-18).
 
-6.30 2013-xx-xx Gregory Nutt <gnutt@nuttx.org>
+6.30 2013-09-14 Gregory Nutt <gnutt@nuttx.org>
 
 	* apps/examples/composite/:  SourceForge bug #19: Fix a typo that can
 	  cause a configuration error.  From CCTSAO (2013-9-4).
@@ -635,12 +635,117 @@
 	* apps/examples/usbmsc:  IMPORTANT bug fix: Change how the msconn
 	  works.  Because of recent changes the msconn command was hanging.
 	  This was because the USB MSC start-up logic creates a pthread;
-	  Now waitpid() will wait until all members of the task groupd
+	  Now waitpid() will wait until all members of the task group
 	  exit.  So NSH was hanging in waitpid when msconn started even
 	  though msconn returned.  The USB MSC logic really should not use
 	  a pthread, but we are stuck with that for now.  The work-around
-	  is the msconn now daemonizes itself so that it so taht the pthread
+	  is the msconn now daemonizes itself so that it so that the pthread
 	  is created in a different task group (2013-9-7).
 	* apps/system/usbmonitor:  The USB monitor has been extended so
 	  that it can be used with USB device or host trace data (2013-9-9).
+	* apps/nshlib/nsh_fscmds.c:  Fix NSH listing output for the case
+	  of a single file.  Provided by Lorenz Meier (2013-9-13).
+
+6.31 2013-10-28 Gregory Nutt <gnutt@nuttx.org>
+
+	* apps/nshlib/nsh_netcmds.c:  Remove a warning when DHCP is not
+	  enabled (2013-9-17).
+	* apps/nshlib/Kconfig:  Default IP address should be 0x0a000001
+	  (10.0.0.1), not 0xa0000001 (160.0.0.1).  Ditto for the gateway
+	  (2013-9017).
+	* apps/examples/ostest/Kconfig:  Add configuration options for
+	  the FPU test.  There are still many OS test configuration
+	  options that do not appear in Kconfig (2013-9-18).
+	* apps/examples/cc3000:  Condition the CC3000 example on having
+	  selected the CC3000 device.  Otherwise, you are prompted for
+	  this option on each 'make oldconfig' (2013-9-18).
+	* apps/system/usbmonitor/usbmonitor.c:  Fix some bad conditional
+	  compilation probably introduced on 2013-9-9 (2013-9-23).
+	* apps/system/stackmonitor:  Add a daemon that can be used to
+	  monitor stack usage by all threads (2013-9-24).
+	* system/usbmsc:  Move examples/usbmsc to system/usbmsc (2013-9-25).
+	* system/cdcacm:  Move examples/cdcacm to system/cdcacm (2013-9-25).
+	* system/composite:  Move examples/composite to system/composite
+	  (2013-9-25).
+	* apps/nshlib and apps/readline:  Numerous changes to get NSH
+	  working with no file system.  Basically this suppresses I/O
+	  redirection and replaces file I/O with calls to low-level
+	  console read/write functions.  Suggested by Alan Carvalho de Assis
+	  in a somewhat different form. (2013-9-30).
+	* apps/nshlib/nsm_routecmds.c:  Add addroute and delroute
+	  commands (2013-10-5).
+	* apps/system/i2ctool/Kconfig:  Fix default I2C frequency:  400KHz
+	  instead of 4MHz.  Suggested by Max Kriegleder (2013-10-10).
+	* apps/system/info/Kconfig and Makefile:  Increase stack size.
+	  Ken Petit reports that this simple command can exceed its 768
+	  stack size under certain conditions.  The size is marginal and
+	  has been increased to 1024 by default but is also now configurable
+	  (2013-10-14).
+	* apps/Makefile:  Need to include external/Make.defs if we want
+	  allow external applications to participate in the NuttX
+	  configuration.  Suggested by gdi@embedders.org (2013-10-14).
+	* apps/examples/cc3300: Updates as part of larger re-organizaion
+	  of CC3000 logic by David Sidrane (2013-10-16).
+	* apps/examples/random:  Add a simple test that dumps values from
+	  /dev/random (2013-10-20).
+	* apps/examples/cc3000:  Extensions and enhancements from David
+	  Sidrane (2013-10-23).
+	* apps/netutils/telnetd/telnetd_driver.c:  Missing argument to
+	  debug statement can cause crashes in certain error conditions.
+	  From David Sidrane (2013-10-24).
+	* apps/examples/cc3000:  Updates from David Sidrane.  Plus
+	  some kruft removal (2013-10-24).
+	* apps/examples/can/can_main.c:  Correct an error in a debug
+	  statement.  From Martin Lederhilger (2013-10-24).
+	* apps/examples/adc:  Add support so that a ADC driven by
+	  software triggering can be tested (2013-10-25).
+	* apps/examples/cc3000:  Updates from David Sidrane (2013-10-25).
+	* apps/system/nxplayer:  Implements a command line media
+	  player.  From Ken Pettit (2013-10-27).
+	* apps/system/nxplayer: Add logic to verify the audio sub-format.
+	  From Ken Pettit (2013-10-28).
+
+6.32 2013-12-07 Gregory Nutt <gnutt@nuttx.org>
+
+	* apps/platform:  A new home for board-specific application code
+	  (2013-10-30).
+	* apps/include/platform/configdata.h:  Define an interface that can be
+	  used to manage platform-specific storage of configuration data
+	  (2013-10-30).
+	* apps/examples/cc3000: Fine tuning of memory usage from David Sidrane
+	  (2013-10-30).
+	* apps/platform/mikroe-stm32f4: Now supports storage of configuration
+	  data.  From Ken Pettit (2013-10-30).
+	* apps/nshlib/nsh_dbgcmds.c and others:  Add skip= and count=
+	  options to the hexdump command.  From Ken Pettit (2013-11-1).
+	* apps/platform/mikroe-stm32f4:  Now uses /dev/config for configuration
+	  data storage.  From Ken Pettit (2013-11-1).
+	* apps/platform/Makefile:  Was not dealing with the bin sub-directory
+	  correctly (2013-11-2).
+	* apps/examples/configdata:  A unit test for the MTD configuration
+	  data driver from Ken Pettit (2013-11-4).
+	* apps/platform/mikroe-stm32f4:  Updated to use new MTD configuration
+	  driver features.  From Ken Pettit (2013-11-1).
+	* apps/nshlib/nsh.h:  Allow USB trace without a USB console. From
+	  David Sidrane (2013-11-06).
+	* apps/system/composite/composite_main.c:  The wrong handle was getting
+	  nullified.  From David Sidrane (2013-11-7).
+	* apps/system/nxplayer: Play thread stack size is now configurable.  All
+	  NxPlayer threads now have names assigned via pthread_setname_np().
+	  From Ken Pettit (2013-11-10).
+	* apps/examples/i2schar:  The beginning of an I2S test based on the I2S
+	  character driver (2013-11-10).
+	* apps/nshlib/nsh_mntcmds.c:  Mount command updates from Ken Pettit
+	  (2013-11-17).
+	* apps/examples/hidkbd/hidkbd_main.c:  Now calls a function named
+	  arch_usbhost_initialize() that must be provided by the platform-
+	  specific code (2013-11-29).
+	* apps/nshlib/nsh_fscmds.c:  Add an option to the mkfatfs command to
+	  specify FAT12, FAT16, or FAT32 (2013-12-5).
+
+6.33 2014-xx-xx Gregory Nutt <gnutt@nuttx.org>
+
+	* apps/nshlib/nsh_mntcmds.c:  Modified the df -h logic to eliminate
+	  truncating numbers in conversion (like 7900 -> 7M).  From Ken
+	  Pettit (2013-12-12).
 

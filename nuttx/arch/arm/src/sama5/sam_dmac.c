@@ -58,6 +58,7 @@
 #include "chip.h"
 #include "sam_dmac.h"
 #include "sam_periphclks.h"
+#include "sam_memories.h"
 #include "chip/sam_pmc.h"
 #include "chip/sam_dmac.h"
 
@@ -192,9 +193,10 @@ static const uint32_t g_fifocfg[3] =
  * before each DMA transfer in order to map the peripheral IDs to the
  * correct channel.  This must be done because the channel can change with
  * the direction of the transfer.
- *
- * DMA controller 0, RX DMA:
  */
+
+#ifdef CONFIG_SAMA5_DMAC0
+/* DMA controller 0, RX DMA: */
 
 static const struct sam_pidmap_s g_dmac0_rxchan[] =
 {
@@ -210,7 +212,6 @@ static const struct sam_pidmap_s g_dmac0_rxchan[] =
 };
 #define NDMAC0_RXCHANNELS (sizeof(g_dmac0_rxchan) / sizeof(struct sam_pidmap_s))
 
-#ifdef CONFIG_SAMA5_DMAC0
 /* DMA controller 0, TX DMA: */
 
 static const struct sam_pidmap_s g_dmac0_txchan[] =
@@ -657,7 +658,7 @@ static uint8_t sam_channel(uint8_t pid, const struct sam_pidmap_s *table,
         }
     }
 
-  fdbg("No channel found for pid %d\n", pid);
+  dmadbg("No channel found for pid %d\n", pid);
   DEBUGPANIC();
   return 0x3f;
 }
@@ -1470,7 +1471,7 @@ static void sam_freelinklist(struct sam_dmach_s *dmach)
 {
   struct sam_dmac_s *dmac = sam_controller(dmach);
   struct dma_linklist_s *desc;
-  struct dma_linklist_s *dscr;
+  uintptr_t paddr;
 
   /* Get the head of the link list and detach the link list from the DMA
    * channel
@@ -1480,15 +1481,26 @@ static void sam_freelinklist(struct sam_dmach_s *dmach)
   dmach->llhead    = NULL;
   dmach->lltail    = NULL;
 
-  /* Reset each descriptor in the link list (thereby freeing them) */
-
   while (desc != NULL)
     {
-      dscr = (struct dma_linklist_s *)desc->dscr;
+      /* Valid, in-use descriptors never have saddr == 0 */
+
       DEBUGASSERT(desc->saddr != 0);
+
+      /* Get the physical address of the next descriptor in the list */
+
+      paddr = desc->dscr;
+
+      /* Free the descriptor by simply nullifying it and bumping up the
+       * semaphore count.
+       */
+
       memset(desc, 0, sizeof(struct dma_linklist_s));
       sam_givedsem(dmac);
-      desc = dscr;
+
+      /* Get the virtual address of the next descriptor in the list */
+
+      desc = (struct dma_linklist_s *)sam_virtramaddr(paddr);
     }
 }
 
@@ -1644,7 +1656,7 @@ static inline int sam_single(struct sam_dmach_s *dmach)
   sam_putdmac(dmac, DMAC_CHER_ENA(dmach->chan), SAM_DMAC_CHER_OFFSET);
 
   /* The DMA has been started. Once the transfer completes, hardware sets
-   * the interrupts and disables the channel.  We will received buffer
+   * the interrupts and disables the channel.  We will receive buffer
    * complete and transfer complete interrupts.
    *
    * Enable error, buffer complete and transfer complete interrupts.
@@ -1807,7 +1819,8 @@ static int sam_dmac_interrupt(struct sam_dmac_s *dmac)
                 {
                    /* Yes... Terminate the transfer with an error? */
 
-                  sam_dmaterminate(dmach, -EIO);
+                   dmalldbg("ERROR: DMA failed: %08x\n", regval);
+                   sam_dmaterminate(dmach, -EIO);
                 }
 
               /* Is the transfer complete? */
@@ -2154,7 +2167,7 @@ int sam_dmatxsetup(DMA_HANDLE handle, uint32_t paddr, uint32_t maddr,
           remaining -= maxtransfer;
 
           /* Increment the memory & peripheral address (if it is appropriate to
-           * do do).
+           * do so).
            */
 
           if ((dmach->flags & DMACH_FLAG_PERIPHINCREMENT) != 0)
@@ -2233,7 +2246,7 @@ int sam_dmarxsetup(DMA_HANDLE handle, uint32_t paddr, uint32_t maddr,
           remaining -= maxtransfer;
 
           /* Increment the memory & peripheral address (if it is appropriate to
-           * do do).
+           * do so).
            */
 
           if ((dmach->flags & DMACH_FLAG_PERIPHINCREMENT) != 0)

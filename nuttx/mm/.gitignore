@@ -1,10 +1,6 @@
-/Make.dep
+/Make_bin.dep
+/Make_ubin.dep
+/Make_kbin.dep
 /.depend
-/*.asm
-/*.obj
-/*.rel
-/*.lst
-/*.sym
-/*.adb
 /*.lib
-/*.src
+

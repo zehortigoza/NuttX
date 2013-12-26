@@ -52,8 +52,8 @@
 #include <crc32.h>
 #include <debug.h>
 
-#include <nuttx/mtd.h>
-#include <nuttx/smart.h>
+#include <nuttx/mtd/mtd.h>
+#include <nuttx/fs/smart.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/fs/mksmartfs.h>
 

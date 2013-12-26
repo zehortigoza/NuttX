@@ -213,9 +213,19 @@ void up_irqinitialize(void)
   int i;
 
   /* The following operations need to be atomic, but since this function is
-   * called early in the intialization sequence, we expect to have exclusive
+   * called early in the initialization sequence, we expect to have exclusive
    * access to the AIC.
    */
+
+  /* Colorize the interrupt stack for debug purposes */
+
+#if defined(CONFIG_DEBUG_STACK) && CONFIG_ARCH_INTERRUPTSTACK > 3
+  {
+    size_t intstack_size = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
+    up_stack_color((FAR void *)((uintptr_t)&g_intstackbase - intstack_size),
+                   intstack_size);
+  }
+#endif
 
   /* Unprotect SMR, SVR, SPU and DCR register */
 

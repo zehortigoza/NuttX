@@ -1,4 +1,4 @@
-NuttX TODO List (Last updated August 2, 2013)
+NuttX TODO List (Last updated November 7, 2013)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This file summarizes known NuttX bugs, limitations, inconsistencies with
@@ -18,7 +18,7 @@ nuttx/
  (16)  Network (net/, drivers/net)
   (4)  USB (drivers/usbdev, drivers/usbhost)
  (11)  Libraries (libc/, )
- (10)  File system/Generic drivers (fs/, drivers/)
+ (11)  File system/Generic drivers (fs/, drivers/)
   (5)  Graphics subystem (graphics/)
   (1)  Pascal add-on (pcode/)
   (1)  Documentation (Documentation/)
@@ -749,6 +749,11 @@ o Network (net/, drivers/net)
                   connection (lipaddr) and verifying that it is in the subnet
                   served by the driver.
 
+               Another issue:  When sending packets to another subnet, the
+               current logic falls back and uses ETH0 if it cannot find the
+               device for the subnet.  That lookup would need to be smarter...
+               perhaps it needs a routing table.
+
   Status:      Open.  Nothing will probably be done until I have a platform
                with two network interfaces that I need to support.
   Priority:    Medium, The feature is not important, but it is important
@@ -956,6 +961,10 @@ o USB (drivers/usbdev, drivers/usbhost)
                correctly supports OUT SETUP data following the same design as
                per above.
 
+               Update 2013-11-7: David Sidrane has fixed with issue with the
+               STM32 F1 USB device driver.  Still a few more to go before this
+               can be closed out.
+
   Status:      Open
   Priority:    High for class drivers that need EP0 data.  For example, the
                CDC/ACM serial driver might need the line coding data (that
@@ -1157,6 +1166,21 @@ o File system / Generic drivers (fs/, drivers/)
   Status:      Open
   Priority:    Low.  Nothing is broken.  This is an enhancement that would
                improve the OS design and possible reduce some FLASH usage
+
+  Title:       UNIFIED DESCRIPTOR REPRESENTATION
+  Descripton:  There are two separate ranges of descriptors for file and
+               socket descriptors: if a descriptor is in one range then it is
+               recognized as a file descriptor; if it is in another range
+               then it is recognized as a socket descriptor.  These separate
+               descriptor ranges can cause problems, for example, they makes
+               dup'ing descriptors with dup2() problematic.  The two groups
+               of descriptors are really indices into two separate tables:
+               On an array of file structures and the other an array of
+               socket structures.  There really should be one array that
+               is a union of file and socket descriptors.  Then socket and
+               file decriptors could lie in the same range.
+  Status:      Open
+  Priority:    Low
 
 o Graphics subystem (graphics/)
   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

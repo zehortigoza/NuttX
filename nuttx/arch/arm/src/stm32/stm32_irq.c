@@ -95,7 +95,7 @@ static void stm32_dumpnvic(const char *msg, int irq)
 
   flags = irqsave();
   lldbg("NVIC (%s, irq=%d):\n", msg, irq);
-  lldbg("  INTCTRL:    %08x VECTAB: %08x\n",
+  lldbg("  INTCTRL:    %08x VECTAB:  %08x\n",
         getreg32(NVIC_INTCTRL), getreg32(NVIC_VECTAB));
 #if 0
   lldbg("  SYSH ENABLE MEMFAULT: %08x BUSFAULT: %08x USGFAULT: %08x SYSTICK: %08x\n",
@@ -151,7 +151,7 @@ static int stm32_nmi(int irq, FAR void *context)
 static int stm32_busfault(int irq, FAR void *context)
 {
   (void)irqsave();
-  dbg("PANIC!!! Bus fault recived\n");
+  dbg("PANIC!!! Bus fault received: %08x\n", getreg32(NVIC_CFAULTS));
   PANIC();
   return 0;
 }
@@ -159,7 +159,7 @@ static int stm32_busfault(int irq, FAR void *context)
 static int stm32_usagefault(int irq, FAR void *context)
 {
   (void)irqsave();
-  dbg("PANIC!!! Usage fault received\n");
+  dbg("PANIC!!! Usage fault received: %08x\n", getreg32(NVIC_CFAULTS));
   PANIC();
   return 0;
 }
@@ -299,6 +299,16 @@ void up_irqinitialize(void)
   putreg32(0, NVIC_IRQ0_31_ENABLE);
   putreg32(0, NVIC_IRQ32_63_ENABLE);
 
+  /* Colorize the interrupt stack for debug purposes */
+
+#if defined(CONFIG_DEBUG_STACK) && CONFIG_ARCH_INTERRUPTSTACK > 3
+  {
+    size_t intstack_size = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
+    up_stack_color((FAR void *)((uintptr_t)&g_intstackbase - intstack_size),
+                   intstack_size);
+  }
+#endif
+
   /* The standard location for the vector table is at the beginning of FLASH
    * at address 0x0800:0000.  If we are using the STMicro DFU bootloader, then
    * the vector table will be offset to a different location in FLASH and we
@@ -311,7 +321,7 @@ void up_irqinitialize(void)
 #if defined(CONFIG_ARCH_RAMVECTORS)
   up_ramvec_initialize();
 #elif defined(CONFIG_STM32_DFU)
-  putreg32((uint32_t)stm32_vectors, NVIC_VECTAB);
+  putreg32((uint32_t)_vectors, NVIC_VECTAB);
 #endif
 
   /* Set all interrupts (and exceptions) to the default priority */
@@ -417,7 +427,8 @@ void up_disable_irq(int irq)
       regval &= ~bit;
       putreg32(regval, regaddr);
     }
-  stm32_dumpnvic("disable", irq);
+
+  // stm32_dumpnvic("disable", irq);
 }
 
 /****************************************************************************
@@ -442,7 +453,8 @@ void up_enable_irq(int irq)
       regval |= bit;
       putreg32(regval, regaddr);
     }
-  stm32_dumpnvic("enable", irq);
+
+  // stm32_dumpnvic("enable", irq);
 }
 
 /****************************************************************************
@@ -476,14 +488,8 @@ int up_prioritize_irq(int irq, int priority)
   uint32_t regval;
   int shift;
 
-#ifdef CONFIG_ARMV7M_USEBASEPRI
-  DEBUGASSERT(irq >= STM32_IRQ_MEMFAULT && irq < NR_IRQS &&
-              priority >= NVIC_SYSH_DISABLE_PRIORITY &&
-              priority <= NVIC_SYSH_PRIORITY_MIN);
-#else
   DEBUGASSERT(irq >= STM32_IRQ_MEMFAULT && irq < NR_IRQS &&
               (unsigned)priority <= NVIC_SYSH_PRIORITY_MIN);
-#endif
 
   if (irq < STM32_IRQ_INTERRUPTS)
     {

@@ -44,7 +44,7 @@
 #include "sama5d3x-ek.h"
 
 /************************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ************************************************************************************/
 
 /************************************************************************************
@@ -103,9 +103,48 @@ void sam_boardinitialize(void)
     }
 #endif
 
+  /* Configure board resources to support networkingif the 1) networking is enabled,
+   * 2) the EMAC or GMAC module is enabled, and 2) the weak function
+   * sam_netinitialize() has been brought into the build.
+   */
+
+#ifdef HAVE_NETWORK
+  if (sam_netinitialize)
+    {
+      sam_netinitialize();
+    }
+#endif
+
 #ifdef CONFIG_ARCH_LEDS
   /* Configure on-board LEDs if LED support has been selected. */
 
   up_ledinit();
 #endif
 }
+
+/****************************************************************************
+ * Name: board_initialize
+ *
+ * Description:
+ *   If CONFIG_BOARD_INITIALIZE is selected, then an additional
+ *   initialization call will be performed in the boot-up sequence to a
+ *   function called board_initialize().  board_initialize() will be
+ *   called immediately after up_intiialize() is called and just before the
+ *   initial application is started.  This additional initialization phase
+ *   may be used, for example, to initialize board-specific device drivers.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BOARD_INITIALIZE
+void board_initialize(void)
+{
+  /* Perform NSH initialization here instead of from the NSH.  This
+   * alternative NSH initialization is necessary when NSH is ran in user-space
+   * but the initialization function must run in kernel space.
+   */
+
+#if defined(CONFIG_NSH_LIBRARY) && !defined(CONFIG_NSH_ARCHINIT)
+  (void)nsh_archinitialize();
+#endif
+}
+#endif /* CONFIG_BOARD_INITIALIZE */

@@ -3,38 +3,22 @@
 # see misc/tools/kconfig-language.txt.
 #
 
-config NET
-	bool "Networking support"
+config ARCH_HAVE_NET
+	bool
 	default n
-	---help---
-		Enable or disable all network features
 
 config ARCH_HAVE_PHY
 	bool
+	default n
+
+config NET
+	bool "Networking support"
+	default n
+	select ARCH_HAVE_NET
+	---help---
+		Enable or disable all network features
 
 if NET
-
-choice
-	prompt "Board PHY Selection"
-	depends on ARCH_HAVE_PHY
-	default PHY_KS8721
-	---help---
-		Identify the PHY on your board.  This setting is not used by all Ethernet
-		drivers no do all Ethernet drivers support all PHYs.
-
-config PHY_KS8721
-	bool "Micrel KS8721 PHY"
-
-config PHY_DP83848C
-	bool "National Semiconduction DP83848C PHY"
-
-config PHY_LAN8720
-	bool "SMSC LAN8720 PHY"
-
-config PHY_DM9161
-	bool "Davicom DM9161 PHY"
-
-endchoice
 
 config NET_NOINTS
 	bool "Not interrupt driven"
@@ -90,8 +74,7 @@ config NET_SOCKOPTS
 
 config NET_BUFSIZE
 	int "Network packet size"
-	default 562 if !NET_TCP && NET_UDP && !NET_SLIP
-	default 420 if NET_TCP && !NET_UDP && !NET_SLIP
+	default 562 if !NET_SLIP
 	default 296 if NET_SLIP
 	---help---
 		uIP buffer size.  Default: 562
@@ -196,9 +179,17 @@ config NET_TCP_SPLIT_SIZE
 	---help---
 		Packets of this size or smaller than this will not be split.
 
-endif
-endif
-endmenu
+endif # NET_TCP_SPLIT
+
+config NET_SENDFILE
+	bool "Optimized network sendfile()"
+	default n
+	---help---
+		Support larger, higher performance sendfile() for transferring
+		files out a TCP connection.
+
+endif # NET_TCP
+endmenu # TCP/IP Networking
 
 menu "UDP Networking"
 
@@ -309,7 +300,7 @@ config NET_ARPTAB_SIZE
 	int "ARP table size"
 	default 16
 	---help---
-		The size of the ARP table
+		The size of the ARP table (in entries).
 
 config NET_ARP_IPIN
 	bool "ARP address harvesting"
@@ -317,6 +308,19 @@ config NET_ARP_IPIN
 	---help---
 		Harvest IP/MAC address mappings from the ARP table
 		from incoming IP packets.
+
+config NET_ROUTE
+	bool "Routing table suport"
+	default n
+	---help---
+		Build in support for a routing table.  See include/net/route.h
+
+config NET_MAXROUTES
+	int "Routing table size"
+	default 4
+	depends on NET_ROUTE
+	---help---
+		The size of the routing table (in entries).
 
 config NET_MULTICAST
 	bool "Multi-cast Tx support"

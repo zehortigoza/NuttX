@@ -162,9 +162,8 @@
 #  define SYS_sigsuspend               (__SYS_signals+5)
 #  define SYS_sigtimedwait             (__SYS_signals+6)
 #  define SYS_sigwaitinfo              (__SYS_signals+7)
-#  define SYS_sleep                    (__SYS_signals+8)
-#  define SYS_usleep                   (__SYS_signals+9)
-#  define __SYS_clock                  (__SYS_signals+10)
+#  define SYS_nanosleep                (__SYS_signals+8)
+#  define __SYS_clock                  (__SYS_signals+9)
 #else
 #  define __SYS_clock                  __SYS_signals
 #endif
@@ -206,7 +205,7 @@
 #  define CONFIG_NSOCKET_DESCRIPTORS 0
 #endif
 
-#if CONFIG_NFILE_DESCRIPTORS > 0 || CONFIG_NSOCKET_DESCRIPTORS > 0 
+#if CONFIG_NFILE_DESCRIPTORS > 0 || CONFIG_NSOCKET_DESCRIPTORS > 0
 #  define SYS_close                    (__SYS_descriptors+0)
 #  define SYS_ioctl                    (__SYS_descriptors+1)
 #  define SYS_read                     (__SYS_descriptors+2)
@@ -245,9 +244,16 @@
 #  if CONFIG_NFILE_STREAMS > 0
 #    define SYS_fs_fdopen              (__SYS_filedesc+16)
 #    define SYS_sched_getstreams       (__SYS_filedesc+17)
-#    define __SYS_mountpoint           (__SYS_filedesc+18)
+#    define __SYS_sendfile             (__SYS_filedesc+18)
 #  else
-#    define __SYS_mountpoint           (__SYS_filedesc+16)
+#    define __SYS_sendfile             (__SYS_filedesc+16)
+#  endif
+
+#  if defined(CONFIG_NET_SENDFILE)
+#    define SYS_sendfile,              __SYS_sendfile
+#    define __SYS_mountpoint           (__SYS_sendfile+1)
+#  else
+#    define __SYS_mountpoint           __SYS_sendfile
 #  endif
 
 #  if !defined(CONFIG_DISABLE_MOUNTPOINT)

@@ -1,5 +1,5 @@
 /************************************************************************************
- * configs/sama5df3x-ek/include/board.h
+ * configs/sama5d3x-ek/include/board.h
  *
  *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -51,7 +51,7 @@
  * definitions will configure operational clocking.
  */
 
-#if !defined(CONFIG_SAMA5_OHCI) || defined(CONFIG_SAMA5_EHCI)
+#if 1 /* #if !defined(CONFIG_SAMA5_OHCI) || defined(CONFIG_SAMA5_EHCI) */
 /* This is the configuration provided in the Atmel example code.  This setup results
  * in a CPU clock of 396MHz.
  *
@@ -70,6 +70,27 @@
 #  include <arch/board/board_384MHz.h>
 
 #endif
+
+/* LCD Interface, Geometry and Timing */
+
+#define BOARD_LCDC_OUTPUT_BPP 24       /* Output format to H/W is 24BPP RGB */
+#define BOARD_LCDC_WIDTH      800      /* Display width (pixels) */
+#define BOARD_LCDC_HEIGHT     480      /* Display height (rows) */
+#undef  BOARD_LCDC_MCK_MUL2            /* Source clock is Mck (vs 2*Mck) */
+#define BOARD_LCDC_PIXCLK_INV 1        /* Invert pixel clock, use falling edge */
+#define BOARD_LCDC_PIXELCLOCK 33260000 /* Pixel clock frequency */
+#define BOARD_LCDC_GUARDTIME  9        /* Guard time (frames) */
+#define BOARD_LCDC_VSPW       2        /* Vertical pulse width (lines) */
+#define BOARD_LCDC_HSPW       128      /* Horizontal pulse width (LCDDOTCLK) */
+#define BOARD_LCDC_VFPW       37       /* Vertical front porch (lines) */
+#define BOARD_LCDC_VBPW       8        /* Vertical back porch (lines) */
+#define BOARD_LCDC_HFPW       168      /* Horizontal front porch (LCDDOTCLK) */
+#define BOARD_LCDC_HBPW       88       /* Horizontal back porch (LCDDOTCLK) */
+
+/* Backlight prescaler value and PWM output polarity */
+
+#define BOARD_LCDC_PWMPS      LCDC_LCDCFG6_PWMPS_DIV1
+#define BOARD_LCDC_PWMPOL     LCDC_LCDCFG6_PWMPOL
 
 /* LED definitions ******************************************************************/
 /* There are two LEDs on the SAMA5D3 series-CM board that can be controlled
@@ -96,7 +117,6 @@
 
 #define BOARD_BLUE_BIT    (1 << BOARD_BLUE)
 #define BOARD_RED_BIT     (1 << BOARD_RED)
-
 
 /* These LEDs are not used by the board port unless CONFIG_ARCH_LEDS is
  * defined.  In that case, the usage by the board port is defined in
@@ -144,6 +164,138 @@
 
 #define BUTTON_USER1_BIT  (1 << BUTTON_USER1)
 
+/* NAND *****************************************************************************/
+
+/* Address for transferring command bytes to the nandflash, CLE A22*/
+
+#define BOARD_EBICS3_NAND_CMDADDR   0x60400000
+
+/* Address for transferring address bytes to the nandflash, ALE A21*/
+
+#define BOARD_EBICS3_NAND_ADDRADDR  0x60200000
+
+/* Address for transferring data bytes to the nandflash.*/
+
+#define BOARD_EBICS3_NAND_DATAADDR  0x60000000
+
+/* PIO configuration ****************************************************************/
+/* LCDC */
+
+#define PIO_LCD_DAT16     PIO_LCD_DAT16_2
+#define PIO_LCD_DAT17     PIO_LCD_DAT17_2
+#define PIO_LCD_DAT18     PIO_LCD_DAT18_2
+#define PIO_LCD_DAT19     PIO_LCD_DAT19_2
+#define PIO_LCD_DAT20     PIO_LCD_DAT20_2
+#define PIO_LCD_DAT21     PIO_LCD_DAT21_2
+#define PIO_LCD_DAT22     PIO_LCD_DAT22_1
+#define PIO_LCD_DAT23     PIO_LCD_DAT23_1
+
+/* PWM.  There are no dedicated PWM output pins available to the user for PWM
+ * testing.  Care must be taken because all PWM output pins conflict with some other
+ * usage of the pin by other devices. Furthermore, many of these pins have not been
+ * brought out to an external connector:
+ *
+ *    -----+---+---+----+------+----------------
+ *     PWM  PIN PER PIO   I/O   CONFLICTS
+ *    -----+---+---+----+------+----------------
+ *     PWM0 FI   B  PC28 J2.30  SPI1, ISI
+ *          H    B  PB0   ---   GMAC
+ *               B  PA20 J1.14  LCDC, ISI
+ *          L    B  PB1   ---   GMAC
+ *               B  PA21 J1.16  LCDC, ISI
+ *    -----+---+---+----+------+----------------
+ *     PWM1 FI   B  PC31 J2.36  HDMI
+ *          H    B  PB4   ---   GMAC
+ *               B  PA22 J1.18  LCDC, ISI
+ *          L    B  PB5   ---   GMAC
+ *               B  PE31 J3.20  ISI, HDMI
+ *               B  PA23 J1.20  LCDC, ISI
+ *    -----+---+---+----+------+----------------
+ *     PWM2 FI   B  PC29 J2.29  UART0, ISI, HDMI
+ *          H    C  PD5   ---   HSMCI0
+ *               B  PB8   ---   GMAC
+ *          L    C  PD6   ---   HSMCI0
+ *               B  PB9   ---   GMAC
+ *    -----+---+---+----+------+----------------
+ *     PWM3 FI   C  PD16  ---  SPI0, Audio
+ *          H    C  PD7   ---  HSMCI0
+ *               B  PB12 J3.7  GMAC
+ *          L    C  PD8   ---  HSMCI0
+ *               B  PB13  ---  GMAC
+ *    -----+---+---+----+------+----------------
+ */
+
+/* PWM channel 0:
+ *
+ * PA20 and PA21 can be used if the LCDC or ISI are not selected.  These outputs are
+ * available on J1, pins 14 and 16, respectively.
+ *
+ * If the GMAC is not selected, then PB0 and PB1 could also be used.  However,
+ * these pins are not available at the I/O expansion connectors.
+ */
+
+#if !defined(CONFIG_SAMA5_LCDC) && !defined(CONFIG_SAMA5_ISI)
+#  define PIO_PWM0_H  PIO_PWM0_H_2
+#  define PIO_PWM0_L  PIO_PWM0_L_2
+#elif !defined(CONFIG_SAMA5_GMAC)
+#  define PIO_PWM0_H  PIO_PWM0_H_1
+#  define PIO_PWM0_L  PIO_PWM0_L_1
+#endif
+
+/* PWM channel 1:
+ *
+ * PA22 and PA23 can be used if the LCDC or ISI are not selected.  These outputs are
+ * available on J1, pins 18 and 20, respectively.
+ *
+ * PE31 can be used if the ISI is not selected (and the HDMI is not being used).
+ * That signal is available at J3 pin 20.
+ *
+ * If the GMAC is not selected, then PB4 and PB5 could also be used.  However,
+ * these pins are not available at the I/O expansion connectors.
+ */
+
+#if !defined(CONFIG_SAMA5_LCDC) && !defined(CONFIG_SAMA5_ISI)
+#  define PIO_PWM1_H  PIO_PWM1_H_2
+#elif !defined(CONFIG_SAMA5_GMAC)
+#  define PIO_PWM1_H  PIO_PWM1_H_1
+#endif
+
+#if !defined(CONFIG_SAMA5_LCDC) && !defined(CONFIG_SAMA5_ISI)
+#  define PIO_PWM1_L  PIO_PWM1_L_3
+#elif !defined(CONFIG_SAMA5_ISI)
+#  define PIO_PWM1_L  PIO_PWM1_L_2
+#elif !defined(CONFIG_SAMA5_GMAC)
+#  define PIO_PWM1_L  PIO_PWM1_L_1
+#endif
+
+/* PWM channel 2:
+ *
+ * None of the output pin options are available at any of the I/O expansion
+ * connectors for PWM channel 2
+ */
+
+#if !defined(CONFIG_SAMA5_HSMCI0)
+#  define PIO_PWM2_H  PIO_PWM2_H_1
+#  define PIO_PWM2_L  PIO_PWM2_L_1
+#elif !defined(CONFIG_SAMA5_GMAC)
+#  define PIO_PWM2_H  PIO_PWM2_H_2
+#  define PIO_PWM2_L  PIO_PWM2_L_2
+#endif
+
+/* PWM channel 3:
+ *
+ * If the GMAC is not selected, then PB12 can used and is available at J3 pin 7.
+ * None of the other output pins are accessible at the I/O expansion connectors.
+ */
+
+#if !defined(CONFIG_SAMA5_GMAC)
+#  define PIO_PWM3_H  PIO_PWM3_H_2
+#  define PIO_PWM3_L  PIO_PWM3_L_2
+#elif !defined(CONFIG_SAMA5_HSMCI0)
+#  define PIO_PWM3_H  PIO_PWM3_H_1
+#  define PIO_PWM3_L  PIO_PWM3_L_1
+#endif
+
 /************************************************************************************
  * Assembly Language Macros
  ************************************************************************************/
@@ -181,6 +333,20 @@ extern "C" {
  ************************************************************************************/
 
 void sam_boardinitialize(void);
+
+/************************************************************************************
+ * Name: sam_phyirq
+ *
+ * Description:
+ *   This function may be called to register an interrupt handler that will be
+ *   called when an interrupt is received from a PHY.
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_NET) && (defined(CONFIG_SAMA5_EMAC) || defined(CONFIG_SAMA5_GMAC)) && \
+    defined(CONFIG_SAMA5_PIOE_IRQ)
+xcpt_t sam_phyirq(int intf, xcpt_t irqhandler);
+#endif
 
 /************************************************************************************
  * Name:  sam_ledinit, sam_setled, and sam_setleds

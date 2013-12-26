@@ -63,7 +63,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/spi/spi.h>
-#include <nuttx/mtd.h>
+#include <nuttx/mtd/mtd.h>
 
 /************************************************************************************
  * Pre-processor Definitions
@@ -885,6 +885,12 @@ FAR struct mtd_dev_s *at45db_initialize(FAR struct spi_dev_s *spi)
       at45db_pwrdown(priv);
       at45db_unlock(priv);
     }  
+
+  /* Register the MTD with the procfs system if enabled */
+
+#ifdef CONFIG_MTD_REGISTRATION
+  mtd_register(&priv->mtd, "at45db");
+#endif
 
   fvdbg("Return %p\n", priv);
   return (FAR struct mtd_dev_s *)priv;

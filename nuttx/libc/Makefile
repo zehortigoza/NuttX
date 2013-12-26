@@ -35,6 +35,18 @@
 
 -include $(TOPDIR)/Make.defs
 
+# CFLAGS
+
+ifeq ($(CONFIG_NUTTX_KERNEL),y)
+ifeq ($(CONFIG_WINDOWS_NATIVE),y)
+  KDEFINE = ${shell $(TOPDIR)\tools\define.bat "$(CC)" __KERNEL__}
+else
+  KDEFINE = ${shell $(TOPDIR)/tools/define.sh "$(CC)" __KERNEL__}
+endif
+endif
+
+# Sources and paths
+
 ASRCS =
 CSRCS =
 
@@ -61,6 +73,7 @@ include spawn/Make.defs
 include queue/Make.defs
 include wqueue/Make.defs
 include misc/Make.defs
+include audio/Make.defs
 
 BINDIR ?= bin
 
@@ -79,9 +92,11 @@ all: $(BIN)
 
 $(AOBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
+	$(call MOVEOBJ,$(patsubst $(BINDIR)$(DELIM)%$(OBJEXT),%,$@),$(BINDIR))
 
 $(COBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
+	$(call MOVEOBJ,$(patsubst $(BINDIR)$(DELIM)%$(OBJEXT),%,$@),$(BINDIR))
 
 # C library for the flat build
 
@@ -105,7 +120,12 @@ endif
 # Dependencies
 
 .depend: Makefile $(SRCS)
-	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+ifeq ($(CONFIG_NUTTX_KERNEL),y)
+	$(Q) $(MKDEP) --obj-path ubin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make_ubin.dep
+	$(Q) $(MKDEP) --obj-path kbin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) $(KDEFINE) -- $(SRCS) >Make_kbin.dep
+else
+	$(Q) $(MKDEP) --obj-path bin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make_bin.dep
+endif
 	$(Q) touch $@
 
 depend: .depend
@@ -127,7 +147,11 @@ distclean: clean
 	$(Q) $(MAKE) -C bin  distclean TOPDIR=$(TOPDIR)
 	$(Q) $(MAKE) -C ubin distclean TOPDIR=$(TOPDIR)
 	$(Q) $(MAKE) -C kbin distclean TOPDIR=$(TOPDIR)
-	$(call DELFILE, Make.dep)
+	$(call DELFILE, Make_bin.dep)
+	$(call DELFILE, Make_ubin.dep)
+	$(call DELFILE, Make_kbin.dep)
 	$(call DELFILE, .depend)
 
--include Make.dep
+-include Make_bin.dep
+-include Make_ubin.dep
+-include Make_kbin.dep
