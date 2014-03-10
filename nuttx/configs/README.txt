@@ -60,16 +60,12 @@ following characteristics:
   |-- <config1-dir>
   |   |-- Make.defs
   |   |-- defconfig
-  |   |-- appconfig*
   |   `-- setenv.sh
   |-- <config2-dir>
   |   |-- Make.defs
   |   |-- defconfig
-  |   |-- appconfig*
   |   `-- setenv.sh
   ...
-
-  *optional
 
 Summary of Files
 ^^^^^^^^^^^^^^^^
@@ -132,10 +128,6 @@ defconfig -- This is a configuration file similar to the Linux
     (2) to generate include/nuttx/config.h which is included by
         most C files in the system.
 
-appconfig -- This is another configuration file that is specific to the
-  application.  This file is copied into the application build directory
-  when NuttX is configured.  See ../apps/README.txt for further details.
-
 setenv.sh -- This is a script that you can include that will be installed at
   the toplevel of the directory structure and can be sourced to set any
   necessary environment variables.  You will most likely have to customize the
@@ -168,6 +160,11 @@ http://nuttx.org/Documentation/NuttXConfigVariables.html.
 
 Supported Boards
 ^^^^^^^^^^^^^^^^
+
+configs/16z
+  This is the port of NuttX port to the 16z board. The 16z board is based on
+  the ZiLOG ZNEO Z16F2811AL20EG part.  See https://github.com/toyaga/16z for
+  further information.
 
 configs/amber
   This is placeholder for the SoC Robotics Amber Web Server that is based
@@ -282,11 +279,6 @@ configs/lpcxpresso-lpc1768
 configs/lpc4330-xplorer
   NuttX port to the LPC4330-Xplorer board from NGX Technologies featuring
   the NXP LPC4330FET100 MCU
-
-configs/m68322evb
-  This is a work in progress for the venerable m68322evb board from
-  Motorola. This OS is also built with the arm-nuttx-elf toolchain*.  STATUS:
-  This port was never completed.
 
 configs/maple
   NuttX support for the LeafLab's Maple and Maple Mini boards. These boards
@@ -439,6 +431,12 @@ configs/pjrc-8051
   8051 Microcontroller.  This port uses the PJRC 87C52 development system
   and the SDCC toolchain.   This port is not quite ready for prime time.
 
+config/px4fmu-v2_upstream
+  This is a minimal configuration that supports low-level test of the
+  PX4FMU v2 in the NuttX source tree.  If you are using PX4, you probably
+  don't want this configuration.  You probably want the latest supported
+  configuration available from the PX4 GIT repositories.
+
 configs/qemu-i486
   Port of NuttX to QEMU in i486 mode.  This port will also run on real i486
   hardwared (Google the Bifferboard).
@@ -470,6 +468,11 @@ configs/sama5d3x-ek
 
   There is also the SAMA5D3FAE-EK bundle includes everything:  The base
   board, all four CPU modules, and the LCD.
+
+configs/samd20-xplained
+  The port of NuttX to the Atmel SAMD20-Xplained Pro development board.  This
+  board features the ATSAMD20J18A MCU (Cortex-M0+ with 256KB of FLASH and
+  32KB of SRAM).
 
 configs/sam3u-ek
   The port of NuttX to the Atmel SAM3U-EK development board.
@@ -521,6 +524,12 @@ configs/stm32f4discovery
 
 configs/stm32f429i-disco
   STMicro STM32F429I-Discovery board based on the STMicro STM32F429ZIT6 MCU.
+
+configs/stm32ldiscovery
+  STMicro STM32L-Discovery board based on the STMicro STM32L152RB MCU.
+
+configs/stm32vldiscovery
+  STMicro STM32VL-Discovery board based on the STMicro STM32F100RB MCU.
 
 configs/sure-pic32mx
   The "Advanced USB Storage Demo Board," Model DB-DP11215, from Sure
@@ -605,12 +614,6 @@ Configuring NuttX requires only copying
   configs/<board-name>/<config-dir>/setenv.sh to ${TOPDIR}/setenv.sh
   configs/<board-name>/<config-dir>/defconfig to ${TOPDIR}/.config
 
-And if configs/<board-name>/<config-dir>/appconfig exists in the board
-configuration directory:
-
-  Copy configs/<board-name>/<config-dir>/appconfig to <app-dir>/.config
-  echo "APPS_LOC=\"<app-dir>\"" >> "${TOPDIR}/.config"
-
 tools/configure.sh
   There is a script that automates these steps.  The following steps will
   accomplish the same configuration:
@@ -626,10 +629,9 @@ tools/configure.sh
 
   See tools/README.txt for more information about these scripts.
 
-  And if configs/<board-name>/<config-dir>/appconfig exists and your
-  application directory is not in the standard loction (../apps), then
-  you should also specify the location of the application directory on the
-  command line like:
+  And if your application directory is not in the standard loction (../apps
+  or ../apps-<version>), then you should also specify the location of the
+  application directory on the command line like:
 
     cd tools
     ./configure.sh -a <app-dir> <board-name>/<config-dir>

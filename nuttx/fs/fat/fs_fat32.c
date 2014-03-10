@@ -1,7 +1,7 @@
 /****************************************************************************
  * fs/fat/fs_fat32.c
  *
- *   Copyright (C) 2007-2009, 2011-2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2011-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * References:
@@ -391,7 +391,7 @@ static int fat_close(FAR struct file *filep)
   struct inode         *inode;
   struct fat_file_s    *ff;
   struct fat_mountpt_s *fs;
-  int                   ret = OK;
+  int                   ret;
 
   /* Sanity checks */
 
@@ -518,8 +518,6 @@ static ssize_t fat_read(FAR struct file *filep, char *buffer, size_t buflen)
     {
       bytesread  = 0;
 
-#ifdef CONFIG_FAT_DMAMEMORY /* Warning avoidance */
-
       /* Check if the current read stream has incremented to the next
        * cluster boundary
        */
@@ -542,6 +540,7 @@ static ssize_t fat_read(FAR struct file *filep, char *buffer, size_t buflen)
           ff->ff_sectorsincluster = fs->fs_fatsecperclus;
         }
 
+#ifdef CONFIG_FAT_DMAMEMORY /* Warning avoidance */
 fat_read_restart:
 #endif
 
@@ -755,11 +754,10 @@ static ssize_t fat_write(FAR struct file *filep, const char *buffer,
 
   while (buflen > 0)
     {
-      /* Check if the user has provided a buffer large enough to
-       * hold one or more complete sectors.
+      /* Check if the current write stream has incremented to the next
+       * cluster boundary
        */
 
-#ifdef CONFIG_FAT_DMAMEMORY /* Warning avoidance */
       if (ff->ff_sectorsincluster < 1)
         {
           /* Extend the current cluster by one (unless lseek was used to
@@ -788,8 +786,13 @@ static ssize_t fat_write(FAR struct file *filep, const char *buffer,
           ff->ff_currentsector    = fat_cluster2sector(fs, cluster);
         }
 
+#ifdef CONFIG_FAT_DMAMEMORY /* Warning avoidance */
 fat_write_restart:
 #endif
+
+      /* Check if the user has provided a buffer large enough to
+       * hold one or more complete sectors.
+       */
 
       nsectors = buflen / fs->fs_hwsectorsize;
       if (nsectors > 0 && sectorindex == 0 && !force_indirect)
@@ -1502,7 +1505,7 @@ static int fat_opendir(struct inode *mountpt, const char *relpath, struct fs_dir
 
 errout_with_semaphore:
   fat_semgive(fs);
-  return ERROR;
+  return ret;
 }
 
 /****************************************************************************
@@ -1520,7 +1523,7 @@ static int fat_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
   uint8_t               ch;
   uint8_t               attribute;
   bool                  found;
-  int                   ret = OK;
+  int                   ret;
 
   /* Sanity checks */
 
@@ -2116,10 +2119,6 @@ static int fat_mkdir(struct inode *mountpt, const char *relpath, mode_t mode)
   DIR_PUTFSTCLUSTLO(direntry, dircluster);
 
   parentcluster = dirinfo.dir.fd_startcluster;
-  /*
-    parent cluster for .. is set to 0 on all FAT types (including
-    FAT32). Tested on Windows8 and Linux
-   */
   if (parentcluster == fs->fs_rootbase)
     {
       parentcluster = 0;

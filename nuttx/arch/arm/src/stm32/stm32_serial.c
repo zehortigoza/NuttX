@@ -1755,7 +1755,6 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
             cr &= ~USART_CR3_HDSEL;
           }
 #else
-
         if (arg == SER_SINGLEWIRE_ENABLED)
           {
             stm32_configgpio(priv->tx_gpio | GPIO_OPENDRAIN);

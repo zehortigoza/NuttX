@@ -46,7 +46,7 @@
 #  include <stdint.h>
 #endif
 
-#ifdef CONFIG_ARCH_AVR32
+#ifdef CONFIG_ARCH_FAMILY_AVR32
 # include "avr32_internal.h"
 #else
 # include "avr_internal.h"
@@ -179,11 +179,11 @@ extern void up_timerinit(void);
 /* Defined in configs/<board-name>/src/up_leds.c */
 
 #ifdef CONFIG_ARCH_LEDS
-void up_ledon(int led);
-void up_ledoff(int led);
+void board_led_on(int led);
+void board_led_off(int led);
 #else
-# define up_ledon(led)
-# define up_ledoff(led)
+# define board_led_on(led)
+# define board_led_off(led)
 #endif
 
 /* Defined in chip/xxx_ethernet.c */

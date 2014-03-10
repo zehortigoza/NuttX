@@ -1,7 +1,7 @@
 /****************************************************************************
  * libc/stdio/lib_sscanf.c
  *
- *   Copyright (C) 2007, 2008, 2011-2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007, 2008, 2011-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,16 +44,25 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
 #include <debug.h>
 
 /****************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 #define MAXLN 128
+
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Type Declarations
@@ -298,14 +307,19 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
                     {
                       /* No... Guess a field width using some heuristics */
 
-                      width = findwidth(buf, fmt);
+                      int tmpwidth = findwidth(buf, fmt);
+                      width = MIN(sizeof(tmp) - 1, tmpwidth);
                     }
 
                   /* Copy the string (if we are making an assignment) */
 
                   if (!noassign)
                     {
-                      strncpy(tv, buf, width);
+                      if (width > 0)
+                        {
+                          strncpy(tv, buf, width);
+                        }
+
                       tv[width] = '\0';
                     }
 
@@ -448,7 +462,8 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
                     {
                       /* No... Guess a field width using some heuristics */
 
-                      width = findwidth(buf, fmt);
+                      int tmpwidth = findwidth(buf, fmt);
+                      width = MIN(sizeof(tmp) - 1, tmpwidth);
                     }
 
                   /* Copy the numeric string into a temporary working

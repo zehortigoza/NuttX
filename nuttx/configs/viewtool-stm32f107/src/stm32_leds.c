@@ -157,7 +157,7 @@ void stm32_ledinit(void)
 }
 
 /****************************************************************************
- * Name: up_ledon
+ * Name: board_led_on
  *
  * Description:
  *   Select the "logical" ON state:
@@ -178,7 +178,7 @@ void stm32_ledinit(void)
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_LEDS
-void up_ledon(int led)
+void board_led_on(int led)
 {
   switch (led)
     {
@@ -210,7 +210,7 @@ void up_ledon(int led)
 #endif
 
 /****************************************************************************
- * Name: up_ledoff
+ * Name: board_led_off
  *
  * Description:
  *   Select the "logical" OFF state:
@@ -231,7 +231,7 @@ void up_ledon(int led)
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_LEDS
-void up_ledoff(int led)
+void board_led_off(int led)
 {
   switch (led)
     {
@@ -296,10 +296,10 @@ void stm32_setled(int led, bool ledon)
 void stm32_setleds(uint8_t ledset)
 {
 #ifdef CONFIG_ARCH_LEDS
-  led_offbits(ledset & ~BOARD_LED4_BIT);
+  led_onbits(ledset & ~BOARD_LED4_BIT);
   led_offbits(~(ledset | BOARD_LED4_BIT));
 #else
-  led_offbits(ledset);
+  led_onbits(ledset);
   led_offbits(~ledset);
 #endif
 }

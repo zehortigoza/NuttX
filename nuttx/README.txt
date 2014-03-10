@@ -12,7 +12,6 @@ README
     - Instantiating "Canned" Configurations
     - NuttX Configuration Tool
     - Incompatibilities with Older Configurations
-    - Converting Older Configurations to use the Configuration Tool
     - NuttX Configuration Tool under DOS
   o Toolchains
     - Cross-Development Toolchains
@@ -43,7 +42,7 @@ Installing Cygwin
   for you.
 
      NOTE: NuttX can also be installed and built on a native Windows
-     system, but with some loss of tool functionality (see the
+     system, but with some potential tool-related issues (see the
      discussion "Native Windows Build" below).
 
   Some Cygwin installation tips:
@@ -254,14 +253,6 @@ additional file to the directory the NuttX application package (APPSDIR)):
     included in the build and what is not.  This file is also used
     to generate a C configuration header at include/nuttx/config.h.
 
-  Copy configs/<board-name>/<config-dir>/appconfig to ${APPSDIR}/.config
-
-    The appconfig file describes the applications that need to be
-    built in the appliction directory (APPSDIR).  Not all configurations
-    have an appconfig file.  This file is deprecated and will not be
-    used with new defconfig files produced with the kconfig-mconf
-    configuration tool.
-
 General information about configuring NuttX can be found in:
 
   ${TOPDIR}/configs/README.txt
@@ -291,8 +282,8 @@ NuttX Configuration Tool
   This automated tool is based on the kconfig-frontends application
   available at http://ymorin.is-a-geek.org/projects/kconfig-frontends
   (A snapshot of this tool is also available at ../misc/tools).  This
-  application provides a tool called 'mconf' that is used by the NuttX
-  top-level Makefile.  The following make target is provided:
+  application provides a tool called 'kconfig-mconf' that is used by
+  the NuttX top-level Makefile.  The following make target is provided:
 
     make menuconfig
 
@@ -314,20 +305,26 @@ NuttX Configuration Tool
      NOTE: For a description of the syntax of this configuration file,
      see ../misc/tools/kconfig-language.txt.
 
-  2. The 'mconf' tool.  'mconf' is part of the kconfig-frontends
-     package.  You can download that package from the website
-     http://ymorin.is-a-geek.org/projects/kconfig-frontends or you
-     can use the snapshot in ../misc/tools.
+  2. The 'kconfig-mconf' tool.  'kconfig-mconf' is part of the
+     kconfig-frontends package.  You can download that package from
+     the website http://ymorin.is-a-geek.org/projects/kconfig-frontends
+     or you can use the snapshot in ../misc/tools.
 
-     Building may be as simple as 'configure; make; make install'
-     but there may be some build complexities, especially if you
-     are building under Cygwin.  See the more detailed build
-     instructions at ../misc/tools/README.txt
+     Building kconfig-frontends under Linux may be as simple as
+     'configure; make; make install' but there may be some build
+     complexities, especially if you are building under Cygwin.  See
+     the more detailed build instructions at ../misc/tools/README.txt
 
-     The 'make install' step will, by default, install the 'mconf'
+     The 'make install' step will, by default, install the 'kconfig-mconf'
      tool at /usr/local/bin/mconf.  Where ever you choose to
-     install 'mconf', make certain that your PATH variable includes
+     install 'kconfig-mconf', make certain that your PATH variable includes
      a path to that installation directory.
+
+     The kconfig-frontends tools will not build in a native Windows
+     environment directly "out-of-the-box".  For the Windows native
+     case, you should should the modified version of kconfig-frontends
+     that can be found at
+     http://uvc.de/posts/linux-kernel-configuration-tool-mconf-under-windows.html
 
   The basic configuration order is "bottom-up":
 
@@ -340,6 +337,17 @@ NuttX Configuration Tool
 
   This is pretty straight forward for creating new configurations
   but may be less intuitive for modifying existing configurations.
+
+  If you have an environment that suppots the Qt or GTK graphical systems
+  (probably KDE or gnome, respectively), then you can also build the
+  graphical kconfig-frontends, kconfig-qconf and kconfig-gconf.  In
+  these case, you can start the graphical configurator with either:
+
+    make qconfig
+
+  or
+
+    make gconfig
 
 Refreshing Configurations with 'make oldconfig'
 -----------------------------------------------
@@ -362,109 +370,39 @@ Incompatibilities with Older Configurations
 
   ***** WARNING *****
 
-  The old legacy, manual configurations and the new kconfig-frontends
-  configurations are not 100% compatible.  Old legacy configurations
-  can *not* be used with the kconfig-frontends tool:  If you run
-  'make menuconfig' with a legacy configuration the resulting
+  The current NuttX build system supports *only* the new configuration
+  files generated using the kconfig-frontends tools.  The older, legacy,
+  manual configurations and the new kconfig-frontends configurations are
+  not compatible.  Old legacy configurations can *not* be used with the kconfig-frontends tool and, hence, cannot be used with recent releases
+  of NuttX:
+
+  If you run 'make menuconfig' with a legacy configuration the resulting
   configuration will probably not be functional.
 
   Q: How can I tell if a configuration is a new kconfig-frontends
      configuration or an older, manual configuration?
 
-  A: a) New kcondfig-frontends configurations will have this setting
-        within the defconfig/.config file":
+  A: Only old, manual configurations will have an appconfig file
 
-          CONFIG_NUTTX_NEWCONFIG=y
-
-     b) Only old, manual configurations will have an appconfig file
-
-Converting Older Configurations to use the Configuration Tool
--------------------------------------------------------------
 
   Q: How can I convert a older, manual configuration into a new,
      kconfig-frontends toolchain.
 
-  A: 1) Look at the appconfig file:  Each application path there
-        will now have to have an enabling setting.  For example,
-        if the old appconfig file had:
-
-          CONFIGURED_APPS = examples/ostest
-
-        Then the new configuration will need:
-
-          CONFIG_EXAMPLES_OSTEST=y
-
-        The appconfig file can then be deleted because it will not
-        be needed after the conversion.
-
-     2) Build the cmpconfig utility at tools:
-
-          cd tools
-          make -f Makefile.host cmpconfig
-
-     3) Perform these steps repeatedly until you are convinced that
-        the configurations are the same:
-
-        a) Repeat the following until you have account for all of the differences:
-
-             cp configs/<board>/<condfiguration>/defconfig .config
-             make menuconfig  (Just exit and save the new .config file)
-             tools/cmpconfig configs/<board>/<condfiguration>/defconfig .config | grep file1
-
-           The final grep will show settings in the old defconfig file that
-           do not appear in the new .config file (or have a different value
-           in the new .config file).  In the new configuration, you will
-           probably have to enable certain groups of features.  Such
-           hierarachical enabling options were not part of the older
-           configuration.
-
-        b) Then make sure these all make sense:
-
-             tools/cmpconfig configs/<board>/<condfiguration>/defconfig .config | grep file2
-
-           The final grep will show settings in the new .config file that
-           do not appear in the older defconfig file (or have a different value
-           in the new .config file).  Here you should see only the new
-           hierarachical enabling options (such as CONFIG_SPI or CONFIG_MMCSD)
-           plus some other internal configuration settings (like CONFIG_ARCH_HAVE_UART0).
-           You will have to convince yourself that these new settings all make sense.
-
-     4) Finally, update the configuration:
-
-          cp .config configs/<board>/<condfiguration>/defconfig
-          rm configs/<board>/<condfiguration>/appconfig
-
-        NOTE:  You should comment out the line containing the CONFIG_APPS_DIR
-        in the new defconfig file.  Why?  Because the application directory
-        may reside at a different location when the configuration is installed
-        at some later time.
-
-          # CONFIG_APPS_DIR="../apps"
-
-     5) The updated configuration can then be instantiated in the normal
-        fashion:
-
-          cd tools
-          ./configure.sh <board>/<condfiguration>
-
-        (or configure.bat for the case of the Windows native build).
-
-        NOTE: If CONFIG_APPS_DIR is not defined in the defconfig file,
-        the configure.sh script will find and add the new, correct path to
-        the application directory (CONFIG_APPS_DIR) when it copies the
-        defconfig file to the .config file.  This is the setting that was
-        commented out in step 4.
+  A: Refer to http://www.nuttx.org/doku.php?id=wiki:howtos:convertconfig
 
 NuttX Configuration Tool under DOS
 ----------------------------------
 
   Recent versions of NuttX support building NuttX from a native Windows
   console window (see "Native Windows Build" below).  But kconfig-frontends
-  is a Linux tool.  There have been some successes building a Windows
-  native version of the kconfig-frontends tool, but that is not ready
-  for prime time.
+  is a Linux tool.  At one time this was a problem for Windows users, but
+  now there is a specially modified version of the kconfig-frontends tools
+  that can be used:
+  http://uvc.de/posts/linux-kernel-configuration-tool-mconf-under-windows.html
 
-  At this point, there are only a few options for the Windows user:
+  It is also possible to use the version of kconfig-frontends built
+  under Cygwin outside of the Cygwin "sandbox" in a native Windows
+  environment:
 
   1. You can run the configuration tool using Cygwin.  However, the
      Cygwin Makefile.win will complain so to do this will, you have
@@ -486,7 +424,7 @@ NuttX Configuration Tool under DOS
 
           kconfig-mconf Kconfig
 
-         There is a Windows bacht file at tools/kconfig.bat that automates
+         There is a Windows batch file at tools/kconfig.bat that automates
          these steps:
 
          tools/kconfig menuconfig
@@ -745,9 +683,7 @@ Native Windows Build
   This capability should still be considered a work in progress because:
 
   (1) It has not been verfied on all targets and tools, and
-  (2) it still lacks some of the creature-comforts of the more mature environments
-      (like 'make menuconfig' support.  See the section "NuttX Configuration Tool
-      under DOS" above).
+  (2) it still lacks some of the creature-comforts of the more mature environments.
 
    There is an alternative to the setenv.sh script available for the Windows
    native environment: tools/configure.bat.  See tools/README.txt for additional
@@ -977,6 +913,8 @@ nuttx
  |- audio/
  |   `-README.txt
  |- configs/
+ |   |- 16z/
+ |   |   `- README.txt
  |   |- amber/
  |   |   `- README.txt
  |   |- arduino-due/
@@ -1089,6 +1027,8 @@ nuttx
  |   |   `- README.txt
  |   |- sama5d3x-ek/
  |   |   `- README.txt
+ |   |- samd20-xplained/
+ |   |   `- README.txt
  |   |- sam3u-ek/
  |   |   `- README.txt
  |   |- sam4l-xplained/
@@ -1118,9 +1058,11 @@ nuttx
  |   |   `- README.txt
  |   |- stm32f4discovery/
  |   |   `- README.txt
+ |   |- stm32f429i-disco/
+ |   |   `- README.txt
  |   |- stm32ldiscovery/
  |   |   `- README.txt
- |   |- stm32f429i-disco/
+ |   |- stm32vldiscovery/
  |   |   `- README.txt
  |   |- sure-pic32mx/
  |   |   `- README.txt
@@ -1183,6 +1125,8 @@ nuttx
  |   `- README.txt
  |- libc/
  |   `- README.txt
+ |- libnx/
+ |   `- README.txt
  |- libxx/
  |   `- README.txt
  |- mm/
@@ -1223,6 +1167,8 @@ apps
  |   |- cdcacm
  |   |  `- README.txt
  |   |- i2c
+ |   |  `- README.txt
+ |   |- inifile
  |   |  `- README.txt
  |   |- install
  |   |  `- README.txt
