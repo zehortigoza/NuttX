@@ -100,7 +100,7 @@
 #elif defined(CONFIG_UART0_SERIAL_CONSOLE)
 #    define CONSOLE_DEV         g_uart0port  /* UART0 is console */
 #    define TTYS0_DEV           g_uart0port  /* UART0 is ttyS0 */
-#    define UART1_ASSIGNED      1
+#    define UART0_ASSIGNED      1
 #elif defined(CONFIG_UART1_SERIAL_CONSOLE)
 #    define CONSOLE_DEV         g_uart1port  /* UART1 is console */
 #    define TTYS0_DEV           g_uart1port  /* UART1 is ttyS0 */
@@ -198,8 +198,7 @@
 
 #define EFM32_TXERR_INTS      (USART_IEN_TXOF)
 #define EFM32_RXERR_INTS      (USART_IEN_RXOF | USART_IEN_RXUF | \
-                               USART_IEN_TXUF | USART_IEN_PERR | \
-                               USART_IEN_FERR)
+                               USART_IEN_PERR | USART_IEN_FERR)
 #ifdef CONFIG_DEBUG
 #  define EFM32_TX_INTS       (USART_IEN_TXBL | EFM32_TXERR_INTS)
 #  define EFM32_RX_INTS       (USART_IEN_RXDATAV | EFM32_RXERR_INTS)
@@ -241,7 +240,9 @@ static inline void efm32_serialout(struct efm32_usart_s *priv, int offset,
 static inline void efm32_setuartint(struct efm32_usart_s *priv);
 
 static void efm32_restoreuartint(struct efm32_usart_s *priv, uint32_t ien);
+#ifdef HAVE_UART_CONSOLE
 static void efm32_disableuartint(struct efm32_usart_s *priv, uint32_t *ien);
+#endif
 static int  efm32_setup(struct uart_dev_s *dev);
 static void efm32_shutdown(struct uart_dev_s *dev);
 static int  efm32_attach(struct uart_dev_s *dev);
@@ -359,15 +360,15 @@ static struct uart_dev_s g_usart0port =
   .recv      =
   {
     .size    = CONFIG_USART0_RXBUFSIZE,
-    .buffer  = g_uart0rxbuffer,
+    .buffer  = g_usart0rxbuffer,
   },
   .xmit      =
   {
     .size    = CONFIG_USART0_TXBUFSIZE,
-    .buffer  = g_uart0txbuffer,
+    .buffer  = g_usart0txbuffer,
    },
   .ops       = &g_uart_ops,
-  .priv      = &g_uart0priv,
+  .priv      = &g_usart0priv,
 };
 #endif
 
@@ -397,15 +398,15 @@ static struct uart_dev_s g_usart1port =
   .recv      =
   {
     .size    = CONFIG_USART1_RXBUFSIZE,
-    .buffer  = g_uart1rxbuffer,
+    .buffer  = g_usart1rxbuffer,
   },
   .xmit      =
   {
     .size    = CONFIG_USART1_TXBUFSIZE,
-    .buffer  = g_uart1txbuffer,
+    .buffer  = g_usart1txbuffer,
    },
   .ops       = &g_uart_ops,
-  .priv      = &g_uart1priv,
+  .priv      = &g_usart1priv,
 };
 #endif
 
@@ -435,15 +436,15 @@ static struct uart_dev_s g_usart2port =
   .recv     =
   {
     .size   = CONFIG_USART2_RXBUFSIZE,
-    .buffer = g_uart2rxbuffer,
+    .buffer = g_usart2rxbuffer,
   },
   .xmit     =
   {
     .size   = CONFIG_USART2_TXBUFSIZE,
-    .buffer = g_uart2txbuffer,
+    .buffer = g_usart2txbuffer,
    },
   .ops      = &g_uart_ops,
-  .priv     = &g_uart2priv,
+  .priv     = &g_usart2priv,
 };
 #endif
 
@@ -575,6 +576,7 @@ static void efm32_restoreuartint(struct efm32_usart_s *priv, uint32_t ien)
  * Name: efm32_disableuartint
  ****************************************************************************/
 
+#ifdef HAVE_UART_CONSOLE
 static void efm32_disableuartint(struct efm32_usart_s *priv, uint32_t *ien)
 {
   irqstate_t flags;
@@ -588,6 +590,7 @@ static void efm32_disableuartint(struct efm32_usart_s *priv, uint32_t *ien)
   efm32_restoreuartint(priv, 0);
   irqrestore(flags);
 }
+#endif
 
 /****************************************************************************
  * Name: efm32_setup
@@ -1126,6 +1129,7 @@ static bool efm32_txempty(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
+#ifdef USE_EARLYSERIALINIT
 void up_earlyserialinit(void)
 {
   /* Disable interrupts from all UARTS.  The console is enabled in
@@ -1153,6 +1157,7 @@ void up_earlyserialinit(void)
   efm32_setup(&CONSOLE_DEV);
 #endif
 }
+#endif
 
 /****************************************************************************
  * Name: up_serialinit
