@@ -553,7 +553,7 @@ off_t nxffs_iotell(FAR struct nxffs_volume_s *volume);
  *   over bad blocks and block headers as necessary.
  *
  * Input Parameters:
- *   volume - Describes the NXFFS volume.  The paramters ioblock and iooffset
+ *   volume - Describes the NXFFS volume.  The parameters ioblock and iooffset
  *     in the volume structure determine the behavior of nxffs_getc().
  *   reserve - If less than this much space is available at the end of the
  *     block, then skip to the next block.
@@ -561,7 +561,7 @@ off_t nxffs_iotell(FAR struct nxffs_volume_s *volume);
  * Returned Value:
  *   Zero is returned on success.  Otherwise, a negated errno indicating the
  *   nature of the failure.
- *   
+ *
  * Defined in nxffs_cache.c
  *
  ****************************************************************************/
@@ -577,7 +577,7 @@ int nxffs_getc(FAR struct nxffs_volume_s *volume, uint16_t reserve);
  *   to dispose of that memory when the inode entry is no longer needed.
  *
  *   Note that the nxffs_entry_s containing structure is not freed.  The
- *   caller may call kfree upon return of this function if necessary to
+ *   caller may call kmm_free upon return of this function if necessary to
  *   free the entry container.
  *
  * Input parameters:
@@ -603,7 +603,7 @@ void nxffs_freeentry(FAR struct nxffs_entry_s *entry);
  *   offset - The FLASH memory offset to begin searching.
  *   entry  - A pointer to memory provided by the caller in which to return
  *     the inode description.
- *  
+ *
  * Returned Value:
  *   Zero is returned on success. Otherwise, a negated errno is returned
  *   that indicates the nature of the failure.
@@ -987,7 +987,7 @@ int nxffs_wrblkhdr(FAR struct nxffs_volume_s *volume,
  * Input Parameters:
  *   volume - Describes the NXFFS volume.
  *   datlen  - A memory location to return the data block length.
- *  
+ *
  * Returned Value:
  *   Zero is returned on success. Otherwise, a negated errno is returned
  *   that indicates the nature of the failure.

@@ -1,7 +1,7 @@
 /****************************************************************************
- * up_idle.c
+ * arch/sim/src/up_idle.c
  *
- *   Copyright (C) 2007-2009, 2011-2012 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2011-2012, 2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,7 +47,7 @@
 #include "up_internal.h"
 
 /****************************************************************************
- * Private Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /****************************************************************************
@@ -94,21 +94,38 @@ extern void up_x11update(void);
 
 void up_idle(void)
 {
+#ifdef CONFIG_SCHED_TICKLESS
+  /* Driver the simulated interval timer */
+
+  up_timer_update();
+#else
   /* If the system is idle, then process "fake" timer interrupts.
    * Hopefully, something will wake up.
    */
 
   sched_process_timer();
-
-  /* Run the network if enabled */
-
-#ifdef CONFIG_NET
-  uipdriver_loop();
 #endif
 
-  /* Fake some power management stuff for testing purposes */
+#if defined(CONFIG_DEV_CONSOLE) && !defined(CONFIG_SIM_UART_DATAPOST)
+  /* Handle UART data availability */
+
+  if (g_uart_data_available)
+    {
+      g_uart_data_available = 0;
+      simuart_post();
+    }
+#endif
+
+
+#ifdef CONFIG_NET
+  /* Run the network if enabled */
+
+  netdriver_loop();
+#endif
 
 #ifdef CONFIG_PM
+  /* Fake some power management stuff for testing purposes */
+
   {
     static enum pm_state_e state = PM_NORMAL;
     enum pm_state_e newstate;
@@ -124,11 +141,11 @@ void up_idle(void)
   }
 #endif
 
+#if defined(CONFIG_SIM_WALLTIME) || defined(CONFIG_SIM_X11FB)
   /* Wait a bit so that the sched_process_timer() is called close to the
    * correct rate.
    */
 
-#if defined(CONFIG_SIM_WALLTIME) || defined(CONFIG_SIM_X11FB)
   (void)up_hostusleep(1000000 / CLK_TCK);
 
   /* Handle X11-related events */
@@ -136,9 +153,9 @@ void up_idle(void)
 #ifdef CONFIG_SIM_X11FB
   if (g_x11initialized)
     {
+#ifdef CONFIG_SIM_TOUCHSCREEN
        /* Drive the X11 event loop */
 
-#ifdef CONFIG_SIM_TOUCHSCREEN
       if (g_eventloop)
         {
           up_x11events();

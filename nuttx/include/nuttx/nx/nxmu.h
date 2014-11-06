@@ -209,7 +209,7 @@ struct nxclimsg_newposition_s
 
 /* This message reports a new mouse event to a particular window */
 
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
 struct nxclimsg_mousein_s
 {
   uint32_t msgid;                /* NX_SVRMSG_MOUSEIN */
@@ -423,7 +423,7 @@ struct nxsvrmsg_setbgcolor_s
  * interrupt handler).
  */
 
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
 struct nxsvrmsg_mousein_s
 {
   uint32_t msgid;                  /* NX_SVRMSG_MOUSEIN */
@@ -483,7 +483,7 @@ extern "C"
  *   inheritance:  The caller's window structure may include extensions that
  *   are not visible to NX.
  *
- *   NOTE:  wnd must have been allocated using kmalloc() (or related allocators)
+ *   NOTE:  wnd must have been allocated using kmm_malloc() (or related allocators)
  *   Once provided to nxfe_constructwindow() that memory is owned and managed
  *   by NX.  On certain error conditions or when the window is closed, NX will
  *   free the window.

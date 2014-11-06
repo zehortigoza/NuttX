@@ -39,7 +39,7 @@
 
 SUBDIRS  = json codecs
 ifeq ($(CONFIG_NET),y)
-SUBDIRS += uiplib dhcpc dhcpd discover ftpc ftpd resolv smtp telnetd
+SUBDIRS += netlib dhcpc dhcpd discover dnsclient ftpc ftpd smtp telnetd
 SUBDIRS += webclient webserver tftpc thttpd xmlrpc
 endif
 
@@ -57,6 +57,8 @@ $(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
 $(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),distclean)))
 
 nothing:
+
+install:
 
 context:
 

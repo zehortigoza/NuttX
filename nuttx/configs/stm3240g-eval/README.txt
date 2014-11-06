@@ -630,10 +630,6 @@ STM3240G-EVAL-specific Configuration Options
 
     CONFIG_HEAP2_END - The size of the SRAM in the FSMC address space (decimal)
 
-    CONFIG_ARCH_IRQPRIO - The STM3240xxx supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
-
     CONFIG_ARCH_FPU - The STM3240xxx supports a floating point unit (FPU)
 
        CONFIG_ARCH_FPU=y
@@ -999,16 +995,16 @@ Where <subdir> is one of the following:
        CONFIG_ARMV7M_TOOLCHAIN_CODESOURCERYW=y : CodeSourcery under Windows
        CONFIG_CXX_NEWLONG=n                    : size_t is unsigned int (maybe?)
 
-    3. In addition to the the kernel mode build, this NxWM configuration
+    3. In addition to the protected mode build, this NxWM configuration
        differences from the nxwm configuration in that:
 
        a. Networking is disabled.  There are issues with some of the network-
-          related NSH commands and with Telnet in the kernel build (see the
+          related NSH commands and with Telnet in the protected build (see the
           top-level TODO file).  Without these NSH commands, there is no use
           for networking in this configuration.
 
-       b. The NxConsole windows are disabled. There are also issues with the
-          NxConsole build now (see the top-level TODO file).
+       b. The NxTerm windows are disabled. There are also issues with the
+          NxTerm build now (see the top-level TODO file).
 
        c. The initialization sequence is quite different:  NX and the
           touchscreen are initialized in kernel mode by logic in this src/
@@ -1070,6 +1066,14 @@ Where <subdir> is one of the following:
        Then use the combined.hex file with the STM32 ST-Link tool.  If
        you do this a lot, you will probably want to invest a little time
        to develop a tool to automate these steps.
+
+       STATUS:
+       2014-10-11:  This worked at one time, but today I am getting a
+         failure inside of the GCC library.  This occurred with the
+         computations at the end of touchscreen calibration. The
+         NuttX code seems to be working correctly, but there is some
+         problem with how the GCC integer math is hooked in???  I did
+         not dig into this very deeply.
 
   nettest:
   -------
@@ -1400,10 +1404,10 @@ Where <subdir> is one of the following:
 
        There is nothing in the DMA driver to prevent this now.
 
-  nxconsole:
+  nxterm:
   ----------
     This is yet another NSH configuration.  This NSH configuration differs
-    from the others, however, in that it uses the NxConsole driver to host
+    from the others, however, in that it uses the NxTerm driver to host
     the NSH shell.
 
     NOTES:
@@ -1425,14 +1429,14 @@ Where <subdir> is one of the following:
          CONFG_NX_MULTIUSER=y
          CONFIG_DISABLE_MQUEUE=n
 
-       The following definition in the defconfig file to enables the NxConsole
+       The following definition in the defconfig file to enables the NxTerm
        driver:
 
-         CONFIG_NXCONSOLE=y
+         CONFIG_NXTERM=y
 
-       And this selects examples/nxconsole instead of examples/nsh:
+       And this selects examples/nxterm instead of examples/nsh:
 
-         CONFIG_EXAMPLES_NXCONSOLE=y
+         CONFIG_EXAMPLES_NXTERM=y
 
        LCD Orientation:
 

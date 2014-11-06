@@ -96,6 +96,8 @@ ifeq ($(CONFIG_MODBUS),y)
 	$(Q) touch .built
 endif
 
+install:
+
 context:
 
 .depend: Makefile $(SRCS)
@@ -114,6 +116,6 @@ distclean: clean
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
 
-    
+
 -include Make.dep
 

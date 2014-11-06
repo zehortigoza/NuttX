@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/sam34/sam_hsmci.c
  *
- *   Copyright (C) 2010, 2012-2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2010, 2012-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,11 +45,11 @@
 #include <string.h>
 #include <assert.h>
 #include <debug.h>
-#include <wdog.h>
 #include <errno.h>
 
-#include <nuttx/clock.h>
 #include <nuttx/arch.h>
+#include <nuttx/wdog.h>
+#include <nuttx/clock.h>
 #include <nuttx/sdio.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/mmcsd.h>
@@ -61,13 +61,24 @@
 #include "up_arch.h"
 
 #include "sam_gpio.h"
-#include "sam_dmac.h"
+#include "sam_cmcc.h"
 #include "sam_hsmci.h"
 #include "sam_periphclks.h"
-#include "chip/sam_dmac.h"
+
+#ifdef CONFIG_SAM34_DMAC
+#  include "sam_dmac.h"
+#endif
+
 #include "chip/sam_pmc.h"
 #include "chip/sam_hsmci.h"
 #include "chip/sam_pinmap.h"
+
+#ifdef CONFIG_SAM34_DMAC
+#  include "chip/sam_dmac.h"
+#endif
+#ifdef CONFIG_SAM34_PDCA
+#  include "chip/sam_pdc.h"
+#endif
 
 #if CONFIG_SAM34_HSMCI
 
@@ -77,8 +88,8 @@
 
 /* Configuration ************************************************************/
 
-#ifndef CONFIG_SAM34_DMAC
-#  warning "HSMCI driver requires CONFIG_SAM34_DMAC"
+#if !(defined(CONFIG_SAM34_DMAC0) || defined(CONFIG_SAM34_PDCA))
+#  warning "HSMCI driver requires CONFIG_SAM34_DMAC0 or CONFIG_SAM34_PDCA"
 #endif
 
 #ifndef CONFIG_SCHED_WORKQUEUE
@@ -89,13 +100,13 @@
 #  error "This driver requires CONFIG_SDIO_BLOCKSETUP"
 #endif
 
-#ifndef CONFIG_HSMCI_PRI
-#  define CONFIG_HSMCI_PRI        NVIC_SYSH_PRIORITY_DEFAULT
-#endif
+/* Nested interrupts not supported */
+
+#define SAM34_HSMCI_PRIO NVIC_SYSH_PRIORITY_DEFAULT
 
 #if !defined(CONFIG_DEBUG_FS) || !defined(CONFIG_DEBUG_VERBOSE)
-#  undef CONFIG_HSMCI_CMDDEBUG
-#  undef CONFIG_HSMCI_XFRDEBUG
+#  undef CONFIG_SAM34_HSMCI_CMDDEBUG
+#  undef CONFIG_SAM34_HSMCI_XFRDEBUG
 #endif
 
 #ifdef CONFIG_SAM34_HSMCI_RDPROOF
@@ -121,14 +132,17 @@
 
 #define HSMCI_DTIMER_DATATIMEOUT (0x000fffff)
 
+#ifdef CONFIG_SAM34_DMAC0
 /* DMA configuration flags */
 
 #define DMA_FLAGS \
   (DMACH_FLAG_FIFO_8BYTES | DMACH_FLAG_FIFOCFG_LARGEST | \
-  (DMACHAN_PID_MCI0 << DMACH_FLAG_PERIPHPID_SHIFT) | \
+  (DMACHAN_INTF_HSMCI0 << DMACH_FLAG_PERIPHPID_SHIFT) | \
    DMACH_FLAG_PERIPHH2SEL | DMACH_FLAG_PERIPHISPERIPH |  \
    DMACH_FLAG_PERIPHWIDTH_32BITS | DMACH_FLAG_PERIPHCHUNKSIZE_1 | \
-   DMACH_FLAG_MEMWIDTH_32BITS | DMACH_FLAG_MEMINCREMENT | DMACH_FLAG_MEMCHUNKSIZE_4)
+   DMACH_FLAG_MEMWIDTH_32BITS | DMACH_FLAG_MEMINCREMENT | \
+   DMACH_FLAG_MEMCHUNKSIZE_4)
+#endif
 
 /* Status errors:
  *
@@ -146,9 +160,9 @@
  */
 
 #define HSMCI_STATUS_ERRORS \
-  ( HSMCI_INT_UNRE  | HSMCI_INT_OVRE  | HSMCI_INT_BLKOVRE | HSMCI_INT_CSTOE | \
-    HSMCI_INT_DTOE  | HSMCI_INT_DCRCE | HSMCI_INT_RTOE    | HSMCI_INT_RENDE | \
-    HSMCI_INT_RCRCE | HSMCI_INT_RDIRE | HSMCI_INT_RINDE )
+  (HSMCI_INT_UNRE  | HSMCI_INT_OVRE  | HSMCI_INT_BLKOVRE | HSMCI_INT_CSTOE | \
+   HSMCI_INT_DTOE  | HSMCI_INT_DCRCE | HSMCI_INT_RTOE    | HSMCI_INT_RENDE | \
+   HSMCI_INT_RCRCE | HSMCI_INT_RDIRE | HSMCI_INT_RINDE)
 
 /* Response errors:
  *
@@ -161,13 +175,15 @@
  */
 
 #define HSMCI_RESPONSE_ERRORS \
-  ( HSMCI_INT_CSTOE | HSMCI_INT_RTOE  | HSMCI_INT_RENDE   | HSMCI_INT_RCRCE | \
-    HSMCI_INT_RDIRE | HSMCI_INT_RINDE )
+  (HSMCI_INT_CSTOE | HSMCI_INT_RTOE  | HSMCI_INT_RENDE   | HSMCI_INT_RCRCE | \
+   HSMCI_INT_RDIRE | HSMCI_INT_RINDE)
+
 #define HSMCI_RESPONSE_NOCRC_ERRORS \
-  ( HSMCI_INT_CSTOE | HSMCI_INT_RTOE  | HSMCI_INT_RENDE   | HSMCI_INT_RDIRE | \
-    HSMCI_INT_RINDE )
+  (HSMCI_INT_CSTOE | HSMCI_INT_RTOE  | HSMCI_INT_RENDE   | HSMCI_INT_RDIRE | \
+   HSMCI_INT_RINDE)
+
 #define HSMCI_RESPONSE_TIMEOUT_ERRORS \
-  ( HSMCI_INT_CSTOE | HSMCI_INT_RTOE  )
+  (HSMCI_INT_CSTOE | HSMCI_INT_RTOE)
 
 /* Data transfer errors:
  *
@@ -179,19 +195,43 @@
  *   HSMCI_INT_DCRCE         Data CRC Error
  */
 
-#define HSMCI_DATA_ERRORS \
-  ( HSMCI_INT_UNRE  | HSMCI_INT_OVRE  | HSMCI_INT_BLKOVRE | HSMCI_INT_CSTOE | \
-    HSMCI_INT_DTOE  | HSMCI_INT_DCRCE )
+#ifdef CONFIG_SAM34_DMAC0
+#  if defined(CONFIG_ARCH_CHIP_SAM3U)
+#    define HSMCI_DATA_ERRORS \
+       (HSMCI_INT_UNRE | HSMCI_INT_OVRE  | HSMCI_INT_BLKOVRE | HSMCI_INT_CSTOE | \
+        HSMCI_INT_DTOE | HSMCI_INT_DCRCE)
+#  else
+#    define HSMCI_DATA_ERRORS \
+       (HSMCI_INT_UNRE | HSMCI_INT_OVRE | HSMCI_INT_CSTOE | HSMCI_INT_DTOE | \
+        HSMCI_INT_DCRCE)
+#  endif
+#else
+  #define HSMCI_DATA_ERRORS \
+    (HSMCI_INT_UNRE | HSMCI_INT_OVRE | HSMCI_INT_CSTOE | HSMCI_INT_DTOE | \
+     HSMCI_INT_DCRCE)
+#endif
 
 #define HSMCI_DATA_TIMEOUT_ERRORS \
-  ( HSMCI_INT_CSTOE | HSMCI_INT_DTOE )
+  (HSMCI_INT_CSTOE | HSMCI_INT_DTOE)
 
-#define HSMCI_DATA_DMARECV_ERRORS \
-  ( HSMCI_INT_OVRE  | HSMCI_INT_BLKOVRE | HSMCI_INT_CSTOE | HSMCI_INT_DTOE | \
-    HSMCI_INT_DCRCE )
+#ifdef CONFIG_SAM34_DMAC0
+#  if defined(CONFIG_ARCH_CHIP_SAM3U)
+#    define HSMCI_DATA_DMARECV_ERRORS \
+      (HSMCI_INT_OVRE  | HSMCI_INT_BLKOVRE | HSMCI_INT_CSTOE | HSMCI_INT_DTOE | \
+       HSMCI_INT_DCRCE)
+#  else
+#    define HSMCI_DATA_DMARECV_ERRORS \
+      (HSMCI_INT_OVRE  | HSMCI_INT_CSTOE | HSMCI_INT_DTOE | HSMCI_INT_DCRCE)
+#  endif
+#endif
+
+#ifdef CONFIG_SAM34_PDCA
+#  define HSMCI_DATA_DMARECV_ERRORS \
+    (HSMCI_INT_OVRE | HSMCI_INT_CSTOE | HSMCI_INT_DTOE | HSMCI_INT_DCRCE)
+#endif
 
 #define HSMCI_DATA_DMASEND_ERRORS \
-  ( HSMCI_INT_UNRE  | HSMCI_INT_CSTOE | HSMCI_INT_DTOE    | HSMCI_INT_DCRCE )
+  (HSMCI_INT_UNRE | HSMCI_INT_CSTOE | HSMCI_INT_DTOE | HSMCI_INT_DCRCE)
 
 /* Data transfer status and interrupt mask bits.
  *
@@ -207,10 +247,19 @@
  *   1: DMA buffer transfer has completed.
  */
 
-#define HSMCI_DMARECV_INTS \
-  ( HSMCI_DATA_DMARECV_ERRORS | HSMCI_INT_XFRDONE /* | HSMCI_INT_DMADONE */ )
-#define HSMCI_DMASEND_INTS \
-  ( HSMCI_DATA_DMASEND_ERRORS | HSMCI_INT_XFRDONE /* | HSMCI_INT_DMADONE */ )
+#ifdef CONFIG_SAM34_DMAC0
+#  define HSMCI_DMARECV_INTS \
+    (HSMCI_DATA_DMARECV_ERRORS | HSMCI_INT_XFRDONE /* | HSMCI_INT_DMADONE */)
+#  define HSMCI_DMASEND_INTS \
+    (HSMCI_DATA_DMASEND_ERRORS | HSMCI_INT_XFRDONE /* | HSMCI_INT_DMADONE */)
+#endif
+
+#ifdef CONFIG_SAM34_PDCA
+  #define HSMCI_DMARECV_INTS \
+    (HSMCI_DATA_DMARECV_ERRORS | HSMCI_INT_ENDRX)
+  #define HSMCI_DMASEND_INTS \
+    (HSMCI_DATA_DMASEND_ERRORS | HSMCI_INT_ENDTX)
+#endif
 
 /* Event waiting interrupt mask bits.
  *
@@ -222,13 +271,13 @@
  */
 
 #define HSMCI_CMDRESP_INTS \
-  ( HSMCI_RESPONSE_ERRORS | HSMCI_INT_CMDRDY )
+  (HSMCI_RESPONSE_ERRORS | HSMCI_INT_CMDRDY)
 #define HSMCI_CMDRESP_NOCRC_INTS \
-  ( HSMCI_RESPONSE_NOCRC_ERRORS | HSMCI_INT_CMDRDY )
+  (HSMCI_RESPONSE_NOCRC_ERRORS | HSMCI_INT_CMDRDY)
 
 /* Register logging support */
 
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
 #  ifdef CONFIG_DEBUG_DMA
 #    define SAMPLENDX_BEFORE_SETUP  0
 #    define SAMPLENDX_BEFORE_ENABLE 1
@@ -244,7 +293,7 @@
 #  endif
 #endif
 
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
 #  define SAMPLENDX_AFTER_CMDR      0
 #  define SAMPLENDX_AT_WAKEUP       1
 #  define DEBUG_NCMDSAMPLES         2
@@ -269,7 +318,9 @@ struct sam_dev_s
   uint32_t           cmdrmask;   /* Interrupt enables for this particular cmd/response */
   volatile sdio_eventset_t wkupevent; /* The event that caused the wakeup */
   WDOG_ID            waitwdog;   /* Watchdog that handles event timeouts */
+#ifdef CONFIG_SAM34_DMAC0
   bool               dmabusy;    /* TRUE: DMA is in progress */
+#endif
 
   /* Callback support */
 
@@ -286,38 +337,55 @@ struct sam_dev_s
   /* DMA data transfer support */
 
   bool               widebus;    /* Required for DMA support */
+#ifdef CONFIG_SAM34_DMAC0
   DMA_HANDLE         dma;        /* Handle for DMA channel */
+#endif
 };
 
 /* Register logging support */
 
-#if defined(CONFIG_HSMCI_XFRDEBUG) || defined(CONFIG_HSMCI_CMDDEBUG)
+#if defined(CONFIG_SAM34_HSMCI_XFRDEBUG) || defined(CONFIG_SAM34_HSMCI_CMDDEBUG)
 struct sam_hsmciregs_s
 {
-  uint32_t mr;    /* Mode Register */
-  uint32_t dtor;  /* Data Timeout Register */
-  uint32_t sdcr;  /* SD/SDIO Card Register */
-  uint32_t argr;  /* Argument Register */
-  uint32_t blkr;  /* Block Register */
-  uint32_t cstor; /* Completion Signal Timeout Register */
-  uint32_t rsp0;  /* Response Register 0 */
-  uint32_t rsp1;  /* Response Register 1 */
-  uint32_t rsp2;  /* Response Register 2 */
-  uint32_t rsp3;  /* Response Register 3 */
-  uint32_t sr;    /* Status Register */
-  uint32_t imr;   /* Interrupt Mask Register */
-  uint32_t dma;   /* DMA Configuration Register */
-  uint32_t cfg;   /* Configuration Register */
-  uint32_t wpmr;  /* Write Protection Mode Register */
-  uint32_t wpsr;  /* Write Protection Status Register */
+  uint32_t mr;       /* Mode Register */
+  uint32_t dtor;     /* Data Timeout Register */
+  uint32_t sdcr;     /* SD/SDIO Card Register */
+  uint32_t argr;     /* Argument Register */
+  uint32_t blkr;     /* Block Register */
+  uint32_t cstor;    /* Completion Signal Timeout Register */
+  uint32_t rsp0;     /* Response Register 0 */
+  uint32_t rsp1;     /* Response Register 1 */
+  uint32_t rsp2;     /* Response Register 2 */
+  uint32_t rsp3;     /* Response Register 3 */
+  uint32_t sr;       /* Status Register */
+  uint32_t imr;      /* Interrupt Mask Register */
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
+  uint32_t dma;      /* DMA Configuration Register */
+#endif
+  uint32_t cfg;      /* Configuration Register */
+  uint32_t wpmr;     /* Write Protection Mode Register */
+  uint32_t wpsr;     /* Write Protection Status Register */
+
+#ifdef CONFIG_SAM34_PDCA
+  uint32_t pdc_rpr;  /* Receive Pointer Register */
+  uint32_t pdc_rcr;  /* Receive Counter Register */
+  uint32_t pdc_tpr;  /* Transmit Pointer Register */
+  uint32_t pdc_tcr;  /* Transmit Counter Register */
+  uint32_t pdc_rnpr; /* Receive Next Pointer Register */
+  uint32_t pdc_rncr; /* Receive Next Counter Register */
+  uint32_t pdc_tnpr; /* Transmit Next Pointer Register */
+  uint32_t pdc_tncr; /* Transmit Next Counter Register */
+//uint32_t pdc_ptcr; /* Transfer Control Register */
+  uint32_t pdc_ptsr; /* Transfer Status Register */
+#endif
 };
 #endif
 
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
 struct sam_xfrregs_s
 {
   struct sam_hsmciregs_s hsmci;
-#ifdef CONFIG_DEBUG_DMA
+#if defined(CONFIG_DEBUG_DMA) && defined(CONFIG_SAM34_DMAC0)
   struct sam_dmaregs_s  dma;
 #endif
 };
@@ -344,12 +412,12 @@ static inline void sam_enable(void);
 
 /* Register Sampling ********************************************************/
 
-#if defined(CONFIG_HSMCI_XFRDEBUG) || defined(CONFIG_HSMCI_CMDDEBUG)
+#if defined(CONFIG_SAM34_HSMCI_XFRDEBUG) || defined(CONFIG_SAM34_HSMCI_CMDDEBUG)
 static void sam_hsmcisample(struct sam_hsmciregs_s *regs);
 static void sam_hsmcidump(struct sam_hsmciregs_s *regs, const char *msg);
 #endif
 
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
 static void sam_xfrsampleinit(void);
 static void sam_xfrsample(struct sam_dev_s *priv, int index);
 static void sam_xfrdumpone(struct sam_dev_s *priv,
@@ -361,7 +429,7 @@ static void sam_xfrdump(struct sam_dev_s *priv);
 #  define   sam_xfrdump(priv)
 #endif
 
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
 static void sam_cmdsampleinit(void);
 static inline void sam_cmdsample1(int index3);
 static inline void sam_cmdsample2(int index, uint32_t sr);
@@ -373,9 +441,11 @@ static void sam_cmddump(void);
 #  define   sam_cmddump()
 #endif
 
+#ifdef CONFIG_SAM34_DMAC0
 /* DMA Helpers **************************************************************/
 
 static void sam_dmacallback(DMA_HANDLE handle, void *arg, int result);
+#endif
 
 /* Data Transfer Helpers ****************************************************/
 
@@ -479,13 +549,13 @@ struct sam_dev_s g_sdiodev =
 
 /* Register logging support */
 
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
 static struct sam_xfrregs_s   g_xfrsamples[DEBUG_NDMASAMPLES];
 #endif
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
 static struct sam_hsmciregs_s g_cmdsamples[DEBUG_NCMDSAMPLES];
 #endif
-#if defined(CONFIG_HSMCI_XFRDEBUG) && defined(CONFIG_HSMCI_CMDDEBUG)
+#if defined(CONFIG_SAM34_HSMCI_XFRDEBUG) && defined(CONFIG_SAM34_HSMCI_CMDDEBUG)
 static bool                     g_xfrinitialized;
 static bool                     g_cmdinitialized;
 #endif
@@ -713,25 +783,40 @@ static inline void sam_enable(void)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_HSMCI_XFRDEBUG) || defined(CONFIG_HSMCI_CMDDEBUG)
+#if defined(CONFIG_SAM34_HSMCI_XFRDEBUG) || defined(CONFIG_SAM34_HSMCI_CMDDEBUG)
 static void sam_hsmcisample(struct sam_hsmciregs_s *regs)
 {
-  regs->mr    = getreg32(SAM_HSMCI_MR);
-  regs->dtor  = getreg32(SAM_HSMCI_DTOR);
-  regs->sdcr  = getreg32(SAM_HSMCI_SDCR);
-  regs->argr  = getreg32(SAM_HSMCI_ARGR);
-  regs->blkr  = getreg32(SAM_HSMCI_BLKR);
-  regs->cstor = getreg32(SAM_HSMCI_CSTOR);
-  regs->rsp0  = getreg32(SAM_HSMCI_RSPR0);
-  regs->rsp1  = getreg32(SAM_HSMCI_RSPR1);
-  regs->rsp2  = getreg32(SAM_HSMCI_RSPR2);
-  regs->rsp3  = getreg32(SAM_HSMCI_RSPR3);
-  regs->sr    = getreg32(SAM_HSMCI_SR);
-  regs->imr   = getreg32(SAM_HSMCI_IMR);
-  regs->dma   = getreg32(SAM_HSMCI_DMA);
-  regs->cfg   = getreg32(SAM_HSMCI_CFG);
-  regs->wpmr  = getreg32(SAM_HSMCI_WPMR);
-  regs->wpsr  = getreg32(SAM_HSMCI_WPSR);
+  regs->mr       = getreg32(SAM_HSMCI_MR);
+  regs->dtor     = getreg32(SAM_HSMCI_DTOR);
+  regs->sdcr     = getreg32(SAM_HSMCI_SDCR);
+  regs->argr     = getreg32(SAM_HSMCI_ARGR);
+  regs->blkr     = getreg32(SAM_HSMCI_BLKR);
+  regs->cstor    = getreg32(SAM_HSMCI_CSTOR);
+  regs->rsp0     = getreg32(SAM_HSMCI_RSPR0);
+  regs->rsp1     = getreg32(SAM_HSMCI_RSPR1);
+  regs->rsp2     = getreg32(SAM_HSMCI_RSPR2);
+  regs->rsp3     = getreg32(SAM_HSMCI_RSPR3);
+  regs->sr       = getreg32(SAM_HSMCI_SR);
+  regs->imr      = getreg32(SAM_HSMCI_IMR);
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
+  regs->dma      = getreg32(SAM_HSMCI_DMA);
+#endif
+  regs->cfg      = getreg32(SAM_HSMCI_CFG);
+  regs->wpmr     = getreg32(SAM_HSMCI_WPMR);
+  regs->wpsr     = getreg32(SAM_HSMCI_WPSR);
+
+#ifdef CONFIG_SAM34_PDCA
+  regs->pdc_rpr  = getreg32(SAM_HSMCI_PDC_RPR);
+  regs->pdc_rcr  = getreg32(SAM_HSMCI_PDC_RCR);
+  regs->pdc_tpr  = getreg32(SAM_HSMCI_PDC_TPR);
+  regs->pdc_tcr  = getreg32(SAM_HSMCI_PDC_TCR);
+  regs->pdc_rnpr = getreg32(SAM_HSMCI_PDC_RNPR);
+  regs->pdc_rncr = getreg32(SAM_HSMCI_PDC_RNCR);
+  regs->pdc_tnpr = getreg32(SAM_HSMCI_PDC_TNPR);
+  regs->pdc_tncr = getreg32(SAM_HSMCI_PDC_TNCR);
+//regs->pdc_ptcr = getreg32(SAM_HSMCI_PDC_PTCR);
+  regs->pdc_ptsr = getreg32(SAM_HSMCI_PDC_PTSR);
+#endif
 }
 #endif
 
@@ -743,26 +828,42 @@ static void sam_hsmcisample(struct sam_hsmciregs_s *regs)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_HSMCI_XFRDEBUG) || defined(CONFIG_HSMCI_CMDDEBUG)
+#if defined(CONFIG_SAM34_HSMCI_XFRDEBUG) || defined(CONFIG_SAM34_HSMCI_CMDDEBUG)
 static void sam_hsmcidump(struct sam_hsmciregs_s *regs, const char *msg)
 {
   fdbg("HSMCI Registers: %s\n", msg);
-  fdbg("     MR[%08x]: %08x\n", SAM_HSMCI_MR,    regs->mr);
-  fdbg("   DTOR[%08x]: %08x\n", SAM_HSMCI_DTOR,  regs->dtor);
-  fdbg("   SDCR[%08x]: %08x\n", SAM_HSMCI_SDCR,  regs->sdcr);
-  fdbg("   ARGR[%08x]: %08x\n", SAM_HSMCI_ARGR,  regs->argr);
-  fdbg("   BLKR[%08x]: %08x\n", SAM_HSMCI_BLKR,  regs->blkr);
-  fdbg("  CSTOR[%08x]: %08x\n", SAM_HSMCI_CSTOR, regs->cstor);
-  fdbg("  RSPR0[%08x]: %08x\n", SAM_HSMCI_RSPR0, regs->rsp0);
-  fdbg("  RSPR1[%08x]: %08x\n", SAM_HSMCI_RSPR1, regs->rsp1);
-  fdbg("  RSPR2[%08x]: %08x\n", SAM_HSMCI_RSPR2, regs->rsp2);
-  fdbg("  RSPR3[%08x]: %08x\n", SAM_HSMCI_RSPR3, regs->rsp3);
-  fdbg("     SR[%08x]: %08x\n", SAM_HSMCI_SR,    regs->sr);
-  fdbg("    IMR[%08x]: %08x\n", SAM_HSMCI_IMR,   regs->imr);
-  fdbg("    DMA[%08x]: %08x\n", SAM_HSMCI_DMA,   regs->dma);
-  fdbg("    CFG[%08x]: %08x\n", SAM_HSMCI_CFG,   regs->cfg);
-  fdbg("   WPMR[%08x]: %08x\n", SAM_HSMCI_WPMR,  regs->wpmr);
-  fdbg("   WPSR[%08x]: %08x\n", SAM_HSMCI_WPSR,  regs->wpsr);
+  fdbg("     MR[%08x]: %08x\n", SAM_HSMCI_MR,       regs->mr);
+  fdbg("   DTOR[%08x]: %08x\n", SAM_HSMCI_DTOR,     regs->dtor);
+  fdbg("   SDCR[%08x]: %08x\n", SAM_HSMCI_SDCR,     regs->sdcr);
+  fdbg("   ARGR[%08x]: %08x\n", SAM_HSMCI_ARGR,     regs->argr);
+  fdbg("   BLKR[%08x]: %08x\n", SAM_HSMCI_BLKR,     regs->blkr);
+  fdbg("  CSTOR[%08x]: %08x\n", SAM_HSMCI_CSTOR,    regs->cstor);
+  fdbg("  RSPR0[%08x]: %08x\n", SAM_HSMCI_RSPR0,    regs->rsp0);
+  fdbg("  RSPR1[%08x]: %08x\n", SAM_HSMCI_RSPR1,    regs->rsp1);
+  fdbg("  RSPR2[%08x]: %08x\n", SAM_HSMCI_RSPR2,    regs->rsp2);
+  fdbg("  RSPR3[%08x]: %08x\n", SAM_HSMCI_RSPR3,    regs->rsp3);
+  fdbg("     SR[%08x]: %08x\n", SAM_HSMCI_SR,       regs->sr);
+  fdbg("    IMR[%08x]: %08x\n", SAM_HSMCI_IMR,      regs->imr);
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
+  fdbg("    DMA[%08x]: %08x\n", SAM_HSMCI_DMA,      regs->dma);
+#endif
+  fdbg("    CFG[%08x]: %08x\n", SAM_HSMCI_CFG,      regs->cfg);
+  fdbg("   WPMR[%08x]: %08x\n", SAM_HSMCI_WPMR,     regs->wpmr);
+  fdbg("   WPSR[%08x]: %08x\n", SAM_HSMCI_WPSR,     regs->wpsr);
+
+#ifdef CONFIG_SAM34_PDCA
+  fdbg("HSMCI PDC Registers:\n");
+  fdbg("    RPR[%08x]: %08x\n", SAM_HSMCI_PDC_RPR,  regs->pdc_rpr);
+  fdbg("    RCR[%08x]: %08x\n", SAM_HSMCI_PDC_RCR,  regs->pdc_rcr);
+  fdbg("    TPR[%08x]: %08x\n", SAM_HSMCI_PDC_TPR,  regs->pdc_tpr);
+  fdbg("    TCR[%08x]: %08x\n", SAM_HSMCI_PDC_TCR,  regs->pdc_tcr);
+  fdbg("   RNPR[%08x]: %08x\n", SAM_HSMCI_PDC_RNPR, regs->pdc_rnpr);
+  fdbg("   RNCR[%08x]: %08x\n", SAM_HSMCI_PDC_RNCR, regs->pdc_rncr);
+  fdbg("   TNPR[%08x]: %08x\n", SAM_HSMCI_PDC_TNPR, regs->pdc_tnpr);
+  fdbg("   TNCR[%08x]: %08x\n", SAM_HSMCI_PDC_TNCR, regs->pdc_tncr);
+//fdbg("    TCR[%08x]: %08x\n", SAM_HSMCI_PDC_PTCR, regs->pdc_ptcr);
+  fdbg("   PTSR[%08x]: %08x\n", SAM_HSMCI_PDC_PTSR, regs->pdc_ptsr);
+#endif
 }
 #endif
 
@@ -774,11 +875,11 @@ static void sam_hsmcidump(struct sam_hsmciregs_s *regs, const char *msg)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
 static void sam_xfrsample(struct sam_dev_s *priv, int index)
 {
   struct sam_xfrregs_s *regs = &g_xfrsamples[index];
-#ifdef CONFIG_DEBUG_DMA
+#if defined(CONFIG_DEBUG_DMA) && defined(CONFIG_SAM34_DMAC0)
   sam_dmasample(priv->dma, &regs->dma);
 #endif
   sam_hsmcisample(&regs->hsmci);
@@ -793,11 +894,11 @@ static void sam_xfrsample(struct sam_dev_s *priv, int index)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
 static void sam_xfrsampleinit(void)
 {
   memset(g_xfrsamples, 0xff, DEBUG_NDMASAMPLES * sizeof(struct sam_xfrregs_s));
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
   g_xfrinitialized = true;
 #endif
 }
@@ -811,11 +912,11 @@ static void sam_xfrsampleinit(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
 static void sam_xfrdumpone(struct sam_dev_s *priv,
                            struct sam_xfrregs_s *regs, const char *msg)
 {
-#ifdef CONFIG_DEBUG_DMA
+#if defined(CONFIG_DEBUG_DMA) && defined(CONFIG_SAM34_DMAC0)
   sam_dmadump(priv->dma, &regs->dma, msg);
 #endif
   sam_hsmcidump(&regs->hsmci, msg);
@@ -830,10 +931,10 @@ static void sam_xfrdumpone(struct sam_dev_s *priv,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
 static void  sam_xfrdump(struct sam_dev_s *priv)
 {
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
   if (g_xfrinitialized)
 #endif
     {
@@ -843,10 +944,10 @@ static void  sam_xfrdump(struct sam_dev_s *priv)
 #endif
       sam_xfrdumpone(priv, &g_xfrsamples[SAMPLENDX_AFTER_SETUP], "After setup");
       sam_xfrdumpone(priv, &g_xfrsamples[SAMPLENDX_END_TRANSFER], "End of transfer");
-#ifdef CONFIG_DEBUG_DMA
+#if defined(CONFIG_DEBUG_DMA) && defined(CONFIG_SAM34_DMAC0)
       sam_xfrdumpone(priv, &g_xfrsamples[SAMPLENDX_DMA_CALLBACK], "DMA Callback");
 #endif
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
       g_xfrinitialized = false;
 #endif
     }
@@ -861,11 +962,11 @@ static void  sam_xfrdump(struct sam_dev_s *priv)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
 static void sam_cmdsampleinit(void)
 {
   memset(g_cmdsamples, 0xff, DEBUG_NCMDSAMPLES * sizeof(struct sam_hsmciregs_s));
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
   g_cmdinitialized = true;
 #endif
 }
@@ -879,7 +980,7 @@ static void sam_cmdsampleinit(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
 static inline void sam_cmdsample1(int index)
 {
   sam_hsmcisample(&g_cmdsamples[index]);
@@ -900,16 +1001,16 @@ static inline void sam_cmdsample2(int index, uint32_t sr)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_HSMCI_CMDDEBUG
+#ifdef CONFIG_SAM34_HSMCI_CMDDEBUG
 static void sam_cmddump(void)
 {
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
   if (g_cmdinitialized)
 #endif
     {
       sam_hsmcidump(&g_cmdsamples[SAMPLENDX_AFTER_CMDR], "After command setup");
       sam_hsmcidump(&g_cmdsamples[SAMPLENDX_AT_WAKEUP],  "After wakeup");
-#ifdef CONFIG_HSMCI_XFRDEBUG
+#ifdef CONFIG_SAM34_HSMCI_XFRDEBUG
       g_cmdinitialized = false;
 #endif
     }
@@ -928,6 +1029,7 @@ static void sam_cmddump(void)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SAM34_DMAC0
 static void sam_dmacallback(DMA_HANDLE handle, void *arg, int result)
 {
   struct sam_dev_s *priv = (struct sam_dev_s *)arg;
@@ -942,6 +1044,7 @@ static void sam_dmacallback(DMA_HANDLE handle, void *arg, int result)
 
   sam_xfrsample((struct sam_dev_s*)arg, SAMPLENDX_DMA_CALLBACK);
 }
+#endif
 
 /****************************************************************************
  * Data Transfer Helpers
@@ -1052,6 +1155,7 @@ static void sam_endtransfer(struct sam_dev_s *priv,
 
   sam_xfrsample(priv, SAMPLENDX_END_TRANSFER);
 
+#ifdef CONFIG_SAM34_DMAC0
   /* Make sure that the DMA is stopped (it will be stopped automatically
    * on normal transfers, but not necessarily when the transfer terminates
    * on an error condition.
@@ -1060,9 +1164,16 @@ static void sam_endtransfer(struct sam_dev_s *priv,
   sam_dmastop(priv->dma);
   priv->dmabusy = false;
 
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
   /* Disable the DMA handshaking */
 
   putreg32(0, SAM_HSMCI_DMA);
+#endif
+#endif
+
+#ifdef CONFIG_SAM34_PDCA
+  putreg32(PDC_PTCR_RXTDIS | PDC_PTCR_TXTDIS, SAM_HSMCI_PDC_PTCR);
+#endif
 
   /* Is a thread wait for these data transfer complete events? */
 
@@ -1091,13 +1202,28 @@ static void sam_endtransfer(struct sam_dev_s *priv,
 
 static void sam_notransfer(struct sam_dev_s *priv)
 {
-  uint32_t regval = getreg32(SAM_HSMCI_MR);
+#ifdef CONFIG_SAM34_DMAC0
+  uint32_t regval;
+
+  regval = getreg32(SAM_HSMCI_MR);
+
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
   regval &= ~(HSMCI_MR_RDPROOF | HSMCI_MR_WRPROOF | HSMCI_MR_BLKLEN_MASK);
+#else
+  regval &= ~(HSMCI_MR_RDPROOF | HSMCI_MR_WRPROOF);
+#endif
+
   putreg32(regval, SAM_HSMCI_MR);
+#endif
+
+#ifdef CONFIG_SAM34_PDCA
+  modifyreg32(SAM_HSMCI_MR, HSMCI_MR_RDPROOF | HSMCI_MR_WRPROOF |
+              HSMCI_MR_PDCMODE, 0);
+#endif
 }
 
 /****************************************************************************
- * Interrrupt Handling
+ * Interrupt Handling
  ****************************************************************************/
 
 /****************************************************************************
@@ -1282,7 +1408,7 @@ static void sam_reset(FAR struct sdio_dev_s *dev)
 
   /* Set the SDCard Register */
 
-  putreg32(HSMCI_SDCR_SDCSEL_SLOTA | HSMCI_SDCR_SDCBUS_4BIT, SAM_HSMCI_SDCR);
+  putreg32(HSMCI_SDCR_SDCSEL_SLOTA | HSMCI_SDCR_SDCBUS_1BIT, SAM_HSMCI_SDCR);
 
   /* Enable the MCI controller */
 
@@ -1290,7 +1416,13 @@ static void sam_reset(FAR struct sdio_dev_s *dev)
 
   /* Disable the DMA interface */
 
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
   putreg32(0, SAM_HSMCI_DMA);
+#endif
+
+#ifdef CONFIG_SAM34_PDCA
+  putreg32(PDC_PTCR_RXTDIS | PDC_PTCR_TXTDIS, SAM_HSMCI_PDC_PTCR);
+#endif
 
   /* Configure MCI */
 
@@ -1305,7 +1437,10 @@ static void sam_reset(FAR struct sdio_dev_s *dev)
   priv->waitevents = 0;      /* Set of events to be waited for */
   priv->waitmask   = 0;      /* Interrupt enables for event waiting */
   priv->wkupevent  = 0;      /* The event that caused the wakeup */
+#ifdef CONFIG_SAM34_DMAC0
   priv->dmabusy    = false;  /* No DMA in progress */
+#endif
+
   wd_cancel(priv->waitwdog); /* Cancel any timeouts */
 
   /* Interrupt mode data transfer support */
@@ -1314,7 +1449,7 @@ static void sam_reset(FAR struct sdio_dev_s *dev)
 
   /* DMA data transfer support */
 
-  priv->widebus    = false;  /* Required for DMA support */
+  priv->widebus    = false;
   irqrestore(flags);
 }
 
@@ -1395,7 +1530,14 @@ static void sam_clock(FAR struct sdio_dev_s *dev, enum sdio_clock_e rate)
   /* Fetch the current mode register and mask out the clkdiv (and pwsdiv) */
 
   regval = getreg32(SAM_HSMCI_MR);
+
+  /* Does this HSMCI support the CLOCKODD bit? */
+
+#ifdef HSMCI_MR_CLKODD
+  regval &= ~(HSMCI_MR_CLKDIV_MASK | HSMCI_MR_PWSDIV_MASK | HSMCI_MR_CLKODD);
+#else
   regval &= ~(HSMCI_MR_CLKDIV_MASK | HSMCI_MR_PWSDIV_MASK);
+#endif
 
  /* These clock devisor values that must be defined in the board-specific
   * board.h header file: HSMCI_INIT_CLKDIV, HSMCI_MMCXFR_CLKDIV,
@@ -1479,9 +1621,11 @@ static int sam_attach(FAR struct sdio_dev_s *dev)
 
       up_enable_irq(SAM_IRQ_HSMCI);
 
-      /* Set the interrrupt priority */
+#ifdef CONFIG_ARCH_IRQPRIO
+      /* Set the interrupt priority */
 
-      up_prioritize_irq(SAM_IRQ_HSMCI, CONFIG_HSMCI_PRI);
+      up_prioritize_irq(SAM_IRQ_HSMCI, SAM34_HSMCI_PRIO);
+#endif
     }
 
   return ret;
@@ -1564,7 +1708,7 @@ static int sam_sendcmd(FAR struct sdio_dev_s *dev,
       break;
     }
 
-  /* 'OR' in data transer related bits */
+  /* 'OR' in data transfer related bits */
 
   switch (cmd & MMCSD_DATAXFR_MASK)
     {
@@ -1636,19 +1780,28 @@ static void sam_blocksetup(FAR struct sdio_dev_s *dev, unsigned int blocklen,
 
   DEBUGASSERT(dev != NULL && nblocks > 0 && nblocks < 65535 && blocklen < 65535);
 
-  /* Set the block size */
+ /* When TRTYP - Single or Multi, blocklen must be 1-511, 0-512 */
+
+  DEBUGASSERT(blocklen <= 512);
+
+  /* Set the block size. Clear bits followed by set */
 
   regval = getreg32(SAM_HSMCI_MR);
+
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
   regval &= ~(HSMCI_MR_RDPROOF | HSMCI_MR_WRPROOF | HSMCI_MR_BLKLEN_MASK);
   regval |= HSMCU_PROOF_BITS;
   regval |= (blocklen << HSMCI_MR_BLKLEN_SHIFT);
+#else
+  regval &= ~(HSMCI_MR_RDPROOF | HSMCI_MR_WRPROOF);
+  regval |= HSMCU_PROOF_BITS;
+#endif
+
   putreg32(regval, SAM_HSMCI_MR);
 
-  /* Set the block count */
+  /* Set the block count register */
 
-  regval  = getreg32(SAM_HSMCI_BLKR);
-  regval &= ~HSMCI_BLKR_BCNT_MASK;
-  regval |= (nblocks << HSMCI_BLKR_BCNT_SHIFT);
+  regval  = HSMCI_BLKR_BLKLEN(blocklen) | HSMCI_BLKR_BCNT(nblocks);
   putreg32(regval, SAM_HSMCI_BLKR);
 }
 
@@ -1695,12 +1848,20 @@ static int sam_cancel(FAR struct sdio_dev_s *dev)
    * on an error condition.
    */
 
+#ifdef CONFIG_SAM34_DMAC0
   sam_dmastop(priv->dma);
   priv->dmabusy = false;
+#endif
 
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
   /* Disable the DMA handshaking */
 
   putreg32(0, SAM_HSMCI_DMA);
+#endif
+
+#ifdef CONFIG_SAM34_PDCA
+  putreg32(PDC_PTCR_RXTDIS | PDC_PTCR_TXTDIS, SAM_HSMCI_PDC_PTCR);
+#endif
 
   return OK;
 }
@@ -2110,18 +2271,9 @@ static sdio_eventset_t sam_eventwait(FAR struct sdio_dev_s *dev,
            return SDIOWAIT_TIMEOUT;
         }
 
-      /* Start the watchdog timer.  I am not sure why this is, but I am
-       * currently seeing some additional delays when DMA is used (On the
-       * SAMA5, might not be necessary for SAM3/4).
-       */
+      /* Start the watchdog timer */
 
-#warning REVISIT: This should not be necessary
-      if (priv->dmabusy)
-        {
-          timeout += 500;
-        }
-
-      delay = (timeout + (MSEC_PER_TICK-1)) / MSEC_PER_TICK;
+      delay = MSEC2TICK(timeout);
       ret   = wd_start(priv->waitwdog, delay, (wdentry_t)sam_eventtimeout,
                        1, (uint32_t)priv);
       if (ret != OK)
@@ -2290,19 +2442,38 @@ static int sam_dmarecvsetup(FAR struct sdio_dev_s *dev, FAR uint8_t *buffer,
   sam_xfrsampleinit();
   sam_xfrsample(priv, SAMPLENDX_BEFORE_SETUP);
 
+#ifdef CONFIG_SAM34_DMAC0
   /* Configure the RX DMA */
 
   sam_dmarxsetup(priv->dma, SAM_HSMCI_RDR, (uint32_t)buffer, buflen);
 
+  /* Invalidate the buffer memory to force re-fetching from RAM when the DMA
+   * completes
+   */
+
+  sam_cmcc_invalidate((uintptr_t)buffer, (uintptr_t)buffer + buflen);
+
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
   /* Enable DMA handshaking */
 
   putreg32(HSMCI_DMA_DMAEN, SAM_HSMCI_DMA);
+#endif
   sam_xfrsample(priv, SAMPLENDX_BEFORE_ENABLE);
 
   /* Start the DMA */
 
   priv->dmabusy = true;
   sam_dmastart(priv->dma, sam_dmacallback, priv);
+#endif
+
+#ifdef CONFIG_SAM34_PDCA
+  modifyreg32(SAM_HSMCI_MR, 0, HSMCI_MR_PDCMODE);
+  fdbg("SAM_HSMCI_MR = 0x%08X\n", getreg32(SAM_HSMCI_MR));
+  putreg32((uint32_t)buffer, SAM_HSMCI_PDC_RPR);
+  putreg32(buflen/4, SAM_HSMCI_PDC_RCR);
+  putreg32(PDC_PTCR_RXTEN, SAM_HSMCI_PDC_PTCR);
+  sam_xfrsample(priv, SAMPLENDX_BEFORE_ENABLE);
+#endif
 
   /* Configure transfer-related interrupts.  Transfer interrupts are not
    * enabled until after the transfer is stard with an SD command (i.e.,
@@ -2334,7 +2505,7 @@ static int sam_dmarecvsetup(FAR struct sdio_dev_s *dev, FAR uint8_t *buffer,
  ****************************************************************************/
 
 static int sam_dmasendsetup(FAR struct sdio_dev_s *dev,
-                          FAR const uint8_t *buffer, size_t buflen)
+                            FAR const uint8_t *buffer, size_t buflen)
 {
   struct sam_dev_s *priv = (struct sam_dev_s *)dev;
 
@@ -2346,19 +2517,32 @@ static int sam_dmasendsetup(FAR struct sdio_dev_s *dev,
   sam_xfrsampleinit();
   sam_xfrsample(priv, SAMPLENDX_BEFORE_SETUP);
 
+#ifdef CONFIG_SAM34_DMAC0
   /* Configure the TX DMA */
 
   sam_dmatxsetup(priv->dma, SAM_HSMCI_TDR, (uint32_t)buffer, buflen);
 
+#if defined(CONFIG_ARCH_CHIP_SAM3U)
   /* Enable DMA handshaking */
 
   putreg32(HSMCI_DMA_DMAEN, SAM_HSMCI_DMA);
+#endif
   sam_xfrsample(priv, SAMPLENDX_BEFORE_ENABLE);
 
   /* Start the DMA */
 
   priv->dmabusy = true;
   sam_dmastart(priv->dma, sam_dmacallback, priv);
+#endif
+
+#ifdef CONFIG_SAM34_PDCA
+  modifyreg32(SAM_HSMCI_MR, 0, HSMCI_MR_PDCMODE);
+  fdbg("SAM_HSMCI_MR = 0x%08X\n", getreg32(SAM_HSMCI_MR));
+  putreg32((uint32_t)buffer, SAM_HSMCI_PDC_TPR);
+  putreg32(buflen/4, SAM_HSMCI_PDC_TCR);
+  putreg32(PDC_PTCR_TXTEN, SAM_HSMCI_PDC_PTCR);
+  sam_xfrsample(priv, SAMPLENDX_BEFORE_ENABLE);
+#endif
 
   /* Configure transfer-related interrupts.  Transfer interrupts are not
    * enabled until after the transfer is stard with an SD command (i.e.,
@@ -2483,22 +2667,24 @@ FAR struct sdio_dev_s *sdio_initialize(int slotno)
   priv->waitwdog = wd_create();
   DEBUGASSERT(priv->waitwdog);
 
+#ifdef CONFIG_SAM34_DMAC0
   /* Allocate a DMA channel.  A FIFO size of 8 is sufficient. */
 
   priv->dma = sam_dmachannel(DMA_FLAGS);
   DEBUGASSERT(priv->dma);
+#endif
 
   /* Configure GPIOs for 4-bit, wide-bus operation.  NOTE: (1) the chip is capable of
    * 8-bit wide bus operation but D4-D7 are not configured, (2) any card detection
    * GPIOs must be set up in board-specific logic.
    */
 
-  sam_configgpio(GPIO_MCI_DAT0);   /* Data 0 of Slot A */
-  sam_configgpio(GPIO_MCI_DAT1);   /* Data 1 of Slot A */
-  sam_configgpio(GPIO_MCI_DAT2);   /* Data 2 of Slot A */
-  sam_configgpio(GPIO_MCI_DAT3);   /* Data 3 of Slot A */
-  sam_configgpio(GPIO_MCI_CK);     /* SD clock */
-  sam_configgpio(GPIO_MCI_DA);     /* Command/Response */
+  sam_configgpio(GPIO_HSMCI_DAT0);   /* Data 0 of Slot A */
+  sam_configgpio(GPIO_HSMCI_DAT1);   /* Data 1 of Slot A */
+  sam_configgpio(GPIO_HSMCI_DAT2);   /* Data 2 of Slot A */
+  sam_configgpio(GPIO_HSMCI_DAT3);   /* Data 3 of Slot A */
+  sam_configgpio(GPIO_HSMCI_CK);     /* SD clock */
+  sam_configgpio(GPIO_HSMCI_DA);     /* Command/Response */
 
 #ifdef CONFIG_DEBUG_FS
   sam_dumpgpio(GPIO_PORT_PIOA, "Pins: 3-8");

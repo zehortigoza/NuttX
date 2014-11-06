@@ -109,6 +109,7 @@ static int usbhost_waiter(int argc, char *argv[])
 
       ret = CONN_WAIT(g_usbconn, &connected);
       DEBUGASSERT(ret == OK);
+      UNUSED(ret);
 
       connected = !connected;
       uvdbg("%s\n", connected ? "connected" : "disconnected");
@@ -176,11 +177,30 @@ int stm32_usbhost_initialize(void)
    */
 
   uvdbg("Register class drivers\n");
+
+#ifdef CONFIG_USBHOST_MSC
   ret = usbhost_storageinit();
   if (ret != OK)
     {
       udbg("Failed to register the mass storage class\n");
     }
+#endif
+
+#ifdef CONFIG_USBHOST_HIDKBD
+  ret = usbhost_kbdinit();
+  if (ret != OK)
+    {
+      udbg("Failed to register the HID keyboard class\n");
+    }
+#endif
+
+#ifdef CONFIG_USBHOST_HIDMOUSE
+  ret = usbhost_mouse_init();
+  if (ret != OK)
+    {
+      udbg("Failed to register the HID mouse class\n");
+    }
+#endif
 
   /* Then get an instance of the USB host interface */
 
@@ -192,7 +212,7 @@ int stm32_usbhost_initialize(void)
 
       uvdbg("Start usbhost_waiter\n");
 
-      pid = TASK_CREATE("usbhost", CONFIG_USBHOST_DEFPRIO,
+      pid = task_create("usbhost", CONFIG_USBHOST_DEFPRIO,
                         CONFIG_USBHOST_STACKSIZE,
                         (main_t)usbhost_waiter, (FAR char * const *)NULL);
       return pid < 0 ? -ENOEXEC : OK;
@@ -209,14 +229,14 @@ int stm32_usbhost_initialize(void)
  *   Enable/disable driving of VBUS 5V output.  This function must be provided be
  *   each platform that implements the STM32 OTG FS host interface
  *
- *   "On-chip 5 V VBUS generation is not supported. For this reason, a charge pump 
- *    or, if 5 V are available on the application board, a basic power switch, must 
- *    be added externally to drive the 5 V VBUS line. The external charge pump can 
- *    be driven by any GPIO output. When the application decides to power on VBUS 
- *    using the chosen GPIO, it must also set the port power bit in the host port 
+ *   "On-chip 5 V VBUS generation is not supported. For this reason, a charge pump
+ *    or, if 5 V are available on the application board, a basic power switch, must
+ *    be added externally to drive the 5 V VBUS line. The external charge pump can
+ *    be driven by any GPIO output. When the application decides to power on VBUS
+ *    using the chosen GPIO, it must also set the port power bit in the host port
  *    control and status register (PPWR bit in OTG_FS_HPRT).
  *
- *   "The application uses this field to control power to this port, and the core 
+ *   "The application uses this field to control power to this port, and the core
  *    clears this bit on an overcurrent condition."
  *
  * Input Parameters:
@@ -232,7 +252,7 @@ int stm32_usbhost_initialize(void)
 void stm32_usbhost_vbusdrive(int iface, bool enable)
 {
   DEBUGASSERT(iface == 0);
-  
+
   if (enable)
     {
       /* Enable the Power Switch by driving the enable pin low */
@@ -240,9 +260,9 @@ void stm32_usbhost_vbusdrive(int iface, bool enable)
       stm32_gpiowrite(GPIO_OTGFS_PWRON, false);
     }
   else
-    { 
+    {
       /* Disable the Power Switch by driving the enable pin high */
- 
+
       stm32_gpiowrite(GPIO_OTGFS_PWRON, true);
     }
 }
@@ -255,7 +275,7 @@ void stm32_usbhost_vbusdrive(int iface, bool enable)
  *   Setup to receive an interrupt-level callback if an overcurrent condition is
  *   detected.
  *
- * Input paramter:
+ * Input Parameter:
  *   handler - New overcurrent interrupt handler
  *
  * Returned value:
@@ -289,6 +309,3 @@ void stm32_usbsuspend(FAR struct usbdev_s *dev, bool resume)
 #endif
 
 #endif /* CONFIG_STM32_OTGFS */
-
-
-

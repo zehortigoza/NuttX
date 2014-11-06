@@ -55,11 +55,15 @@
  * Public Functions
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int sysinfo_main(int argc, char *argv[])
+#endif
 {
   printf("System Information:\n");
   printf("\tNuttX Version:\t" CONFIG_VERSION_STRING
-         " Build: %d\n", CONFIG_VERSION_BUILD);
+         " Build: %s\n", CONFIG_VERSION_BUILD);
   printf("\tSystem Time:\t%d [s] UTC "
 #ifdef CONFIG_RTC
         "Hardware RTC Support"

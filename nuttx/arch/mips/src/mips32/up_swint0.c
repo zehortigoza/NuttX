@@ -65,7 +65,7 @@
  */
 
 #ifdef CONFIG_DEBUG_SYSCALL
-# define swidbg(format, arg...) lldbg(format, ##arg)
+# define swidbg(format, ...) lldbg(format, ##__VA_ARGS__)
 #else
 # define swidbg(x...)
 #endif
@@ -122,7 +122,7 @@ static void up_registerdump(const uint32_t *regs)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_KERNEL
 static void dispatch_syscall(void) naked_function;
 static void dispatch_syscall(void)
 {
@@ -234,7 +234,7 @@ int up_swint0(int irq, FAR void *context)
        * unprivileged thread mode.
        */
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_KERNEL
       case SYS_syscall_return:
         {
           struct tcb_s *rtcb = sched_self();
@@ -262,7 +262,7 @@ int up_swint0(int irq, FAR void *context)
 
       default:
         {
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_KERNEL
           FAR struct tcb_s *rtcb = sched_self();
           int index = rtcb->xcp.nsyscalls;
 
@@ -310,7 +310,7 @@ int up_swint0(int irq, FAR void *context)
 #endif
 
   /* Clear the pending software interrupt 0 in the PIC32 interrupt block */
- 
+
   up_clrpend_irq(PIC32MX_IRQSRC_CS0);
 
   /* And reset the software interrupt bit in the MIPS CAUSE register */

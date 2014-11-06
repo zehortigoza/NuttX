@@ -45,15 +45,16 @@
 #include <time.h>
 #include <string.h>
 #include <debug.h>
-#include <wdog.h>
 #include <errno.h>
 
-#include <nuttx/irq.h>
+#include <arpa/inet.h>
+
 #include <nuttx/arch.h>
+#include <nuttx/wdog.h>
+#include <nuttx/irq.h>
 #include <arch/board/board.h>
-#include <nuttx/net/uip/uip.h>
-#include <nuttx/net/uip/uip-arp.h>
-#include <nuttx/net/uip/uip-arch.h>
+#include <nuttx/net/arp.h>
+#include <nuttx/net/netdev.h>
 
 #include "chip.h"
 #include "up_arch.h"
@@ -71,7 +72,7 @@
 #ifdef CONFIG_TIVA_ETHHDUPLEX
 #  define TIVA_DUPLEX_SETBITS 0
 #  define TIVA_DUPLEX_CLRBITS MAC_TCTL_DUPLEX
-#else 
+#else
 #  define TIVA_DUPLEX_SETBITS MAC_TCTL_DUPLEX
 #  define TIVA_DUPLEX_CLRBITS 0
 #endif
@@ -81,7 +82,7 @@
 #ifdef CONFIG_TIVA_ETHNOAUTOCRC
 #  define TIVA_CRC_SETBITS 0
 #  define TIVA_CRC_CLRBITS MAC_TCTL_CRC
-#else 
+#else
 #  define TIVA_CRC_SETBITS MAC_TCTL_CRC
 #  define TIVA_CRC_CLRBITS 0
 #endif
@@ -91,7 +92,7 @@
 #ifdef CONFIG_TIVA_ETHNOPAD
 #  define TIVA_PADEN_SETBITS 0
 #  define TIVA_PADEN_CLRBITS MAC_TCTL_PADEN
-#else 
+#else
 #  define TIVA_PADEN_SETBITS MAC_TCTL_PADEN
 #  define TIVA_PADEN_CLRBITS 0
 #endif
@@ -104,7 +105,7 @@
 #ifdef CONFIG_TIVA_MULTICAST
 #  define TIVA_AMUL_SETBITS MAC_RCTL_AMUL
 #  define TIVA_AMUL_CLRBITS 0
-#else 
+#else
 #  define TIVA_AMUL_SETBITS 0
 #  define TIVA_AMUL_CLRBITS MAC_RCTL_AMUL
 #endif
@@ -114,7 +115,7 @@
 #ifdef CONFIG_TIVA_PROMISCUOUS
 #  define TIVA_PRMS_SETBITS MAC_RCTL_PRMS
 #  define TIVA_PRMS_CLRBITS 0
-#else 
+#else
 #  define TIVA_PRMS_SETBITS 0
 #  define TIVA_PRMS_CLRBITS MAC_RCTL_PRMS
 #endif
@@ -124,7 +125,7 @@
 #ifdef CONFIG_TIVA_BADCRC
 #  define TIVA_BADCRC_SETBITS MAC_RCTL_BADCRC
 #  define TIVA_BADCRC_CLRBITS 0
-#else 
+#else
 #  define TIVA_BADCRC_SETBITS 0
 #  define TIVA_BADCRC_CLRBITS MAC_RCTL_BADCRC
 #endif
@@ -151,7 +152,7 @@
 
 /* This is a helper pointer for accessing the contents of the Ethernet header */
 
-#define ETHBUF ((struct uip_eth_hdr *)priv->ld_dev.d_buf)
+#define ETHBUF ((struct eth_hdr_s *)priv->ld_dev.d_buf)
 
 #define TIVA_MAX_MDCCLK 2500000
 
@@ -207,7 +208,7 @@ struct tiva_driver_s
 
   /* This holds the information visible to uIP/NuttX */
 
-  struct uip_driver_s ld_dev;  /* Interface understood by uIP */
+  struct net_driver_s ld_dev;  /* Interface understood by uIP */
 };
 
 /****************************************************************************
@@ -238,7 +239,7 @@ static uint16_t tiva_phyread(struct tiva_driver_s *priv, int regaddr);
 /* Common TX logic */
 
 static int  tiva_transmit(struct tiva_driver_s *priv);
-static int  tiva_uiptxpoll(struct uip_driver_s *dev);
+static int  tiva_txpoll(struct net_driver_s *dev);
 
 /* Interrupt handling */
 
@@ -253,12 +254,12 @@ static void tiva_txtimeout(int argc, uint32_t arg, ...);
 
 /* NuttX callback functions */
 
-static int  tiva_ifup(struct uip_driver_s *dev);
-static int  tiva_ifdown(struct uip_driver_s *dev);
-static int  tiva_txavail(struct uip_driver_s *dev);
+static int  tiva_ifup(struct net_driver_s *dev);
+static int  tiva_ifdown(struct net_driver_s *dev);
+static int  tiva_txavail(struct net_driver_s *dev);
 #ifdef CONFIG_NET_IGMP
-static int  tiva_addmac(struct uip_driver_s *dev, FAR const uint8_t *mac);
-static int  tiva_rmmac(struct uip_driver_s *dev, FAR const uint8_t *mac);
+static int  tiva_addmac(struct net_driver_s *dev, FAR const uint8_t *mac);
+static int  tiva_rmmac(struct net_driver_s *dev, FAR const uint8_t *mac);
 #endif
 
 /****************************************************************************
@@ -514,7 +515,7 @@ static int tiva_transmit(struct tiva_driver_s *priv)
 
       pktlen     = priv->ld_dev.d_len;
       nllvdbg("Sending packet, pktlen: %d\n", pktlen);
-      DEBUGASSERT(pktlen > UIP_LLH_LEN);
+      DEBUGASSERT(pktlen > NET_LL_HDRLEN);
 
       dbuf       = priv->ld_dev.d_buf;
       regval     = (uint32_t)(pktlen - 14);
@@ -573,11 +574,11 @@ static int tiva_transmit(struct tiva_driver_s *priv)
 }
 
 /****************************************************************************
- * Function: tiva_uiptxpoll
+ * Function: tiva_txpoll
  *
  * Description:
  *   The transmitter is available, check if uIP has any outgoing packets ready
- *   to send.  This is a callback from uip_poll().  uip_poll() may be called:
+ *   to send.  This is a callback from devif_poll().  devif_poll() may be called:
  *
  *   1. When the preceding TX packet send is complete,
  *   2. When the preceding TX packet send timesout and the interface is reset
@@ -593,7 +594,7 @@ static int tiva_transmit(struct tiva_driver_s *priv)
  *
  ****************************************************************************/
 
-static int tiva_uiptxpoll(struct uip_driver_s *dev)
+static int tiva_txpoll(struct net_driver_s *dev)
 {
   struct tiva_driver_s *priv = (struct tiva_driver_s *)dev->d_private;
   int ret = OK;
@@ -610,7 +611,7 @@ static int tiva_uiptxpoll(struct uip_driver_s *dev)
        */
 
       DEBUGASSERT((tiva_ethin(priv, TIVA_MAC_TR_OFFSET) & MAC_TR_NEWTX) == 0)
-      uip_arp_out(&priv->ld_dev);
+      arp_out(&priv->ld_dev);
       ret = tiva_transmit(priv);
     }
 
@@ -676,7 +677,7 @@ static void tiva_receive(struct tiva_driver_s *priv)
        * and 4 byte FCS that are not copied into the uIP packet.
        */
 
-      if (pktlen > (CONFIG_NET_BUFSIZE + 6) || pktlen <= (UIP_LLH_LEN + 6))
+      if (pktlen > (CONFIG_NET_BUFSIZE + 6) || pktlen <= (NET_LL_HDRLEN + 6))
         {
           int wordlen;
 
@@ -758,16 +759,16 @@ static void tiva_receive(struct tiva_driver_s *priv)
       /* We only accept IP packets of the configured type and ARP packets */
 
 #ifdef CONFIG_NET_IPv6
-      if (ETHBUF->type == HTONS(UIP_ETHTYPE_IP6))
+      if (ETHBUF->type == HTONS(ETHTYPE_IP6))
 #else
-      if (ETHBUF->type == HTONS(UIP_ETHTYPE_IP))
+      if (ETHBUF->type == HTONS(ETHTYPE_IP))
 #endif
         {
           nllvdbg("IP packet received (%02x)\n", ETHBUF->type);
           EMAC_STAT(priv, rx_ip);
 
-          uip_arp_ipin(&priv->ld_dev);
-          uip_input(&priv->ld_dev);
+          arp_ipin(&priv->ld_dev);
+          devif_input(&priv->ld_dev);
 
           /* If the above function invocation resulted in data that should be
            * sent out on the network, the field  d_len will set to a value > 0.
@@ -775,16 +776,16 @@ static void tiva_receive(struct tiva_driver_s *priv)
 
           if (priv->ld_dev.d_len > 0)
             {
-              uip_arp_out(&priv->ld_dev);
+              arp_out(&priv->ld_dev);
               tiva_transmit(priv);
             }
         }
-      else if (ETHBUF->type == htons(UIP_ETHTYPE_ARP))
+      else if (ETHBUF->type == htons(ETHTYPE_ARP))
         {
           nllvdbg("ARP packet received (%02x)\n", ETHBUF->type);
           EMAC_STAT(priv, rx_arp);
 
-          uip_arp_arpin(&priv->ld_dev);
+          arp_arpin(&priv->ld_dev);
 
           /* If the above function invocation resulted in data that should be
            * sent out on the network, the field  d_len will set to a value > 0.
@@ -839,7 +840,7 @@ static void tiva_txdone(struct tiva_driver_s *priv)
 
   /* Then poll uIP for new XMIT data */
 
-  (void)uip_poll(&priv->ld_dev, tiva_uiptxpoll);
+  (void)devif_poll(&priv->ld_dev, tiva_txpoll);
 }
 
 /****************************************************************************
@@ -921,7 +922,7 @@ static int tiva_interrupt(int irq, FAR void *context)
       tiva_txdone(priv);
     }
 
-  /* Enable Ethernet interrupts (perhaps excluding the TX done interrupt if 
+  /* Enable Ethernet interrupts (perhaps excluding the TX done interrupt if
    * there are no pending transmissions).
    */
 
@@ -963,7 +964,7 @@ static void tiva_txtimeout(int argc, uint32_t arg, ...)
 
   /* Then poll uIP for new XMIT data */
 
-  (void)uip_poll(&priv->ld_dev, tiva_uiptxpoll);
+  (void)devif_poll(&priv->ld_dev, tiva_txpoll);
 }
 
 /****************************************************************************
@@ -999,7 +1000,7 @@ static void tiva_polltimer(int argc, uint32_t arg, ...)
     {
       /* If so, update TCP timing states and poll uIP for new XMIT data */
 
-      (void)uip_timer(&priv->ld_dev, tiva_uiptxpoll, TIVA_POLLHSEC);
+      (void)devif_timer(&priv->ld_dev, tiva_txpoll, TIVA_POLLHSEC);
 
       /* Setup the watchdog poll timer again */
 
@@ -1012,7 +1013,7 @@ static void tiva_polltimer(int argc, uint32_t arg, ...)
  *
  * Description:
  *   NuttX Callback: Bring up the Ethernet interface when an IP address is
- *   provided 
+ *   provided
  *
  * Parameters:
  *   dev  - Reference to the NuttX driver state structure
@@ -1024,7 +1025,7 @@ static void tiva_polltimer(int argc, uint32_t arg, ...)
  *
  ****************************************************************************/
 
-static int tiva_ifup(struct uip_driver_s *dev)
+static int tiva_ifup(struct net_driver_s *dev)
 {
   struct tiva_driver_s *priv = (struct tiva_driver_s *)dev->d_private;
   irqstate_t flags;
@@ -1055,7 +1056,7 @@ static int tiva_ifup(struct uip_driver_s *dev)
   tiva_ethout(priv, TIVA_MAC_MDV_OFFSET, div);
   nllvdbg("MDV:   %08x\n", div);
 
-  /* Then configure the Ethernet Controller for normal operation 
+  /* Then configure the Ethernet Controller for normal operation
    *
    * Setup the transmit control register (Full duplex, TX CRC Auto Generation,
    * TX Padding Enabled).
@@ -1180,7 +1181,7 @@ static int tiva_ifup(struct uip_driver_s *dev)
  *
  ****************************************************************************/
 
-static int tiva_ifdown(struct uip_driver_s *dev)
+static int tiva_ifdown(struct net_driver_s *dev)
 {
   struct tiva_driver_s *priv = (struct tiva_driver_s *)dev->d_private;
   irqstate_t flags;
@@ -1250,7 +1251,7 @@ static int tiva_ifdown(struct uip_driver_s *dev)
  * Function: tiva_txavail
  *
  * Description:
- *   Driver callback invoked when new TX data is available.  This is a 
+ *   Driver callback invoked when new TX data is available.  This is a
  *   stimulus perform an out-of-cycle poll and, thereby, reduce the TX
  *   latency.
  *
@@ -1265,7 +1266,7 @@ static int tiva_ifdown(struct uip_driver_s *dev)
  *
  ****************************************************************************/
 
-static int tiva_txavail(struct uip_driver_s *dev)
+static int tiva_txavail(struct net_driver_s *dev)
 {
   struct tiva_driver_s *priv = (struct tiva_driver_s *)dev->d_private;
   irqstate_t flags;
@@ -1285,7 +1286,7 @@ static int tiva_txavail(struct uip_driver_s *dev)
        * for new Tx data
        */
 
-      (void)uip_poll(&priv->ld_dev, tiva_uiptxpoll);
+      (void)devif_poll(&priv->ld_dev, tiva_txpoll);
     }
 
   irqrestore(flags);
@@ -1301,7 +1302,7 @@ static int tiva_txavail(struct uip_driver_s *dev)
  *
  * Parameters:
  *   dev  - Reference to the NuttX driver state structure
- *   mac  - The MAC address to be added 
+ *   mac  - The MAC address to be added
  *
  * Returned Value:
  *   None
@@ -1311,7 +1312,7 @@ static int tiva_txavail(struct uip_driver_s *dev)
  ****************************************************************************/
 
 #ifdef CONFIG_NET_IGMP
-static int tiva_addmac(struct uip_driver_s *dev, FAR const uint8_t *mac)
+static int tiva_addmac(struct net_driver_s *dev, FAR const uint8_t *mac)
 {
   FAR struct tiva_driver_s *priv = (FAR struct tiva_driver_s *)dev->d_private;
 
@@ -1331,7 +1332,7 @@ static int tiva_addmac(struct uip_driver_s *dev, FAR const uint8_t *mac)
  *
  * Parameters:
  *   dev  - Reference to the NuttX driver state structure
- *   mac  - The MAC address to be removed 
+ *   mac  - The MAC address to be removed
  *
  * Returned Value:
  *   None
@@ -1341,7 +1342,7 @@ static int tiva_addmac(struct uip_driver_s *dev, FAR const uint8_t *mac)
  ****************************************************************************/
 
 #ifdef CONFIG_NET_IGMP
-static int tiva_rmmac(struct uip_driver_s *dev, FAR const uint8_t *mac)
+static int tiva_rmmac(struct net_driver_s *dev, FAR const uint8_t *mac)
 {
   FAR struct tiva_driver_s *priv = (FAR struct tiva_driver_s *)dev->d_private;
 
@@ -1416,7 +1417,7 @@ static inline int tiva_ethinitialize(int intf)
 
   /* If the board can provide us with a MAC address, get the address
    * from the board now.  The MAC will not be applied until tiva_ifup()
-   * is caleld (and the MAC can be overwritten with a netdev ioctl call). 
+   * is caleld (and the MAC can be overwritten with a netdev ioctl call).
    */
 
 #ifdef CONFIG_TIVA_BOARDMAC

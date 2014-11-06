@@ -51,6 +51,8 @@
 #  include "sam3u_gpio.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM3X) || defined(CONFIG_ARCH_CHIP_SAM3A)
 #  include "sam3x_gpio.h"
+#elif defined(CONFIG_ARCH_CHIP_SAM4CM)
+#  include "sam4cm_gpio.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM4E)
 #  include "sam4e_gpio.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM4L)
@@ -67,10 +69,12 @@
 
 /* Configuration ********************************************************************/
 
-#if defined(CONFIG_GPIOA_IRQ) || defined(CONFIG_GPIOB_IRQ) || defined(CONFIG_GPIOC_IRQ)
-#  define CONFIG_GPIO_IRQ 1
+#if defined(CONFIG_SAM34_GPIOA_IRQ) || defined(CONFIG_SAM34_GPIOB_IRQ) || \
+    defined(CONFIG_SAM34_GPIOC_IRQ) || defined(CONFIG_SAM34_GPIOD_IRQ) || \
+    defined(CONFIG_SAM34_GPIOE_IRQ) || defined(CONFIG_SAM34_GPIOF_IRQ)
+#  define CONFIG_SAM34_GPIO_IRQ 1
 #else
-#  undef CONFIG_GPIO_IRQ
+#  undef CONFIG_SAM34_GPIO_IRQ
 #endif
 
 #ifndef CONFIG_DEBUG
@@ -112,7 +116,7 @@ extern "C"
  *
  ************************************************************************************/
 
-#ifdef CONFIG_GPIO_IRQ
+#ifdef CONFIG_SAM34_GPIO_IRQ
 void sam_gpioirqinitialize(void);
 #else
 #  define sam_gpioirqinitialize()
@@ -156,7 +160,7 @@ bool sam_gpioread(gpio_pinset_t pinset);
  *
  ************************************************************************************/
 
-#ifdef CONFIG_GPIO_IRQ
+#ifdef CONFIG_SAM34_GPIO_IRQ
 void sam_gpioirq(gpio_pinset_t pinset);
 #else
 #  define sam_gpioirq(pinset)
@@ -170,7 +174,7 @@ void sam_gpioirq(gpio_pinset_t pinset);
  *
  ************************************************************************************/
 
-#ifdef CONFIG_GPIO_IRQ
+#ifdef CONFIG_SAM34_GPIO_IRQ
 void sam_gpioirqenable(int irq);
 #else
 #  define sam_gpioirqenable(irq)
@@ -184,7 +188,7 @@ void sam_gpioirqenable(int irq);
  *
  ************************************************************************************/
 
-#ifdef CONFIG_GPIO_IRQ
+#ifdef CONFIG_SAM34_GPIO_IRQ
 void sam_gpioirqdisable(int irq);
 #else
 #  define sam_gpioirqdisable(irq)

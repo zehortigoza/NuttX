@@ -342,7 +342,7 @@ int sam_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  pid = TASK_CREATE("OHCI Monitor", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
+  pid = task_create("OHCI Monitor", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
                     (main_t)ohci_waiter, (FAR char * const *)NULL);
   if (pid < 0)
     {
@@ -363,7 +363,7 @@ int sam_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  pid = TASK_CREATE("EHCI Monitor", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
+  pid = task_create("EHCI Monitor", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
                     (main_t)ehci_waiter, (FAR char * const *)NULL);
   if (pid < 0)
     {
@@ -463,7 +463,7 @@ void sam_usbhost_vbusdrive(int rhport, bool enable)
  *   REVISIT: Since this is a common signal, we will need to come up with some way
  *   to inform both EHCI and OHCI drivers when this error occurs.
  *
- * Input paramter:
+ * Input Parameter:
  *   handler - New overcurrent interrupt handler
  *
  * Returned value:
@@ -486,18 +486,18 @@ xcpt_t sam_setup_overcurrent(xcpt_t handler)
 
   flags = irqsave();
 
-  /* Get the old button interrupt handler and save the new one */
+  /* Get the old interrupt handler and save the new one */
 
   oldhandler  = g_ochandler;
   g_ochandler = handler;
 
   /* Configure the interrupt */
 
-  sam_pioirq(IRQ_USBBC_VBUS_OVERCURRENT);
+  sam_pioirq(PIO_USBBC_VBUS_OVERCURRENT);
   (void)irq_attach(IRQ_USBBC_VBUS_OVERCURRENT, handler);
   sam_pioirqenable(IRQ_USBBC_VBUS_OVERCURRENT);
 
-  /* Return the old button handler (so that it can be restored) */
+  /* Return the old handler (so that it can be restored) */
 
   irqrestore(flags);
   return oldhandler;

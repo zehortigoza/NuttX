@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/sam34/sam_gpioirq.c
  *
- *   Copyright (C) 2010, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2010, 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,10 +55,20 @@
 
 #include "sam_gpio.h"
 #include "sam_periphclks.h"
-#include "chip/sam3u_pio.h"
 #include "chip/sam_pmc.h"
 
-#ifdef CONFIG_GPIO_IRQ
+#if defined(CONFIG_ARCH_CHIP_SAM3U) || defined(CONFIG_ARCH_CHIP_SAM3X) || \
+    defined(CONFIG_ARCH_CHIP_SAM3A)
+#  include "chip/sam3u_pio.h"
+#elif defined(CONFIG_ARCH_CHIP_SAM4E)
+#  include "chip/sam4e_pio.h"
+#elif defined(CONFIG_ARCH_CHIP_SAM4CM) || defined(CONFIG_ARCH_CHIP_SAM4S)
+#  include "chip/sam4s_pio.h"
+#else
+#  error Unrecognized SAM architecture
+#endif
+
+#ifdef CONFIG_SAM34_GPIO_IRQ
 
 /****************************************************************************
  * Private Definitions
@@ -115,7 +125,7 @@ static int sam_irqbase(int irq, uint32_t *base, int *pin)
 {
   if (irq >= SAM_IRQ_NIRQS)
     {
-#ifdef CONFIG_GPIOA_IRQ
+#ifdef CONFIG_SAM34_GPIOA_IRQ
       if (irq <= SAM_IRQ_PA31)
         {
           *base = SAM_PIOA_BASE;
@@ -123,7 +133,7 @@ static int sam_irqbase(int irq, uint32_t *base, int *pin)
           return OK;
         }
 #endif
-#ifdef CONFIG_GPIOB_IRQ
+#ifdef CONFIG_SAM34_GPIOB_IRQ
       if (irq <= SAM_IRQ_PB31)
         {
           *base = SAM_PIOB_BASE;
@@ -131,7 +141,7 @@ static int sam_irqbase(int irq, uint32_t *base, int *pin)
           return OK;
         }
 #endif
-#ifdef CONFIG_GPIOC_IRQ
+#ifdef CONFIG_SAM34_GPIOC_IRQ
       if (irq <= SAM_IRQ_PC31)
         {
           *base = SAM_PIOC_BASE;
@@ -139,7 +149,7 @@ static int sam_irqbase(int irq, uint32_t *base, int *pin)
           return OK;
         }
 #endif
-#ifdef CONFIG_GPIOD_IRQ
+#ifdef CONFIG_SAM34_GPIOD_IRQ
       if (irq <= SAM_IRQ_PD31)
         {
           *base = SAM_PIOD_BASE;
@@ -147,7 +157,7 @@ static int sam_irqbase(int irq, uint32_t *base, int *pin)
           return OK;
         }
 #endif
-#ifdef CONFIG_GPIOE_IRQ
+#ifdef CONFIG_SAM34_GPIOE_IRQ
       if (irq <= SAM_IRQ_PE31)
         {
           *base = SAM_PIOE_BASE;
@@ -155,7 +165,7 @@ static int sam_irqbase(int irq, uint32_t *base, int *pin)
           return OK;
         }
 #endif
-#ifdef CONFIG_GPIOF_IRQ
+#ifdef CONFIG_SAM34_GPIOF_IRQ
       if (irq <= SAM_IRQ_PF31)
         {
           *base = SAM_PIOF_BASE;
@@ -199,42 +209,42 @@ static int sam_gpiointerrupt(uint32_t base, int irq0, void *context)
   return OK;
 }
 
-#ifdef CONFIG_GPIOA_IRQ
+#ifdef CONFIG_SAM34_GPIOA_IRQ
 static int sam_gpioainterrupt(int irq, void *context)
 {
   return sam_gpiointerrupt(SAM_PIOA_BASE, SAM_IRQ_PA0, context);
 }
 #endif
 
-#ifdef CONFIG_GPIOB_IRQ
+#ifdef CONFIG_SAM34_GPIOB_IRQ
 static int sam_gpiobinterrupt(int irq, void *context)
 {
   return sam_gpiointerrupt(SAM_PIOB_BASE, SAM_IRQ_PB0, context);
 }
 #endif
 
-#ifdef CONFIG_GPIOC_IRQ
+#ifdef CONFIG_SAM34_GPIOC_IRQ
 static int sam_gpiocinterrupt(int irq, void *context)
 {
   return sam_gpiointerrupt(SAM_PIOC_BASE, SAM_IRQ_PC0, context);
 }
 #endif
 
-#ifdef CONFIG_GPIOD_IRQ
+#ifdef CONFIG_SAM34_GPIOD_IRQ
 static int sam_gpiodinterrupt(int irq, void *context)
 {
   return sam_gpiointerrupt(SAM_PIOD_BASE, SAM_IRQ_PD0, context);
 }
 #endif
 
-#ifdef CONFIG_GPIOE_IRQ
+#ifdef CONFIG_SAM34_GPIOE_IRQ
 static int sam_gpioeinterrupt(int irq, void *context)
 {
   return sam_gpiointerrupt(SAM_PIOE_BASE, SAM_IRQ_PE0, context);
 }
 #endif
 
-#ifdef CONFIG_GPIOF_IRQ
+#ifdef CONFIG_SAM34_GPIOF_IRQ
 static int sam_gpiofinterrupt(int irq, void *context)
 {
   return sam_gpiointerrupt(SAM_PIOF_BASE, SAM_IRQ_PF0, context);
@@ -258,7 +268,7 @@ void sam_gpioirqinitialize(void)
 {
   /* Configure GPIOA interrupts */
 
-#ifdef CONFIG_GPIOA_IRQ
+#ifdef CONFIG_SAM34_GPIOA_IRQ
   /* Enable GPIOA clocking */
 
   sam_pioa_enableclk();
@@ -276,7 +286,7 @@ void sam_gpioirqinitialize(void)
 
   /* Configure GPIOB interrupts */
 
-#ifdef CONFIG_GPIOB_IRQ
+#ifdef CONFIG_SAM34_GPIOB_IRQ
   /* Enable GPIOB clocking */
 
   sam_piob_enableclk();
@@ -294,7 +304,7 @@ void sam_gpioirqinitialize(void)
 
   /* Configure GPIOC interrupts */
 
-#ifdef CONFIG_GPIOC_IRQ
+#ifdef CONFIG_SAM34_GPIOC_IRQ
   /* Enable GPIOC clocking */
 
   sam_pioc_enableclk();
@@ -312,7 +322,7 @@ void sam_gpioirqinitialize(void)
 
   /* Configure GPIOD interrupts */
 
-#ifdef CONFIG_GPIOD_IRQ
+#ifdef CONFIG_SAM34_GPIOD_IRQ
   /* Enable GPIOD clocking */
 
   sam_piod_enableclk();
@@ -330,7 +340,7 @@ void sam_gpioirqinitialize(void)
 
   /* Configure GPIOE interrupts */
 
-#ifdef CONFIG_GPIOE_IRQ
+#ifdef CONFIG_SAM34_GPIOE_IRQ
   /* Enable GPIOE clocking */
 
   sam_pioe_enableclk();
@@ -348,7 +358,7 @@ void sam_gpioirqinitialize(void)
 
   /* Configure GPIOF interrupts */
 
-#ifdef CONFIG_GPIOF_IRQ
+#ifdef CONFIG_SAM34_GPIOF_IRQ
   /* Enable GPIOF clocking */
 
   sam_piof_enableclk();
@@ -459,4 +469,4 @@ void sam_gpioirqdisable(int irq)
     }
 }
 
-#endif /* CONFIG_GPIO_IRQ */
+#endif /* CONFIG_SAM34_GPIO_IRQ */

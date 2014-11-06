@@ -116,7 +116,7 @@ FAR void *up_stack_frame(FAR struct tcb_s *tcb, size_t frame_size)
   /* Align the frame_size */
 
   frame_size = STACK_ALIGN_UP(frame_size);
-  
+
   /* Is there already a stack allocated? Is it big enough? */
 
   if (!tcb->stack_alloc_ptr || tcb->adj_stack_size <= frame_size)
@@ -132,9 +132,10 @@ FAR void *up_stack_frame(FAR struct tcb_s *tcb, size_t frame_size)
 
   /* Reset the initial state */
 
-  tcb->xcp.regs[JB_SP] = (uint32_t)tcb->adj_stack_ptr;
+  tcb->xcp.regs[JB_SP] = (xcpt_reg_t)tcb->adj_stack_ptr;
 
   /* And return a pointer to the allocated memory */
 
   return (FAR void *)(topaddr + sizeof(uint32_t));
 }
+

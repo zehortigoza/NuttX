@@ -1,7 +1,7 @@
 /****************************************************************************
  * libc/stdio/lib_sscanf.c
  *
- *   Copyright (C) 2007, 2008, 2011-2014 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007, 2008, 2011-2012 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,29 +40,18 @@
 #include <nuttx/compiler.h>
 
 #include <sys/types.h>
-
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <errno.h>
 #include <debug.h>
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Definitions
  ****************************************************************************/
 
 #define MAXLN 128
-
-#ifndef MIN
-#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
-#endif
-
-#ifndef MAX
-#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
-#endif
 
 /****************************************************************************
  * Private Type Declarations
@@ -72,12 +61,12 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-/**************************************************************************
+/****************************************************************************
  * Global Function Prototypes
  ****************************************************************************/
- 
-int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap);
- 
+
+int vsscanf(char *buf, const char *fmt, va_list ap);
+
 /**************************************************************************
  * Global Constant Data
  **************************************************************************/
@@ -119,7 +108,7 @@ static int findwidth(FAR const char *buf, FAR const char *fmt)
       return strcspn(buf, spaces);
     }
 
-  /* No.. Another possibility is the format character is followed by
+  /* No.. Another possibility is the the format character is followed by
    * some recognizable delimiting value.
    */
 
@@ -168,7 +157,7 @@ int sscanf(FAR const char *buf, FAR const char *fmt, ...)
   int     count;
 
   va_start(ap, fmt);
-  count = vsscanf((FAR const char*)buf, fmt, ap);
+  count = vsscanf((FAR char*)buf, fmt, ap);
   va_end(ap);
   return count;
 }
@@ -181,9 +170,9 @@ int sscanf(FAR const char *buf, FAR const char *fmt, ...)
  *
  ****************************************************************************/
 
-int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
+int vsscanf(FAR char *buf, FAR const char *fmt, va_list ap)
 {
-  FAR const char *bufstart;
+  FAR char       *bufstart;
   FAR char       *tv;
   FAR const char *tc;
   FAR long       *pclong;
@@ -307,19 +296,14 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
                     {
                       /* No... Guess a field width using some heuristics */
 
-                      int tmpwidth = findwidth(buf, fmt);
-                      width = MIN(sizeof(tmp) - 1, tmpwidth);
+                      width = findwidth(buf, fmt);
                     }
 
                   /* Copy the string (if we are making an assignment) */
 
                   if (!noassign)
                     {
-                      if (width > 0)
-                        {
-                          strncpy(tv, buf, width);
-                        }
-
+                      strncpy(tv, buf, width);
                       tv[width] = '\0';
                     }
 
@@ -392,10 +376,6 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
           else if (strchr("dobxu", *fmt))
             {
               fmtcount++;
-
-              FAR long *plong = NULL;
-              FAR int  *pint  = NULL;
-
               lvdbg("vsscanf: Performing integer conversion\n");
 
               /* Get a pointer to the integer value.  We need to do this even
@@ -403,6 +383,8 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
                * update the 'ap' variable.
                */
 
+              FAR long *plong = NULL;
+              FAR int  *pint  = NULL;
               if (!noassign)
                 {
                   /* We have to check whether we need to return a long or an
@@ -462,8 +444,7 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
                     {
                       /* No... Guess a field width using some heuristics */
 
-                      int tmpwidth = findwidth(buf, fmt);
-                      width = MIN(sizeof(tmp) - 1, tmpwidth);
+                      width = findwidth(buf, fmt);
                     }
 
                   /* Copy the numeric string into a temporary working
@@ -500,23 +481,12 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
                   buf += width;
                   if (!noassign)
                     {
+#ifdef SDCC
                       char *endptr;
-                      int   errsave;
-                      long  tmplong;
-
-                      errsave = errno;
-                      set_errno(0);
-                      tmplong = strtol(tmp, &endptr, base);
-
-                      /* Number can't be converted */
-
-                      if (tmp == endptr || errno == ERANGE)
-                        {
-                          return count;
-                        }
-
-                      set_errno(errsave);
-
+                      long tmplong = strtol(tmp, &endptr, base);
+#else
+                      long tmplong = strtol(tmp, NULL, base);
+#endif
                       /* We have to check whether we need to return a long
                        * or an int.
                        */
@@ -546,12 +516,6 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
           else if (*fmt == 'f')
             {
               fmtcount++;
-
-#ifdef CONFIG_HAVE_DOUBLE
-              FAR double_t *pd = NULL;
-#endif
-              FAR float    *pf = NULL;
-
               lvdbg("vsscanf: Performing floating point conversion\n");
 
               /* Get a pointer to the double value.  We need to do this even
@@ -559,6 +523,10 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
                * update the 'ap' variable.
                */
 
+#ifdef CONFIG_HAVE_DOUBLE
+              FAR double_t *pd = NULL;
+#endif
+              FAR float    *pf = NULL;
               if (!noassign)
                 {
                   /* We have to check whether we need to return a float or a
@@ -635,24 +603,12 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
                   if (!noassign)
                     {
                       /* strtod always returns a double */
-
+#ifdef SDCC
                       FAR char *endptr;
-                      int       errsave;
-                      double_t  dvalue;
-
-                      errsave = errno;
-                      set_errno(0);
-                      dvalue  = strtod(tmp, &endptr);
-
-                      /* Number can't be converted */
-
-                      if (tmp == endptr || errno == ERANGE)
-                        {
-                          return count;
-                        }
-
-                      set_errno(errsave);
-
+                      double_t dvalue = strtod(tmp,&endptr);
+#else
+                      double_t dvalue = strtod(tmp, NULL);
+#endif
                       /* We have to check whether we need to return a float
                        * or a double.
                        */
@@ -720,7 +676,7 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
           fmt++;
         }
 
-    /* It is not a conversion specifier */
+    /* Its is not a conversion specifier */
 
       else if (*buf)
         {
@@ -742,12 +698,6 @@ int vsscanf(FAR const char *buf, FAR const char *fmt, va_list ap)
               fmt++;
               buf++;
             }
-        }
-      else
-        {
-          /* NULL terminator encountered */
-
-          break;
         }
     }
 

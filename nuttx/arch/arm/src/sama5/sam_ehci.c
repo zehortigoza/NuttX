@@ -1118,7 +1118,7 @@ static int sam_qtd_invalidate(struct sam_qtd_s *qtd, uint32_t **bp, void *arg)
    * memory over the specified address range.
    */
 
-  cp15_invalidate_dcache((uintptr_t)&qtd->hw,
+  arch_invalidate_dcache((uintptr_t)&qtd->hw,
                          (uintptr_t)&qtd->hw + sizeof(struct ehci_qtd_s));
   return OK;
 }
@@ -1137,7 +1137,7 @@ static int sam_qh_invalidate(struct sam_qh_s *qh)
 {
   /* Invalidate the QH first so that we reload the qTD list head */
 
-  cp15_invalidate_dcache((uintptr_t)&qh->hw,
+  arch_invalidate_dcache((uintptr_t)&qh->hw,
                          (uintptr_t)&qh->hw + sizeof(struct ehci_qh_s));
 
   /* Then invalidate all of the qTD entries in the queue */
@@ -1163,12 +1163,12 @@ static int sam_qtd_flush(struct sam_qtd_s *qtd, uint32_t **bp, void *arg)
    */
 
 #if 0 /* Didn't behave as expected */
-  cp15_flush_dcache((uintptr_t)&qtd->hw,
+  arch_flush_dcache((uintptr_t)&qtd->hw,
                     (uintptr_t)&qtd->hw + sizeof(struct ehci_qtd_s));
 #else
-  cp15_clean_dcache((uintptr_t)&qtd->hw,
+  arch_clean_dcache((uintptr_t)&qtd->hw,
                     (uintptr_t)&qtd->hw + sizeof(struct ehci_qtd_s));
-  cp15_invalidate_dcache((uintptr_t)&qtd->hw,
+  arch_invalidate_dcache((uintptr_t)&qtd->hw,
                          (uintptr_t)&qtd->hw + sizeof(struct ehci_qtd_s));
 #endif
 
@@ -1191,12 +1191,12 @@ static int sam_qh_flush(struct sam_qh_s *qh)
    */
 
 #if 0 /* Didn't behave as expected */
-  cp15_flush_dcache((uintptr_t)&qh->hw,
+  arch_flush_dcache((uintptr_t)&qh->hw,
                     (uintptr_t)&qh->hw + sizeof(struct ehci_qh_s));
 #else
-  cp15_clean_dcache((uintptr_t)&qh->hw,
+  arch_clean_dcache((uintptr_t)&qh->hw,
                      (uintptr_t)&qh->hw + sizeof(struct ehci_qh_s));
-  cp15_invalidate_dcache((uintptr_t)&qh->hw,
+  arch_invalidate_dcache((uintptr_t)&qh->hw,
                          (uintptr_t)&qh->hw + sizeof(struct ehci_qh_s));
 #endif
 
@@ -1407,7 +1407,7 @@ static void sam_qh_enqueue(struct sam_qh_s *qhead, struct sam_qh_s *qh)
 
   physaddr = (uintptr_t)sam_physramaddr((uintptr_t)qh);
   qhead->hw.hlp = sam_swap32(physaddr | QH_HLP_TYP_QH);
-  cp15_clean_dcache((uintptr_t)&qhead->hw,
+  arch_clean_dcache((uintptr_t)&qhead->hw,
                     (uintptr_t)&qhead->hw + sizeof(struct ehci_qh_s));
 }
 
@@ -1545,10 +1545,10 @@ static int sam_qtd_addbpl(struct sam_qtd_s *qtd, const void *buffer, size_t bufl
    */
 
 #if 0 /* Didn't behave as expected */
-  cp15_flush_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
+  arch_flush_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
 #else
-  cp15_clean_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
-  cp15_invalidate_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
+  arch_clean_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
+  arch_invalidate_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
 #endif
 
   /* Loop, adding the aligned physical addresses of the buffer to the buffer page
@@ -2096,7 +2096,7 @@ static ssize_t sam_async_transfer(struct sam_rhport_s *rhport,
        * invalid in this memory region.
        */
 
-      cp15_invalidate_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
+      arch_invalidate_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
     }
 #endif
 
@@ -2331,7 +2331,7 @@ static int sam_qtd_ioccheck(struct sam_qtd_s *qtd, uint32_t **bp, void *arg)
 
   /* Make sure we reload the QH from memory */
 
-  cp15_invalidate_dcache((uintptr_t)&qtd->hw,
+  arch_invalidate_dcache((uintptr_t)&qtd->hw,
                          (uintptr_t)&qtd->hw + sizeof(struct ehci_qtd_s));
   sam_qtd_print(qtd);
 
@@ -2382,7 +2382,7 @@ static int sam_qh_ioccheck(struct sam_qh_s *qh, uint32_t **bp, void *arg)
 
   /* Make sure we reload the QH from memory */
 
-  cp15_invalidate_dcache((uintptr_t)&qh->hw,
+  arch_invalidate_dcache((uintptr_t)&qh->hw,
                          (uintptr_t)&qh->hw + sizeof(struct ehci_qh_s));
   sam_qh_print(qh);
 
@@ -2436,7 +2436,7 @@ static int sam_qh_ioccheck(struct sam_qh_s *qh, uint32_t **bp, void *arg)
        */
 
       **bp = qh->hw.hlp;
-      cp15_clean_dcache((uintptr_t)*bp, (uintptr_t)*bp + sizeof(uint32_t));
+      arch_clean_dcache((uintptr_t)*bp, (uintptr_t)*bp + sizeof(uint32_t));
 
       /* Check for errors, update the data toggle */
 
@@ -2536,7 +2536,7 @@ static inline void sam_ioc_bottomhalf(void)
   /* Check the Asynchronous Queue */
   /* Make sure that the head of the asynchronous queue is invalidated */
 
-  cp15_invalidate_dcache((uintptr_t)&g_asynchead.hw,
+  arch_invalidate_dcache((uintptr_t)&g_asynchead.hw,
                          (uintptr_t)&g_asynchead.hw + sizeof(struct ehci_qh_s));
 
   /* Set the back pointer to the forward qTD pointer of the asynchronous
@@ -2562,7 +2562,7 @@ static inline void sam_ioc_bottomhalf(void)
   /* Check the Interrupt Queue */
   /* Make sure that the head of the interrupt queue is invalidated */
 
-  cp15_invalidate_dcache((uintptr_t)&g_intrhead.hw,
+  arch_invalidate_dcache((uintptr_t)&g_intrhead.hw,
                          (uintptr_t)&g_intrhead.hw + sizeof(struct ehci_qh_s));
 
   /* Set the back pointer to the forward qTD pointer of the asynchronous
@@ -3457,7 +3457,7 @@ static int sam_epalloc(FAR struct usbhost_driver_s *drvr,
 
   /* Allocate a endpoint information structure */
 
-  epinfo = (struct sam_epinfo_s *)kzalloc(sizeof(struct sam_epinfo_s));
+  epinfo = (struct sam_epinfo_s *)kmm_zalloc(sizeof(struct sam_epinfo_s));
   if (!epinfo)
     {
       usbhost_trace1(EHCI_TRACE1_EPALLOC_FAILED, 0);
@@ -3519,7 +3519,7 @@ static int sam_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 
   /* Free the container */
 
-  kfree(epinfo);
+  kmm_free(epinfo);
   return OK;
 }
 
@@ -3530,7 +3530,7 @@ static int sam_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
  *   Some hardware supports special memory in which request and descriptor data
  *   can be accessed more efficiently.  This method provides a mechanism to
  *   allocate the request/descriptor memory.  If the underlying hardware does
- *   not support such "special" memory, this functions may simply map to kmalloc.
+ *   not support such "special" memory, this functions may simply map to kmm_malloc.
  *
  *   This interface was optimized under a particular assumption.  It was
  *   assumed that the driver maintains a pool of small, pre-allocated buffers
@@ -3563,7 +3563,7 @@ static int sam_alloc(FAR struct usbhost_driver_s *drvr,
 
   /* There is no special requirements for transfer/descriptor buffers. */
 
-  *buffer = (FAR uint8_t *)kmalloc(CONFIG_SAMA5_EHCI_BUFSIZE);
+  *buffer = (FAR uint8_t *)kmm_malloc(CONFIG_SAMA5_EHCI_BUFSIZE);
   if (*buffer)
     {
       *maxlen = CONFIG_SAMA5_EHCI_BUFSIZE;
@@ -3580,7 +3580,7 @@ static int sam_alloc(FAR struct usbhost_driver_s *drvr,
  *   Some hardware supports special memory in which request and descriptor data
  *   can be accessed more efficiently.  This method provides a mechanism to
  *   free that request/descriptor memory.  If the underlying hardware does not
- *   support such "special" memory, this functions may simply map to kfree().
+ *   support such "special" memory, this functions may simply map to kmm_free().
  *
  * Input Parameters:
  *   drvr - The USB host driver instance obtained as a parameter from the call
@@ -3602,7 +3602,7 @@ static int sam_free(FAR struct usbhost_driver_s *drvr, FAR uint8_t *buffer)
 
   /* No special action is require to free the transfer/descriptor buffer memory */
 
-  kfree(buffer);
+  kmm_free(buffer);
   return OK;
 }
 
@@ -3613,7 +3613,7 @@ static int sam_free(FAR struct usbhost_driver_s *drvr, FAR uint8_t *buffer)
  *   Some hardware supports special memory in which larger IO buffers can
  *   be accessed more efficiently.  This method provides a mechanism to allocate
  *   the request/descriptor memory.  If the underlying hardware does not support
- *   such "special" memory, this functions may simply map to kumalloc.
+ *   such "special" memory, this functions may simply map to kumm_malloc.
  *
  *   This interface differs from DRVR_ALLOC in that the buffers are variable-sized.
  *
@@ -3642,7 +3642,7 @@ static int sam_ioalloc(FAR struct usbhost_driver_s *drvr, FAR uint8_t **buffer,
    * accessible (depending on how the class driver implements its buffering).
    */
 
-  *buffer = (FAR uint8_t *)kumalloc(buflen);
+  *buffer = (FAR uint8_t *)kumm_malloc(buflen);
   return *buffer ? OK : -ENOMEM;
 }
 
@@ -3653,7 +3653,7 @@ static int sam_ioalloc(FAR struct usbhost_driver_s *drvr, FAR uint8_t **buffer,
  *   Some hardware supports special memory in which IO data can  be accessed more
  *   efficiently.  This method provides a mechanism to free that IO buffer
  *   memory.  If the underlying hardware does not support such "special" memory,
- *   this functions may simply map to kufree().
+ *   this functions may simply map to kumm_free().
  *
  * Input Parameters:
  *   drvr - The USB host driver instance obtained as a parameter from the call to
@@ -3675,7 +3675,7 @@ static int sam_iofree(FAR struct usbhost_driver_s *drvr, FAR uint8_t *buffer)
 
   /* No special action is require to free the I/O buffer memory */
 
-  kufree(buffer);
+  kumm_free(buffer);
   return OK;
 }
 
@@ -4152,7 +4152,7 @@ FAR struct usbhost_connection_s *sam_ehci_initialize(int controller)
   /* Allocate a pool of free Queue Head (QH) structures */
 
   g_qhpool = (struct sam_qh_s *)
-    kmemalign(32, CONFIG_SAMA5_EHCI_NQHS * sizeof(struct sam_qh_s));
+    kmm_memalign(32, CONFIG_SAMA5_EHCI_NQHS * sizeof(struct sam_qh_s));
   if (!g_qhpool)
     {
       usbhost_trace1(EHCI_TRACE1_QHPOOLALLOC_FAILED, 0);
@@ -4173,11 +4173,11 @@ FAR struct usbhost_connection_s *sam_ehci_initialize(int controller)
   /* Allocate a pool of free  Transfer Descriptor (qTD) structures */
 
   g_qtdpool = (struct sam_qtd_s *)
-    kmemalign(32, CONFIG_SAMA5_EHCI_NQTDS * sizeof(struct sam_qtd_s));
+    kmm_memalign(32, CONFIG_SAMA5_EHCI_NQTDS * sizeof(struct sam_qtd_s));
   if (!g_qtdpool)
     {
       usbhost_trace1(EHCI_TRACE1_QTDPOOLALLOC_FAILED, 0);
-      kfree(g_qhpool);
+      kmm_free(g_qhpool);
       return NULL;
     }
 #endif
@@ -4186,12 +4186,12 @@ FAR struct usbhost_connection_s *sam_ehci_initialize(int controller)
   /* Allocate the periodic framelist  */
 
   g_framelist = (uint32_t *)
-    kmemalign(4096, FRAME_LIST_SIZE * sizeof(uint32_t));
+    kmm_memalign(4096, FRAME_LIST_SIZE * sizeof(uint32_t));
   if (!g_framelist)
     {
       usbhost_trace1(EHCI_TRACE1_PERFLALLOC_FAILED, 0);
-      kfree(g_qhpool);
-      kfree(g_qtdpool);
+      kmm_free(g_qhpool);
+      kmm_free(g_qtdpool);
       return NULL;
     }
 #endif
@@ -4294,7 +4294,7 @@ FAR struct usbhost_connection_s *sam_ehci_initialize(int controller)
   g_asynchead.hw.overlay.token = sam_swap32(QH_TOKEN_HALTED);
   g_asynchead.fqp              = sam_swap32(QTD_NQP_T);
 
-  cp15_clean_dcache((uintptr_t)&g_asynchead.hw,
+  arch_clean_dcache((uintptr_t)&g_asynchead.hw,
                     (uintptr_t)&g_asynchead.hw + sizeof(struct ehci_qh_s));
 
   /* Set the Current Asynchronous List Address. */
@@ -4325,9 +4325,9 @@ FAR struct usbhost_connection_s *sam_ehci_initialize(int controller)
 
   /* Set the Periodic Frame List Base Address. */
 
-  cp15_clean_dcache((uintptr_t)&g_intrhead.hw,
+  arch_clean_dcache((uintptr_t)&g_intrhead.hw,
                     (uintptr_t)&g_intrhead.hw + sizeof(struct ehci_qh_s));
-  cp15_clean_dcache((uintptr_t)g_framelist,
+  arch_clean_dcache((uintptr_t)g_framelist,
                     (uintptr_t)g_framelist + FRAME_LIST_SIZE * sizeof(uint32_t));
 
   physaddr = sam_physramaddr((uintptr_t)g_framelist);

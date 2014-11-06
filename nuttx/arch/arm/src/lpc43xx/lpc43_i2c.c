@@ -1,7 +1,7 @@
 /*******************************************************************************
  * arch/arm/src/lpc43xx/lpc43_i2c.c
  *
- *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2012, 2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Ported from from the LPC17 version:
@@ -61,16 +61,15 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/wdog.h>
 #include <nuttx/i2c.h>
 
 #include <arch/irq.h>
 #include <arch/board/board.h>
 
-#include "wdog.h"
 #include "chip.h"
 #include "up_arch.h"
 #include "up_internal.h"
-#include "os_internal.h"
 
 #include "lpc43_syscon.h"
 #include "lpc43_pinconn.h"

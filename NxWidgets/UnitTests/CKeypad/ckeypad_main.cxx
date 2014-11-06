@@ -97,8 +97,8 @@ static void updateMemoryUsage(unsigned int previous,
 
   /* Show the change from the previous time */
 
-  message("%s: Before: %8d After: %8d Change: %8d\n",
-           msg, previous, mmcurrent.uordblks, mmcurrent.uordblks - previous);
+  printf("%s: Before: %8d After: %8d Change: %8d\n",
+         msg, previous, mmcurrent.uordblks, mmcurrent.uordblks - previous);
 
   /* Set up for the next test */
 
@@ -155,7 +155,7 @@ static void clickButtons(CKeypadTest *test, CKeypad *keypad)
           int clickRow;
           if (keypad->isButtonClicked(clickColumn, clickRow))
             {
-              printf("clickButtons: %s: Button (%d, %d) is clicked\n", 
+              printf("clickButtons: %s: Button (%d, %d) is clicked\n",
                      clickColumn == i && clickRow == j ? "OK" : "ERROR",
                      clickColumn, clickRow);
             }
@@ -174,10 +174,10 @@ static void clickButtons(CKeypadTest *test, CKeypad *keypad)
           test->poll(keypad);
           if (keypad->isButtonClicked(clickColumn, clickRow))
             {
-              printf("clickButtons: ERROR: Button (%d, %d) is clicked\n", 
+              printf("clickButtons: ERROR: Button (%d, %d) is clicked\n",
                      clickColumn, clickRow);
             }
- 
+
           usleep(500*1000);
         }
     }
@@ -268,7 +268,7 @@ int ckeypad_main(int argc, char *argv[])
   delete test;
   updateMemoryUsage(g_mmPrevious, "After deleting the test");
   updateMemoryUsage(g_mmInitial, "Final memory usage");
-  message("Peak memory usage: %8d\n", g_mmPeak - g_mmInitial);
+  printf("Peak memory usage: %8d\n", g_mmPeak - g_mmInitial);
   return 0;
 }
 

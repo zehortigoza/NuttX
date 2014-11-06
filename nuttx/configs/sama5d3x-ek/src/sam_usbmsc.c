@@ -1,5 +1,5 @@
 /****************************************************************************
- * configs/sama5d3x-ek/src/up_usbmsc.c
+ * configs/sama5d3x-ek/src/sam_usbmsc.c
  *
  *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -42,7 +42,7 @@
 #include <nuttx/config.h>
 
 #include <stdio.h>
-#include <debug.h>
+#include <syslog.h>
 #include <errno.h>
 
 #include "sama5d3x-ek.h"
@@ -59,8 +59,8 @@
 #  error AT25 Serial FLASH not supported
 #endif
 
-#ifndef CONFIG_SAMA5_AT25_FTL
-#  error AT25 FTL support required (CONFIG_SAMA5_AT25_FTL)
+#ifndef CONFIG_SAMA5D3xEK_AT25_FTL
+#  error AT25 FTL support required (CONFIG_SAMA5D3xEK_AT25_FTL)
 #  undef HAVE_AT25
 #endif
 
@@ -71,26 +71,6 @@
 #if CONFIG_SYSTEM_USBMSC_DEVMINOR1 != AT25_MINOR
 #  error Confusion in the assignment of minor device numbers
 #  undef HAVE_AT25
-#endif
-
-/* Debug ********************************************************************/
-
-#ifdef CONFIG_CPP_HAVE_VARARGS
-#  ifdef CONFIG_DEBUG
-#    define message(...) lowsyslog(__VA_ARGS__)
-#    define msgflush()
-#  else
-#    define message(...) printf(__VA_ARGS__)
-#    define msgflush() fflush(stdout)
-#  endif
-#else
-#  ifdef CONFIG_DEBUG
-#    define message lowsyslog
-#    define msgflush()
-#  else
-#    define message printf
-#    define msgflush() fflush(stdout)
-#  endif
 #endif
 
 /****************************************************************************
@@ -113,7 +93,7 @@ int usbmsc_archinitialize(void)
   int ret = sam_at25_automount(AT25_MINOR);
   if (ret < 0)
     {
-      message("ERROR: sam_at25_automount failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: sam_at25_automount failed: %d\n", ret);
     }
 
   return ret;

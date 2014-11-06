@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/arm/up_assert.c
  *
- *   Copyright (C) 2007-2010, 2012-2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2010, 2012-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,18 @@
 
 #include <nuttx/config.h>
 
+/* Output debug info if stack dump is selected -- even if debug is not
+ * selected.
+ */
+
+#ifdef CONFIG_ARCH_STACKDUMP
+#  undef  CONFIG_DEBUG
+#  undef  CONFIG_DEBUG_VERBOSE
+#  define CONFIG_DEBUG 1
+#  define CONFIG_DEBUG_VERBOSE 1
+#endif
+
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -46,23 +58,28 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/usb/usbdev_trace.h>
+
 #include <arch/board/board.h>
 
 #include "up_arch.h"
-#include "os_internal.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Output debug info if stack dump is selected -- even if 
- * debug is not selected.
- */
+/* USB trace dumping */
 
-#ifdef CONFIG_ARCH_STACKDUMP
-# undef  lldbg
-# define lldbg lowsyslog
+#ifndef CONFIG_USBDEV_TRACE
+#  undef CONFIG_ARCH_USBDUMP
+#endif
+
+/* Check if we can dump stack usage information */
+
+#ifndef CONFIG_DEBUG
+#  undef CONFIG_DEBUG_STACK
 #endif
 
 /* The following is just intended to keep some ugliness out of the mainline
@@ -155,6 +172,31 @@ static inline void up_registerdump(void)
 #endif
 
 /****************************************************************************
+ * Name: assert_tracecallback
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_USBDUMP
+static int usbtrace_syslog(FAR const char *fmt, ...)
+{
+  va_list ap;
+  int ret;
+
+  /* Let vsyslog do the real work */
+
+  va_start(ap, fmt);
+  ret = lowvsyslog(LOG_INFO, fmt, ap);
+  va_end(ap);
+  return ret;
+}
+
+static int assert_tracecallback(FAR struct usbtrace_s *trace, FAR void *arg)
+{
+  usbtrace_trprintf(usbtrace_syslog, trace->event, trace->value);
+  return 0;
+}
+#endif
+
+/****************************************************************************
  * Name: up_dumpstate
  ****************************************************************************/
 
@@ -187,7 +229,7 @@ static void up_dumpstate(void)
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
   istackbase = (uint32_t)&g_intstackbase;
-  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~3) - 4;
+  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
 
   /* Show interrupt stack info */
 
@@ -195,6 +237,9 @@ static void up_dumpstate(void)
   lldbg("IRQ stack:\n");
   lldbg("  base: %08x\n", istackbase);
   lldbg("  size: %08x\n", istacksize);
+#ifdef CONFIG_DEBUG_STACK
+  lldbg("  used: %08x\n", up_check_intstack());
+#endif
 
   /* Does the current stack pointer lie within the interrupt
    * stack?
@@ -219,10 +264,17 @@ static void up_dumpstate(void)
   lldbg("User stack:\n");
   lldbg("  base: %08x\n", ustackbase);
   lldbg("  size: %08x\n", ustacksize);
+#ifdef CONFIG_DEBUG_STACK
+  lldbg("  used: %08x\n", up_check_tcbstack(rtcb));
+#endif
+
 #else
   lldbg("sp:         %08x\n", sp);
   lldbg("stack base: %08x\n", ustackbase);
   lldbg("stack size: %08x\n", ustacksize);
+#ifdef CONFIG_DEBUG_STACK
+  lldbg("stack used: %08x\n", up_check_tcbstack(rtcb));
+#endif
 #endif
 
   /* Dump the user stack if the stack pointer lies within the allocated user
@@ -243,6 +295,12 @@ static void up_dumpstate(void)
   /* Then dump the registers (if available) */
 
   up_registerdump();
+
+#ifdef CONFIG_ARCH_USBDUMP
+  /* Dump USB trace data */
+
+  (void)usbtrace_enumerate(assert_tracecallback, NULL);
+#endif
 }
 #else
 # define up_dumpstate()
@@ -260,7 +318,7 @@ static void _up_assert(int errorcode)
   if (current_regs || ((struct tcb_s*)g_readytorun.head)->pid == 0)
     {
        (void)irqsave();
-        for(;;)
+        for (;;)
           {
 #ifdef CONFIG_ARCH_LEDS
             board_led_on(LED_PANIC);

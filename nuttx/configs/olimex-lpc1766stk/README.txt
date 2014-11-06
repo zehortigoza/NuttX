@@ -234,8 +234,7 @@ IDEs
 ^^^^
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
+  effort will be required to create the project.
 
   Makefile Build
   --------------
@@ -683,10 +682,6 @@ Olimex LPC1766-STK Configuration Options
 
        CONFIG_RAM_START=0x10000000
 
-    CONFIG_ARCH_IRQPRIO - The LPC17xx supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
-
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
 
@@ -782,8 +777,6 @@ Olimex LPC1766-STK Configuration Options
     CONFIG_NET_EMACRAM_SIZE - Size of EMAC RAM.  Default: 16Kb
     CONFIG_NET_NTXDESC - Configured number of Tx descriptors. Default: 18
     CONFIG_NET_NRXDESC - Configured number of Rx descriptors. Default: 18
-    CONFIG_NET_PRIORITY - Ethernet interrupt priority.  The is default is
-      the higest priority.
     CONFIG_NET_WOL - Enable Wake-up on Lan (not fully implemented).
     CONFIG_NET_REGDEBUG - Enabled low level register debug.  Also needs
       CONFIG_DEBUG.
@@ -837,16 +830,26 @@ USB host operations.  To make these modifications, do the following:
 1. First configure to build the NSH configuration from the top-level
    NuttX directory:
 
-   cd tools
-   ./configure nucleus2g/nsh
-   cd ..
+     cd tools
+     ./configure olimex-lpc1766stk/nsh
+     cd ..
 
-2. Then edit the top-level .config file to enable USB host.  Make the
-   following changes:
+2. Modify the top-level .config file to enable USB host using:
 
-   CONFIG_LPC17_USBHOST=y
-   CONFIG_USBHOST=y
-   CONFIG_SCHED_WORKQUEUE=y
+     make menuconfig
+
+   Make the following changes:
+
+     System Type -> LPC17xx Peripheral Support
+       CONFIG_LPC17_USBHOST=y
+
+     Device Drivers-> USB Host Driver Support
+       CONFIG_USBHOST=y
+       CONFIG_USBHOST_ISOC_DISABLE=y
+       CONFIG_USBHOST_MSC=y
+
+     Library Routines
+       CONFIG_SCHED_WORKQUEUE=y
 
 When this change is made, NSH should be extended to support USB flash
 devices.  When a FLASH device is inserted, you should see a device

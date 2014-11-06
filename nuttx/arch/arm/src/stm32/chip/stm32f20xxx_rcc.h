@@ -1,7 +1,7 @@
 /****************************************************************************************************
  * arch/arm/src/stm32/chip/stm32f20xxx_rcc.h
  *
- *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2012, 2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -184,7 +184,7 @@
 #  define RCC_CFGR_MCO1_LSE         (1 << RCC_CFGR_MCO1_SHIFT) /* 01: LSE oscillator selected */
 #  define RCC_CFGR_MCO1_HSE         (2 << RCC_CFGR_MCO1_SHIFT) /* 10: HSE oscillator clock selected */
 #  define RCC_CFGR_MCO1_PLL         (3 << RCC_CFGR_MCO1_SHIFT) /* 11: PLL clock selected */
-#define TCC_CFGR_I2SSRC             (1 << 23) /* Bit 23: I2S clock selection */
+#define RCC_CFGR_I2SSRC             (1 << 23) /* Bit 23: I2S clock selection */
 #define RCC_CFGR_MCO1PRE_SHIFT      (24)      /* Bits 24-26: MCO1 prescaler */
 #define RCC_CFGR_MCO1PRE_MASK       (7 << RCC_CFGR_MCO1PRE_SHIFT)
 #  define RCC_CFGR_MCO1PRE_NONE     (0 << RCC_CFGR_MCO1PRE_SHIFT) /* 0xx: no division */
@@ -357,6 +357,8 @@
 #define RCC_APB1ENR_CAN2EN           (1 << 26) /* Bit 26: CAN 2 clock enable */
 #define RCC_APB1ENR_PWREN            (1 << 28) /* Bit 28: Power interface clock enable */
 #define RCC_APB1ENR_DACEN            (1 << 29) /* Bit 29: DAC interface clock enable */
+#define RCC_APB1ENR_UART7EN          (1 << 30) /* Bit 30: UART7 clock enable */
+#define RCC_APB1ENR_UART8EN          (1 << 31) /* Bit 31: UART8 clock enable */
 
 /* APB2 Peripheral Clock enable register */
 

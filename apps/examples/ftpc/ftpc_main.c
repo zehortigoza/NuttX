@@ -243,7 +243,7 @@ static int ftpc_execute(SESSION handle, int argc, char *argv[])
     */
 
    cmd = argv[0];
-   
+
    /* See if the command is one that we understand */
 
    for (cmdmap = g_cmdmap; cmdmap->cmd; cmdmap++)
@@ -355,7 +355,11 @@ int ftpc_parse(SESSION handle, char *cmdline)
  * Public Functions
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int ftpc_main(int argc, char **argv, char **envp)
+#endif
 {
   struct ftpc_connect_s connect = {{0}, 0};
   SESSION handle;

@@ -111,37 +111,77 @@ config APPS_DIR
 			`-application
 			|
 			`- Makefile
-		
+
 		Then you would set APPS_DIR=../application.
 
 		The application direction must contain Makefile and this make
 		file must support the following targets:
-		
+
 		1)libapps$(LIBEXT) (usually libapps.a). libapps.a is a static
 		library ( an archive) that contains all of application object
 		files.
-		
+
 		2)clean. Do whatever is appropriate to clean the application
 		directories for a fresh build.
-		
+
 		3)distclean. Clean everything -- auto-generated files, symbolic
 		links etc. -- so that the directory contents are the same as
 		the contents in your configuration management system.
 		This is only done when you change the NuttX configuration.
-		
+
 		4)depend. Make or update the application build dependencies.
-		
+
 		When this application is invoked it will receive the setting TOPDIR like:
-		
+
 		$(MAKE) -C $(CONFIG_APPS_DIR) TOPDIR="$(TOPDIR)" <target>
-		
+
 		TOPDIR is the full path to the NuttX directory. It can be used, for
 		example, to include makefile fragments (e.g., .config or Make.defs)
 		or to set up include file paths.
 
+choice
+	prompt "Memory organization"
+	default BUILD_FLAT
+
+config BUILD_FLAT
+	bool "Flat address space"
+	---help---
+		Build NuttX as one large, executable "blob".  All of the code
+		within the blob can interrupt with all of the other code within
+		the blob.  There are no special privileges, protections, or
+		restraints.
+
+config BUILD_PROTECTED
+	bool "NuttX protected build"
+	depends on ARCH_USE_MPU
+	select LIB_SYSCALL
+	select BUILD_2PASS
+	---help---
+		Builds NuttX and selected applications as two "blobs":  A protected, privileged kernel blob and a separate unprivileged, user blob.  This require sue of the two pass build with each blob being build on each pass.
+
+		NOTE:  This build configuration requires that the platform support
+		a memory protection unit (MPU).  Support, however, may not be
+		implemented on all platforms.
+
+config BUILD_KERNEL
+	bool "NuttX kernel build"
+	depends on ARCH_USE_MMU && ARCH_ADDRENV && EXPERIMENTAL
+	select LIB_SYSCALL
+	---help---
+		Builds NuttX as a separately compiled kernel.  No applications are
+		built.  All user applications must reside in a file system where
+		they can be loaded into memory for execution.
+
+		NOTE:  This build configuration requires that the platform support
+		a memory management unit (MPU) and address environments.  Support,
+		however, may not be implemented on all platforms.
+
+endchoice # Build configuration
+
 config BUILD_2PASS
 	bool "Two pass build"
 	default n
+	depends on !BUILD_KERNEL
 	---help---
 		Enables the two pass build options.
 
@@ -183,16 +223,10 @@ config PASS1_OBJECT
 		from the PASS1_TARGET.  It may be available at link time
 		in the arch/<architecture>/src directory.
 
-config NUTTX_KERNEL
-	bool "NuttX kernel build"
-	default n
-	---help---
-		Builds NuttX as a separately compiled kernel.
-
 config NUTTX_USERSPACE
 	hex "Beginning of user-space blob"
 	default 0x0
-	depends on NUTTX_KERNEL
+	depends on BUILD_PROTECTED
 	---help---
 		In the kernel build, the NuttX kernel and the user-space blob are
 		built separately linked objects.  NUTTX_USERSPACE provides the
@@ -235,6 +269,24 @@ config RAW_BINARY
 		different loaders using the GNU objcopy program.  This option
 		should not be selected if you are not using the GNU toolchain.
 
+menuconfig UBOOT_UIMAGE
+	bool "U-Boot uImage"
+	select RAW_BINARY
+	depends on !WINDOWS_NATIVE
+	---help---
+		Create the uImage binary used with U-Boot.
+
+if UBOOT_UIMAGE
+
+config UIMAGE_LOAD_ADDRESS
+	hex "uImage load address"
+	default 0x0
+
+config UIMAGE_ENTRY_POINT
+	hex "uImage entry point"
+	default 0x0
+
+endif
 endmenu # Binary Output Formats
 
 menu "Customize Header Files"
@@ -361,24 +413,57 @@ config DEBUG_VERBOSE
 
 comment "Subsystem Debug Options"
 
+config DEBUG_AUDIO
+	bool "Audio Device Debug Output"
+	default n
+	---help---
+		Enable low level debug SYSLOG output from the audio subsystem and
+		device drivers. (disabled by default).  Support for this debug option
+		is architecture-specific and may not be available for some MCUs.
+
+config DEBUG_BINFMT
+	bool "Binary Loader Debug Output"
+	default n
+	---help---
+		Enable binary loader debug SYSLOG output (disabled by default)
+
+config DEBUG_CRYPTO
+	bool "Crypto Debug Output"
+	default n
+	depends on CRYPTO
+	---help---
+		Enable Crypto debug SYSLOG output (disabled by default)
+
+config DEBUG_FS
+	bool "File System Debug Output"
+	default n
+	---help---
+		Enable file system debug SYSLOG output (disabled by default)
+
+config DEBUG_GRAPHICS
+	bool "Graphics Debug Output"
+	default n
+	---help---
+		Enable NX graphics debug SYSLOG output (disabled by default)
+
+config DEBUG_LIB
+	bool "C Library Debug Output"
+	default n
+	---help---
+		Enable C library debug SYSLOG output (disabled by default)
+
 config DEBUG_MM
 	bool "Memory Manager Debug Output"
 	default n
 	---help---
 		Enable memory management debug SYSLOG output (disabled by default)
 
-config DEBUG_SCHED
-	bool "Scheduler Debug Output"
+config DEBUG_SHM
+	bool "Shared Memory Debug Output"
 	default n
+	depends on MM_SHM
 	---help---
-		Enable OS debug SYSLOG output (disabled by default)
-
-config DEBUG_PAGING
-	bool "Demand Paging Debug Output"
-	default n
-	depends on PAGING
-	---help---
-		Enable demand paging debug SYSLOG output (disabled by default)
+		Enable shared memory management debug SYSLOG output (disabled by default)
 
 config DEBUG_NET
 	bool "Network Debug Output"
@@ -387,36 +472,37 @@ config DEBUG_NET
 	---help---
 		Enable network debug SYSLOG output (disabled by default)
 
-config DEBUG_USB
-	bool "USB Debug Output"
+config DEBUG_SCHED
+	bool "Scheduler Debug Output"
 	default n
-	depends on USBDEV || USBHOST
 	---help---
-		Enable usb debug SYSLOG output (disabled by default)
+		Enable OS debug SYSLOG output (disabled by default)
 
-config DEBUG_FS
-	bool "File System Debug Output"
+config DEBUG_SYSCALL
+	bool "SYSCALL Debug Output"
 	default n
+	depends on LIB_SYSCALL
 	---help---
-		Enable file system debug SYSLOG output (disabled by default)
+		Enable very low level output related to system calls.  This gives
+		you basically a poor man's version of strace.
 
-config DEBUG_LIB
-	bool "C Library Debug Output"
-	default n
-	---help---
-		Enable C library debug SYSLOG output (disabled by default)
+comment "OS Function Debug Options"
 
-config DEBUG_BINFMT
-	bool "Binary Loader Debug Output"
+config DEBUG_DMA
+	bool "DMA Debug Output"
 	default n
+	depends on ARCH_DMA
 	---help---
-		Enable binary loader debug SYSLOG output (disabled by default)
+		Enable DMA-releated debug SYSLOG output (disabled by default).
+		Support for this debug option is architecture-specific and may not
+		be available for some MCUs.
 
-config DEBUG_GRAPHICS
-	bool "Graphics Debug Output"
+config DEBUG_HEAP
+	bool "Heap usage debug hooks"
 	default n
+	depends on ARCH_HAVE_HEAPCHECK
 	---help---
-		Enable NX graphics debug SYSLOG output (disabled by default)
+		Enable hooks to check heap usage.  Only supported by a few architectures.
 
 config DEBUG_IRQ
 	bool "Interrupt Controller Debug Output"
@@ -429,13 +515,12 @@ config DEBUG_IRQ
 		that here is a problem with that logic.  On some platforms, this
 		option may even cause crashes! Use with care!
 
-config DEBUG_SYSCALL
-	bool "SYSCALL Debug Output"
+config DEBUG_PAGING
+	bool "Demand Paging Debug Output"
 	default n
-	depends on NUTTX_KERNEL
+	depends on PAGING
 	---help---
-		Enable very low level output related to system calls.  This gives
-		you basically a poor man's version of strace.
+		Enable demand paging debug SYSLOG output (disabled by default)
 
 config DEBUG_STACK
 	bool "Stack usage debug hooks"
@@ -443,13 +528,6 @@ config DEBUG_STACK
 	depends on ARCH_HAVE_STACKCHECK
 	---help---
 		Enable hooks to check stack usage.  Only supported by a few architectures.
-
-config DEBUG_HEAP
-	bool "Heap usage debug hooks"
-	default n
-	depends on ARCH_HAVE_HEAPCHECK
-	---help---
-		Enable hooks to check heap usage.  Only supported by a few architectures.
 
 comment "Driver Debug Options"
 
@@ -490,19 +568,27 @@ config DEBUG_ANALOG
 		this debug option is architecture-specific and may not be available
 		for some MCUs.
 
+config DEBUG_CAN
+	bool "CAN Debug Output"
+	default n
+	depends on CAN
+	---help---
+		Enable CAN driver debug SYSLOG output (disabled by default).
+		Support for this debug option is architecture-specific and may not
+		be available for some MCUs.
+
+config DEBUG_GPIO
+	bool "GPIO Debug Output"
+	default n
+	---help---
+		Enable GPIO-releated debug SYSLOG output (disabled by default).
+		Support for this debug option is architecture-specific and may not
+		be available for some MCUs.
+
 config DEBUG_I2C
 	bool "I2C Debug Output"
 	default n
 	depends on I2C
-	---help---
-		Enable I2C driver debug SYSLOG output (disabled by default).
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-config DEBUG_SPI
-	bool "SPI Debug Output"
-	default n
-	depends on SPI
 	---help---
 		Enable I2C driver debug SYSLOG output (disabled by default).
 		Support for this debug option is architecture-specific and may not
@@ -517,47 +603,12 @@ config DEBUG_I2S
 		Support for this debug option is architecture-specific and may not
 		be available for some MCUs.
 
-config DEBUG_CAN
-	bool "CAN Debug Output"
-	default n
-	depends on CAN
-	---help---
-		Enable CAN driver debug SYSLOG output (disabled by default).
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
 config DEBUG_PWM
 	bool "PWM Debug Output"
 	default n
 	depends on PWM
 	---help---
 		Enable PWM driver debug SYSLOG output (disabled by default).
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-config DEBUG_SDIO
-	bool "SDIO Debug Output"
-	default n
-	depends on MMCSD_SDIO
-	---help---
-		Enable SDIO driver debug SYSLOG output (disabled by default).
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-config DEBUG_GPIO
-	bool "GPIO Debug Output"
-	default n
-	---help---
-		Enable GPIO-releated debug SYSLOG output (disabled by default).
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-config DEBUG_DMA
-	bool "DMA Debug Output"
-	default n
-	depends on ARCH_DMA
-	---help---
-		Enable DMA-releated debug SYSLOG output (disabled by default).
 		Support for this debug option is architecture-specific and may not
 		be available for some MCUs.
 
@@ -570,6 +621,40 @@ config DEBUG_RTC
 		Support for this debug option is architecture-specific and may not
 		be available for some MCUs.
 
+config DEBUG_SDIO
+	bool "SDIO Debug Output"
+	default n
+	depends on MMCSD_SDIO
+	---help---
+		Enable SDIO driver debug SYSLOG output (disabled by default).
+		Support for this debug option is architecture-specific and may not
+		be available for some MCUs.
+
+config DEBUG_SPI
+	bool "SPI Debug Output"
+	default n
+	depends on SPI
+	---help---
+		Enable I2C driver debug SYSLOG output (disabled by default).
+		Support for this debug option is architecture-specific and may not
+		be available for some MCUs.
+
+config DEBUG_TIMER
+	bool "Timer Debug Output"
+	default n
+	depends on TIMER
+	---help---
+		Enable timer debug SYSLOG output (disabled by default).
+		Support for this debug option is architecture-specific and may not
+		be available for some MCUs.
+
+config DEBUG_USB
+	bool "USB Debug Output"
+	default n
+	depends on USBDEV || USBHOST
+	---help---
+		Enable usb debug SYSLOG output (disabled by default)
+
 config DEBUG_WATCHDOG
 	bool "Watchdog Timer Debug Output"
 	default n
@@ -578,14 +663,6 @@ config DEBUG_WATCHDOG
 		Enable watchdog timer debug SYSLOG output (disabled by default).
 		Support for this debug option is architecture-specific and may not
 		be available for some MCUs.
-
-config DEBUG_AUDIO
-	bool "Audio Device Debug Output"
-	default n
-	---help---
-		Enable low level debug SYSLOG output from the audio subsystem and
-		device drivers. (disabled by default).  Support for this debug option
-		is architecture-specific and may not be available for some MCUs.
 
 endif # DEBUG
 
@@ -645,9 +722,7 @@ endmenu
 
 menu "RTOS Features"
 source sched/Kconfig
-if NUTTX_KERNEL
 source syscall/Kconfig
-endif
 endmenu
 
 menu "Device Drivers"
@@ -656,6 +731,10 @@ endmenu
 
 menu "Networking Support"
 source net/Kconfig
+endmenu
+
+menu "Crypto API"
+source crypto/Kconfig
 endmenu
 
 menu "File Systems"
@@ -674,7 +753,7 @@ menu "Audio Support"
 source audio/Kconfig
 endmenu
 
-menu "Binary Formats"
+menu "Binary Loader"
 source binfmt/Kconfig
 endmenu
 
@@ -686,4 +765,3 @@ endmenu
 menu "Application Configuration"
 source "$APPSDIR/Kconfig"
 endmenu
-

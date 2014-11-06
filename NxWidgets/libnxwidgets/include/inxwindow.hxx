@@ -39,7 +39,7 @@
 /****************************************************************************
  * Included Files
  ****************************************************************************/
- 
+
 #include <nuttx/config.h>
 
 #include <nuttx/nx/nxglib.h>
@@ -47,8 +47,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#ifdef CONFIG_NXCONSOLE_NXKBDIN
-#  include <nuttx/nx/nxconsole.h>
+#ifdef CONFIG_NXTERM_NXKBDIN
+#  include <nuttx/nx/nxterm.h>
 #endif
 
 /****************************************************************************
@@ -99,7 +99,7 @@ namespace NXWidgets
      *
      * @return True if the window was successfully created.
      */
-     
+
     virtual bool open(void) = 0;
 
     /**
@@ -144,7 +144,7 @@ namespace NXWidgets
      * @param pPos The new position of the window.
      * @return True on success, false on failure.
      */
-     
+
     virtual bool setPosition(FAR const struct nxgl_point_s *pPos) = 0;
 
     /**
@@ -153,7 +153,7 @@ namespace NXWidgets
      * @param pSize The new size of the window.
      * @return OK on success; ERROR on failure with errno set appropriately.
      */
-    
+
     virtual bool setSize(FAR const struct nxgl_size_s *pSize) = 0;
 
     /**
@@ -175,19 +175,19 @@ namespace NXWidgets
     /**
      * Each window implementation also inherits from CCallback.  CCallback,
      * by default, forwards NX keyboard input to the various widgets residing
-     * in the window. But NxConsole is a different usage model; In this case,
-     * keyboard input needs to be directed to the NxConsole character driver.
+     * in the window. But NxTerm is a different usage model; In this case,
+     * keyboard input needs to be directed to the NxTerm character driver.
      * This method can be used to enable (or disable) redirection of NX
-     * keyboard input from the window widgets to the NxConsole
+     * keyboard input from the window widgets to the NxTerm
      *
-     * @param handle.  The NXCONSOLE handle.  If non-NULL, NX keyboard
-     *    input will be directed to the NxConsole driver using this
+     * @param handle.  The NXTERM handle.  If non-NULL, NX keyboard
+     *    input will be directed to the NxTerm driver using this
      *    handle;  If NULL (the default), NX keyboard input will be
      *    directed to the widgets within the window.
      */
 
-#ifdef CONFIG_NXCONSOLE_NXKBDIN
-    virtual void redirectNxConsole(NXCONSOLE handle) = 0;
+#ifdef CONFIG_NXTERM_NXKBDIN
+    virtual void redirectNxTerm(NXTERM handle) = 0;
 #endif
 
     /**

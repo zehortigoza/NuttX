@@ -39,7 +39,7 @@
 /****************************************************************************
  * Included Files
  ****************************************************************************/
- 
+
 #include <nuttx/config.h>
 
 #include <stdint.h>
@@ -55,7 +55,7 @@
 /****************************************************************************
  * Pre-Processor Definitions
  ****************************************************************************/
- 
+
 /****************************************************************************
  * Implementation Classes
  ****************************************************************************/
@@ -89,7 +89,7 @@ namespace NXWidgets
     CWidgetControl *m_widgetControl; /**< The controlling widget for the window */
 
   public:
-  
+
     /**
      * Constructor.  Obtains the background window from server and wraps
      * the window as CBgWindow.  Creates an uninitialized instance of the
@@ -112,13 +112,13 @@ namespace NXWidgets
      * @param hNxServer Handle to the NX server.
      * @param widgetControl Controlling widget for this window.
      */
-  
+
     CBgWindow(NXHANDLE hNxServer, CWidgetControl *widgetControl);
 
     /**
      * Destructor.  Returns the background window to the server.
      */
-     
+
     virtual ~CBgWindow(void);
 
     /**
@@ -147,7 +147,7 @@ namespace NXWidgets
      *
      * @return True on success, false on any failure.
      */
-     
+
     bool requestPosition(void);
 
     /**
@@ -174,7 +174,7 @@ namespace NXWidgets
      * @param pPos The new position of the window.
      * @return True on success, false on any failure.
      */
-     
+
     bool setPosition(FAR const struct nxgl_point_s *pPos);
 
     /**
@@ -185,7 +185,7 @@ namespace NXWidgets
      * @param pSize The new size of the window.
      * @return True on success, false on any failure.
      */
-    
+
     bool setSize(FAR const struct nxgl_size_s *pSize);
 
     /**
@@ -209,21 +209,21 @@ namespace NXWidgets
     /**
      * Each window implementation also inherits from CCallback.  CCallback,
      * by default, forwards NX keyboard input to the various widgets residing
-     * in the window. But NxConsole is a different usage model; In this case,
-     * keyboard input needs to be directed to the NxConsole character driver.
+     * in the window. But NxTerm is a different usage model; In this case,
+     * keyboard input needs to be directed to the NxTerm character driver.
      * This method can be used to enable (or disable) redirection of NX
-     * keyboard input from the window widgets to the NxConsole
+     * keyboard input from the window widgets to the NxTerm
      *
-     * @param handle.  The NXCONSOLE handle.  If non-NULL, NX keyboard
-     *    input will be directed to the NxConsole driver using this
+     * @param handle.  The NXTERM handle.  If non-NULL, NX keyboard
+     *    input will be directed to the NxTerm driver using this
      *    handle;  If NULL (the default), NX keyboard input will be
      *    directed to the widgets within the window.
      */
 
-#ifdef CONFIG_NXCONSOLE_NXKBDIN
-    inline void redirectNxConsole(NXCONSOLE handle)
+#ifdef CONFIG_NXTERM_NXKBDIN
+    inline void redirectNxTerm(NXTERM handle)
     {
-      setNxConsole(handle);
+      setNxTerm(handle);
     }
 #endif
 

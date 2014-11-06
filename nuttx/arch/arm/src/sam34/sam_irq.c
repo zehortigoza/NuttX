@@ -49,10 +49,9 @@
 #include "nvic.h"
 #include "ram_vectors.h"
 #include "up_arch.h"
-#include "os_internal.h"
 #include "up_internal.h"
 
-#ifdef CONFIG_GPIO_IRQ
+#ifdef CONFIG_SAM34_GPIO_IRQ
 #  include "sam_gpio.h"
 #endif
 
@@ -372,7 +371,7 @@ void up_irqinitialize(void)
        i > 0;
        i--, regaddr += 4)
     {
-      putreg32(0, regaddr);
+      putreg32(DEFPRIORITY32, regaddr);
     }
 
   /* currents_regs is non-NULL only while processing an interrupt */
@@ -438,7 +437,7 @@ void up_irqinitialize(void)
    * GPIO pins.
    */
 
-#ifdef CONFIG_GPIO_IRQ
+#ifdef CONFIG_SAM34_GPIO_IRQ
   sam_gpioirqinitialize();
 #endif
 
@@ -481,7 +480,7 @@ void up_disable_irq(int irq)
           putreg32(regval, regaddr);
         }
     }
-#ifdef CONFIG_GPIO_IRQ
+#ifdef CONFIG_SAM34_GPIO_IRQ
   else
     {
       /* Maybe it is a (derived) GPIO IRQ */
@@ -525,7 +524,7 @@ void up_enable_irq(int irq)
           putreg32(regval, regaddr);
         }
     }
-#ifdef CONFIG_GPIO_IRQ
+#ifdef CONFIG_SAM34_GPIO_IRQ
   else
     {
       /* Maybe it is a (derived) GPIO IRQ */

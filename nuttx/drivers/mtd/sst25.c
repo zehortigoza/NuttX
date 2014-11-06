@@ -406,7 +406,7 @@ static uint8_t sst25_waitwritecomplete(struct sst25_dev_s *priv)
   /* Send "Read Status Register (RDSR)" command */
 
   (void)SPI_SEND(priv->dev, SST25_RDSR);
-  
+
   /* Loop as long as the memory is busy with a write cycle */
 
   do
@@ -647,7 +647,7 @@ static void sst25_bytewrite(struct sst25_dev_s *priv, FAR const uint8_t *buffer,
           /* Enable write access to the FLASH */
 
           sst25_wren(priv);
-  
+
           /* Select this FLASH part */
 
           SPI_SELECT(priv->dev, SPIDEV_FLASH, true);
@@ -665,7 +665,7 @@ static void sst25_bytewrite(struct sst25_dev_s *priv, FAR const uint8_t *buffer,
           /* Then write the single byte */
 
           (void)SPI_SEND(priv->dev, *buffer);
-  
+
           /* Deselect the FLASH and setup for the next pass through the loop */
 
           SPI_SELECT(priv->dev, SPIDEV_FLASH, false);
@@ -713,7 +713,7 @@ static void sst25_wordwrite(struct sst25_dev_s *priv, FAR const uint8_t *buffer,
       /* If there are no further non-erased bytes in the user buffer, then
        * we are finished.
        */
- 
+
       if (nwords <= 0)
         {
           return;
@@ -727,7 +727,7 @@ static void sst25_wordwrite(struct sst25_dev_s *priv, FAR const uint8_t *buffer,
       /* Enable write access to the FLASH */
 
       sst25_wren(priv);
-  
+
       /* Select this FLASH part */
 
       SPI_SELECT(priv->dev, SPIDEV_FLASH, true);
@@ -745,7 +745,7 @@ static void sst25_wordwrite(struct sst25_dev_s *priv, FAR const uint8_t *buffer,
       /* Then write one 16-bit word */
 
       SPI_SNDBLOCK(priv->dev, buffer, 2);
-  
+
       /* Deselect the FLASH: Chip Select high */
 
       SPI_SELECT(priv->dev, SPIDEV_FLASH, false);
@@ -848,7 +848,7 @@ static FAR uint8_t *sst25_cacheread(struct sst25_dev_s *priv, off_t sector)
   off_t esectno;
   int   shift;
   int   index;
- 
+
   /* Convert from the 512 byte sector to the erase sector size of the device.  For
    * exmample, if the actual erase sector size if 4Kb (1 << 12), then we first
    * shift to the right by 3 to get the sector number in 4096 increments.
@@ -1164,7 +1164,7 @@ static int sst25_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
             sst25_unlock(priv->dev);
         }
         break;
- 
+
       case MTDIOC_XIPBASE:
       default:
         ret = -ENOTTY; /* Bad command */
@@ -1203,11 +1203,11 @@ FAR struct mtd_dev_s *sst25_initialize(FAR struct spi_dev_s *dev)
    * to be extended to handle multiple FLASH parts on the same SPI bus.
    */
 
-  priv = (FAR struct sst25_dev_s *)kzalloc(sizeof(struct sst25_dev_s));
+  priv = (FAR struct sst25_dev_s *)kmm_zalloc(sizeof(struct sst25_dev_s));
   if (priv)
     {
       /* Initialize the allocated structure. (unsupported methods were
-       * nullified by kzalloc).
+       * nullified by kmm_zalloc).
        */
 
       priv->mtd.erase  = sst25_erase;
@@ -1229,7 +1229,7 @@ FAR struct mtd_dev_s *sst25_initialize(FAR struct spi_dev_s *dev)
           /* Unrecognized! Discard all of that work we just did and return NULL */
 
           fdbg("Unrecognized\n");
-          kfree(priv);
+          kmm_free(priv);
           priv = NULL;
         }
       else
@@ -1243,13 +1243,13 @@ FAR struct mtd_dev_s *sst25_initialize(FAR struct spi_dev_s *dev)
 #ifdef CONFIG_SST25_SECTOR512        /* Simulate a 512 byte sector */
           /* Allocate a buffer for the erase block cache */
 
-          priv->sector = (FAR uint8_t *)kmalloc(1 << priv->sectorshift);
+          priv->sector = (FAR uint8_t *)kmm_malloc(1 << priv->sectorshift);
           if (!priv->sector)
             {
               /* Allocation failed! Discard all of that work we just did and return NULL */
 
               fdbg("Allocation failed\n");
-              kfree(priv);
+              kmm_free(priv);
               priv = NULL;
             }
 #endif

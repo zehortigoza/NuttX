@@ -109,7 +109,7 @@ bool CKeypadTest::connect(void)
 
       if (!setBackgroundColor(CONFIG_CKEYPADTEST_BGCOLOR))
         {
-          message("CKeypadTest::connect: setBackgroundColor failed\n");
+          printf("CKeypadTest::connect: setBackgroundColor failed\n");
         }
     }
 
@@ -170,7 +170,7 @@ bool CKeypadTest::createWindow(void)
   m_bgWindow = getBgWindow(m_widgetControl);
   if (!m_bgWindow)
     {
-      message("CKeypadTest::createGraphics: Failed to create CBgWindow instance\n");
+      printf("CKeypadTest::createGraphics: Failed to create CBgWindow instance\n");
       delete m_widgetControl;
       return false;
     }
@@ -180,7 +180,7 @@ bool CKeypadTest::createWindow(void)
   bool success = m_bgWindow->open();
   if (!success)
     {
-      message("CKeypadTest::createGraphics: Failed to open background window\n");
+      printf("CKeypadTest::createGraphics: Failed to open background window\n");
       delete m_bgWindow;
       m_bgWindow = (CBgWindow*)0;
       return false;
@@ -201,7 +201,7 @@ void CKeypadTest::setDisplaySize(void)
   struct nxgl_size_s windowSize;
   if (!m_bgWindow->getSize(&windowSize))
     {
-      message("CKeypadTest::createGraphics: Failed to get window size\n");
+      printf("CKeypadTest::createGraphics: Failed to get window size\n");
       return;
     }
 
@@ -221,7 +221,7 @@ void CKeypadTest::setDisplaySize(void)
 
       m_buttonWidth = windowSize.w >> 2;
     }
-  
+
   // Lets aim for a height of 7*32 = 224.  But lets bump up the number of rows
   // to allow one for the text box.
 
@@ -248,7 +248,7 @@ CKeypad *CKeypadTest::createKeypad(void)
   struct nxgl_size_s windowSize;
   if (!m_bgWindow->getSize(&windowSize))
     {
-      message("CKeypadTest::createGraphics: Failed to get window size\n");
+      printf("CKeypadTest::createGraphics: Failed to get window size\n");
       return (CKeypad *)NULL;
     }
 
@@ -308,7 +308,7 @@ CTextBox *CKeypadTest::createTextBox(void)
   struct nxgl_size_s windowSize;
   if (!m_bgWindow->getSize(&windowSize))
     {
-      message("CKeypadTest::createGraphics: Failed to get window size\n");
+      printf("CKeypadTest::createGraphics: Failed to get window size\n");
       return (CTextBox *)NULL;
     }
 
@@ -340,7 +340,7 @@ void CKeypadTest::showKeypad(CKeypad *keypad)
   keypad->redraw();
 
   // Then redraw the text box
-  
+
   m_textbox->enable();        // Un-necessary, the widget is enabled by default
   m_textbox->enableDrawing();
   m_textbox->redraw();

@@ -39,6 +39,7 @@
 
 #include <nuttx/config.h>
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -107,27 +108,27 @@
 
 #ifdef CONFIG_CPP_HAVE_VARARGS
 #  if CONFIG_SYSTEM_CLE_DEBUGLEVEL > 0
-#    define cledbg(format, arg...) \
-       syslog(EXTRA_FMT format EXTRA_ARG, ##arg)
+#    define cledbg(format, ...) \
+       syslog(LOG_DEBUG, EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
 #  else
 #    define cledbg(x...)
 #  endif
 
 #  if CONFIG_SYSTEM_CLE_DEBUGLEVEL > 1
-#    define clevdbg(format, arg...) \
-       syslog(EXTRA_FMT format EXTRA_ARG, ##arg)
+#    define clevdbg(format, ...) \
+       syslog(LOG_DEBUG, EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
 #  else
 #    define clevdbg(x...)
 #  endif
 #else
 #  if CONFIG_SYSTEM_CLE_DEBUGLEVEL > 0
-#    define cledbg  syslog
+#    define cledbg  cle_debug
 #  else
 #    define cledbg  (void)
 #  endif
 
 #  if CONFIG_SYSTEM_CLE_DEBUGLEVEL > 1
-#    define clevdbg syslog
+#    define clevdbg cle_debug
 #  else
 #    define clevdbg (void)
 #  endif
@@ -170,6 +171,10 @@ struct cle_s
  * Private Function Prototypes
  ****************************************************************************/
 
+#if !defined(CONFIG_CPP_HAVE_VARARGS) && CONFIG_SYSTEM_CLE_DEBUGLEVEL > 0
+static int      cle_debug(FAR const char *fmt, ...);
+#endif
+
 /* Low-level display and data entry functions */
 
 static void     cle_write(FAR struct cle_s *priv, FAR const char *buffer,
@@ -207,6 +212,29 @@ static const char g_fmtcursorpos[] = VT100_FMT_CURSORPOS;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: cle_debug
+ *
+ * Description:
+ *   Print a debug message to the syslog
+ *
+ ****************************************************************************/
+
+#if !defined(CONFIG_CPP_HAVE_VARARGS) && CONFIG_SYSTEM_CLE_DEBUGLEVEL > 0
+static int cle_debug(FAR const char *fmt, ...)
+{
+  va_list ap;
+  int ret;
+
+  /* Let vsyslog do the real work */
+
+  va_start(ap, fmt);
+  ret = vsyslog(LOG_DEBUG, fmt, ap);
+  va_end(ap);
+  return ret;
+}
+#endif
 
 /****************************************************************************
  * Name: cle_write
@@ -824,36 +852,31 @@ static int cle_editloop(FAR struct cle_s *priv)
           }
           break;
 
-        /* Newline terminates editing */
+        /* Newline terminates editing.  But what is a newline? */
 
-#if defined(CONFIG_EOL_IS_CR)
+#if defined(CONFIG_EOL_IS_CR) || defined(CONFIG_EOL_IS_EITHER_CRLF)
         case '\r': /* CR terminates line */
+
+#elif defined(CONFIG_EOL_IS_LF) || defined(CONFIG_EOL_IS_BOTH_CRLF) || \
+      defined(CONFIG_EOL_IS_EITHER_CRLF)
+
+        case '\n': /* LF terminates line */
+#endif
           {
+            /* Add the newline character to the buffer at the end of the line */
+
+            priv->curpos = priv->nchars;
+            cle_insertch(priv, '\n');
+            cle_putch(priv, '\n');
             return OK;
           }
           break;
 
-#elif defined(CONFIG_EOL_IS_BOTH_CRLF)
+#if defined(CONFIG_EOL_IS_BOTH_CRLF)
         case '\r': /* Wait for the LF */
           break;
 #endif
 
-#if defined(CONFIG_EOL_IS_LF) || defined(CONFIG_EOL_IS_BOTH_CRLF)
-        case '\n': /* LF terminates line */
-          {
-            return OK;
-          }
-          break;
-#endif
-
-#ifdef CONFIG_EOL_IS_EITHER_CRLF
-        case '\r': /* Either CR or LF terminates line */
-        case '\n':
-          {
-            return OK;
-          }
-          break;
-#endif
         /* Text to insert or unimplemented/invalid keypresses */
 
         default:

@@ -37,9 +37,16 @@
  ************************************************************************************/
 
 /* OPTIONS:
- *  - additional non-jedec standard device: FM25H20 
+ *  - additional non-jedec standard device: FM25H20
  *    must be enabled with the CONFIG_RAMTRON_FRAM_NON_JEDEC=y
- * 
+ *
+ * NOTE:
+ *  - frequency is fixed to desired max by RAMTRON_INIT_CLK_MAX
+ *    if new devices with different speed arrive, then SETFREQUENCY()
+ *    needs to handle freq changes and INIT_CLK_MAX must be reduced
+ *    to fit all devices. Note that STM32_SPI driver is prone to
+ *    too high freq. parameters and limit it within physical constraints.
+ *
  * TODO:
  *  - add support for sleep
  *  - add support for faster read FSTRD command
@@ -93,7 +100,6 @@
 #define RAMTRON_RDID      0x9f    /* 1 Read Identification       0   0     1-3 */
 #define RAMTRON_SN        0xc3    // TODO:
 
-
 /* Status register bit definitions */
 
 #define RAMTRON_SR_WIP            (1 << 0)                /* Bit 0: Write in progress bit */
@@ -133,14 +139,14 @@ struct ramtron_parts_s
 
 struct ramtron_dev_s
 {
-  struct mtd_dev_s mtd;      /* MTD interface */
-  FAR struct spi_dev_s *dev; /* Saved SPI interface instance */
-  uint8_t  sectorshift;
-  uint8_t  pageshift;
+  struct mtd_dev_s mtd;                    /* MTD interface */
+  FAR struct spi_dev_s *dev;               /* Saved SPI interface instance */
+  uint8_t sectorshift;
+  uint8_t pageshift;
   uint16_t nsectors;
   uint32_t npages;
   uint32_t speed; // overridable via ioctl
-  const struct ramtron_parts_s *part;  /* part instance */
+  FAR const struct ramtron_parts_s *part;  /* Part instance */
 };
 
 /************************************************************************************
@@ -155,7 +161,7 @@ struct ramtron_dev_s
 #define RAMTRON_CLK_MAX      40*1000*1000UL
 #define RAMTRON_INIT_CLK_DEFAULT  11*1000*1000UL
 
-static struct ramtron_parts_s ramtron_parts[] =
+static const struct ramtron_parts_s g_ramtron_parts[] =
 {
   {
     "FM25V01",                    /* name */
@@ -174,12 +180,12 @@ static struct ramtron_parts_s ramtron_parts[] =
     40000000                      /* speed */
   },
   {
-    "FM25VN02",                    /* name */
-    0x22,                          /* id1 */
-    0x01,                          /* id2 */
-    32L*1024L,                     /* size */
-    2,                             /* addr_len */
-    40000000                       /* speed */
+    "FM25VN02",                   /* name */
+    0x22,                         /* id1 */
+    0x01,                         /* id2 */
+    32L*1024L,                    /* size */
+    2,                            /* addr_len */
+    40000000                      /* speed */
   },
   {
     "FM25V05",                    /* name */
@@ -190,12 +196,12 @@ static struct ramtron_parts_s ramtron_parts[] =
     40000000                      /* speed */
   },
   {
-    "FM25VN05",                    /* name */
-    0x23,                          /* id1 */
-    0x01,                          /* id2 */
-    64L*1024L,                     /* size */
-    2,                             /* addr_len */
-    40000000                       /* speed */
+    "FM25VN05",                   /* name */
+    0x23,                         /* id1 */
+    0x01,                         /* id2 */
+    64L*1024L,                    /* size */
+    2,                            /* addr_len */
+    40000000                      /* speed */
   },
   {
     "FM25V10",                    /* name */
@@ -212,6 +218,14 @@ static struct ramtron_parts_s ramtron_parts[] =
     128L*1024L,                   /* size */
     3,                            /* addr_len */
     40000000                      /* speed */
+  },
+  {
+    "MB85RS1MT",                  /* name */
+    0x27,                         /* id1 */
+    0x03,                         /* id2 */
+    128L*1024L,                   /* size */
+    3,                            /* addr_len */
+    25000000                      /* speed */
   },
 #ifdef CONFIG_RAMTRON_FRAM_NON_JEDEC
   {
@@ -233,7 +247,6 @@ static struct ramtron_parts_s ramtron_parts[] =
 #endif
 };
 
-
 /************************************************************************************
  * Private Function Prototypes
  ************************************************************************************/
@@ -245,8 +258,8 @@ static inline void ramtron_unlock(FAR struct spi_dev_s *dev);
 static inline int ramtron_readid(struct ramtron_dev_s *priv);
 static int ramtron_waitwritecomplete(struct ramtron_dev_s *priv);
 static void ramtron_writeenable(struct ramtron_dev_s *priv);
-static inline int ramtron_pagewrite(struct ramtron_dev_s *priv, FAR const uint8_t *buffer,
-                                     off_t offset);
+static inline int ramtron_pagewrite(struct ramtron_dev_s *priv,
+                                     FAR const uint8_t *buffer, off_t offset);
 
 /* MTD driver methods */
 
@@ -273,11 +286,11 @@ static int ramtron_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg);
 
 static void ramtron_lock(FAR struct ramtron_dev_s *priv)
 {
-  /* On SPI busses where there are multiple devices, it will be necessary to
-   * lock SPI to have exclusive access to the busses for a sequence of
+  /* On SPI buses where there are multiple devices, it will be necessary to
+   * lock SPI to have exclusive access to the buses for a sequence of
    * transfers.  The bus should be locked before the chip is selected.
    *
-   * This is a blocking call and will not return until we have exclusiv access to
+   * This is a blocking call and will not return until we have exclusive access to
    * the SPI buss.  We will retain that exclusive access until the bus is unlocked.
    */
 
@@ -285,7 +298,7 @@ static void ramtron_lock(FAR struct ramtron_dev_s *priv)
 
   /* After locking the SPI bus, the we also need call the setfrequency, setbits, and
    * setmode methods to make sure that the SPI is properly configured for the device.
-   * If the SPI buss is being shared, then it may have been left in an incompatible
+   * If the SPI bus is being shared, then it may have been left in an incompatible
    * state.
    */
 
@@ -310,7 +323,10 @@ static inline void ramtron_unlock(FAR struct spi_dev_s *dev)
 
 static inline int ramtron_readid(struct ramtron_dev_s *priv)
 {
-  uint16_t manufacturer, memory, capacity, part;
+  uint16_t manufacturer;
+  uint16_t memory;
+  uint16_t capacity;
+  uint16_t part;
   int i;
 
   fvdbg("priv: %p\n", priv);
@@ -320,31 +336,49 @@ static inline int ramtron_readid(struct ramtron_dev_s *priv)
   ramtron_lock(priv);
   SPI_SELECT(priv->dev, SPIDEV_FLASH, true);
 
-  /* Send the "Read ID (RDID)" command and read the first three ID bytes */
+  /* Send the "Read ID (RDID)" command */
 
   (void)SPI_SEND(priv->dev, RAMTRON_RDID);
+
+  /* Read the first six manufacturer ID bytes. */
+
   for (i = 0; i < 6; i++)
     {
+      /* Read the next manufacturer byte */
+
       manufacturer = SPI_SEND(priv->dev, RAMTRON_DUMMY);
+
+      /* Fujitsu parts such as MB85RS1MT only have 1-byte for the manufacturer
+       * ID.  The manufacturer code is "0x4".
+       */
+
+      if (i == 0 && manufacturer == 0x04)
+        {
+          break;
+        }
     }
 
-  memory           = SPI_SEND(priv->dev, RAMTRON_DUMMY);
-  capacity         = SPI_SEND(priv->dev, RAMTRON_DUMMY);  // fram.id1
-  part             = SPI_SEND(priv->dev, RAMTRON_DUMMY);  // fram.id2
+  memory   = SPI_SEND(priv->dev, RAMTRON_DUMMY);
+  capacity = SPI_SEND(priv->dev, RAMTRON_DUMMY);  /* fram.id1 */
+  part     = SPI_SEND(priv->dev, RAMTRON_DUMMY);  /* fram.id2 */
 
   /* Deselect the FLASH and unlock the bus */
 
   SPI_SELECT(priv->dev, SPIDEV_FLASH, false);
   ramtron_unlock(priv->dev);
-  
+
   /* Select part from the part list */
- 
-  for (priv->part = ramtron_parts;
-     priv->part->name != NULL && !(priv->part->id1 == capacity && priv->part->id2 == part);
-     priv->part++);
-     
+
+  for (priv->part = g_ramtron_parts;
+       priv->part->name != NULL &&
+         !(priv->part->id1 == capacity && priv->part->id2 == part);
+       priv->part++);
+
   if (priv->part->name)
     {
+      UNUSED(manufacturer); /* Eliminate warnings when debug is off */
+      UNUSED(memory);       /* Eliminate warnings when debug is off */
+
       fvdbg("RAMTRON %s of size %d bytes (mf:%02x mem:%02x cap:%02x part:%02x)\n",
             priv->part->name, priv->part->size, manufacturer, memory, capacity, part);
 
@@ -355,7 +389,7 @@ static inline int ramtron_readid(struct ramtron_dev_s *priv)
       priv->speed       = priv->part->speed;
       return OK;
     }
- 
+
   fvdbg("RAMTRON device not found\n");
   return -ENODEV;
 }
@@ -420,7 +454,7 @@ static void ramtron_writeenable(struct ramtron_dev_s *priv)
   /* Send "Write Enable (WREN)" command */
 
   (void)SPI_SEND(priv->dev, RAMTRON_WREN);
-  
+
   /* Deselect the FLASH */
 
   SPI_SELECT(priv->dev, SPIDEV_FLASH, false);
@@ -434,7 +468,7 @@ static void ramtron_writeenable(struct ramtron_dev_s *priv)
 static inline void ramtron_sendaddr(const struct ramtron_dev_s *priv, uint32_t addr)
 {
   DEBUGASSERT(priv->part->addr_len == 3 || priv->part->addr_len == 2);
-  
+
   if (priv->part->addr_len == 3)
     {
       (void)SPI_SEND(priv->dev, (addr >> 16) & 0xff);
@@ -458,7 +492,7 @@ static inline int ramtron_pagewrite(struct ramtron_dev_s *priv, FAR const uint8_
   /* Enable the write access to the FLASH */
 
   ramtron_writeenable(priv);
-  
+
   /* Select this FLASH part */
 
   SPI_SELECT(priv->dev, SPIDEV_FLASH, true);
@@ -474,7 +508,7 @@ static inline int ramtron_pagewrite(struct ramtron_dev_s *priv, FAR const uint8_
   /* Then write the specified number of bytes */
 
   SPI_SNDBLOCK(priv->dev, buffer, 1 << priv->pageshift);
-  
+
   /* Deselect the FLASH: Chip Select high */
 
   SPI_SELECT(priv->dev, SPIDEV_FLASH, false);
@@ -506,8 +540,8 @@ static int ramtron_erase(FAR struct mtd_dev_s *dev, off_t startblock, size_t nbl
  * Name: ramtron_bread
  ************************************************************************************/
 
-static ssize_t ramtron_bread(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks,
-                             FAR uint8_t *buffer)
+static ssize_t ramtron_bread(FAR struct mtd_dev_s *dev, off_t startblock,
+                             size_t nblocks, FAR uint8_t *buffer)
 {
   FAR struct ramtron_dev_s *priv = (FAR struct ramtron_dev_s *)dev;
   ssize_t nbytes;
@@ -516,7 +550,8 @@ static ssize_t ramtron_bread(FAR struct mtd_dev_s *dev, off_t startblock, size_t
 
   /* On this device, we can handle the block read just like the byte-oriented read */
 
-  nbytes = ramtron_read(dev, startblock << priv->pageshift, nblocks << priv->pageshift, buffer);
+  nbytes = ramtron_read(dev, startblock << priv->pageshift,
+                        nblocks << priv->pageshift, buffer);
   if (nbytes > 0)
     {
         return nbytes >> priv->pageshift;
@@ -529,8 +564,8 @@ static ssize_t ramtron_bread(FAR struct mtd_dev_s *dev, off_t startblock, size_t
  * Name: ramtron_bwrite
  ************************************************************************************/
 
-static ssize_t ramtron_bwrite(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks,
-                              FAR const uint8_t *buffer)
+static ssize_t ramtron_bwrite(FAR struct mtd_dev_s *dev, off_t startblock,
+                              size_t nblocks, FAR const uint8_t *buffer)
 {
   FAR struct ramtron_dev_s *priv = (FAR struct ramtron_dev_s *)dev;
   size_t blocksleft = nblocks;
@@ -548,7 +583,7 @@ static ssize_t ramtron_bwrite(FAR struct mtd_dev_s *dev, off_t startblock, size_
         goto error;
       }
       startblock++;
-   }
+    }
 
   error:
     ramtron_unlock(priv->dev);
@@ -601,6 +636,7 @@ static ssize_t ramtron_read(FAR struct mtd_dev_s *dev, off_t offset, size_t nbyt
 
   SPI_SELECT(priv->dev, SPIDEV_FLASH, false);
   ramtron_unlock(priv->dev);
+
   fvdbg("return nbytes: %d\n", (int)nbytes);
   return nbytes;
 }
@@ -697,11 +733,11 @@ FAR struct mtd_dev_s *ramtron_initialize(FAR struct spi_dev_s *dev)
    * to be extended to handle multiple FLASH parts on the same SPI bus.
    */
 
-  priv = (FAR struct ramtron_dev_s *)kzalloc(sizeof(struct ramtron_dev_s));
+  priv = (FAR struct ramtron_dev_s *)kmm_zalloc(sizeof(struct ramtron_dev_s));
   if (priv)
     {
       /* Initialize the allocated structure. (unsupported methods were
-       * nullified by kzalloc).
+       * nullified by kmm_zalloc).
        */
 
       priv->mtd.erase  = ramtron_erase;
@@ -722,7 +758,7 @@ FAR struct mtd_dev_s *ramtron_initialize(FAR struct spi_dev_s *dev)
         {
           /* Unrecognized! Discard all of that work we just did and return NULL */
 
-          kfree(priv);
+          kmm_free(priv);
           priv = NULL;
         }
     }

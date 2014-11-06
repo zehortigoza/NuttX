@@ -519,7 +519,7 @@ static inline FAR struct usbhost_state_s *usbhost_allocclass(void)
   FAR struct usbhost_state_s *priv;
 
   DEBUGASSERT(!up_interrupt_context());
-  priv = (FAR struct usbhost_state_s *)kmalloc(sizeof(struct usbhost_state_s));
+  priv = (FAR struct usbhost_state_s *)kmm_malloc(sizeof(struct usbhost_state_s));
   uvdbg("Allocated: %p\n", priv);;
   return priv;
 }
@@ -545,7 +545,7 @@ static inline void usbhost_freeclass(FAR struct usbhost_state_s *class)
   /* Free the class instance. */
 
   uvdbg("Freeing: %p\n", class);;
-  kfree(class);
+  kmm_free(class);
 }
 
 /****************************************************************************
@@ -1083,14 +1083,20 @@ static int usbhost_mouse_poll(int argc, char *argv[])
 
       if (ret != OK)
         {
-          nerrors++;
-          udbg("ERROR: DRVR_TRANSFER returned: %d/%d\n",
-               ret, nerrors);
+          /* If DRVR_TRANSFER() returns EAGAIN, that simply means that
+           * the devices was not ready and has NAK'ed the transfer.  That
+           * should not be treated as an error (unless it persists for a
+           * long time).
+           */
 
-          if (nerrors > 200)
+          udbg("ERROR: DRVR_TRANSFER returned: %d/%d\n", ret, nerrors);
+          if (ret != -EAGAIN)
             {
-              udbg("Too many errors... aborting: %d\n", nerrors);
-              break;
+              if (++nerrors > 200)
+                {
+                  udbg("Too many errors... aborting: %d\n", nerrors);
+                  break;
+                }
             }
         }
 
@@ -1131,7 +1137,7 @@ static int usbhost_mouse_poll(int argc, char *argv[])
             {
               /* We get here when either there is a meaning button change
                * and/or a significant movement of the mouse.  We are going
-               * to report the mouse event. 
+               * to report the mouse event.
                *
                * Snap to the new x/y position for subsequent thresholding
                */
@@ -1629,7 +1635,7 @@ static inline int usbhost_devinit(FAR struct usbhost_state_s *priv)
    * memory resources, primarily for the dedicated stack (CONFIG_HIDMOUSE_STACKSIZE).
    */
 
-  uvdbg("user_start: Start poll task\n");
+  uvdbg("Start poll task\n");
 
   /* The inputs to a task started by task_create() are very awkward for this
    * purpose.  They are really designed for command line tasks (argc/argv). So
@@ -1643,14 +1649,9 @@ static inline int usbhost_devinit(FAR struct usbhost_state_s *priv)
   usbhost_takesem(&g_exclsem);
   g_priv = priv;
 
-#ifndef CONFIG_CUSTOM_STACK
   priv->pollpid = task_create("mouse", CONFIG_HIDMOUSE_DEFPRIO,
                               CONFIG_HIDMOUSE_STACKSIZE,
                               (main_t)usbhost_mouse_poll, (FAR char * const *)NULL);
-#else
-  priv->pollpid = task_create("mouse", CONFIG_HIDMOUSE_DEFPRIO,
-                              (main_t)usbhost_mouse_poll, (FAR char * const *)NULL);
-#endif
   if (priv->pollpid == ERROR)
     {
       /* Failed to started the poll thread... probably due to memory resources */

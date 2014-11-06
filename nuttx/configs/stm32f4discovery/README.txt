@@ -10,7 +10,7 @@ memory and 128kbytes. The board features:
   - LIS302DL, ST MEMS motion sensor, 3-axis digital output accelerometer,
   - MP45DT02, ST MEMS audio sensor, omni-directional digital microphone,
   - CS43L22, audio DAC with integrated class D speaker driver,
-  - Eight LEDs and two push-buttons,
+  - Four LEDs and two push-buttons,
   - USB OTG FS with micro-AB connector, and
   - Easy access to most MCU pins.
 
@@ -31,6 +31,7 @@ Contents
   - UARTs
   - Timer Inputs/Outputs
   - FPU
+  - STM32F4DIS-BB
   - FSMC SRAM
   - SSD1289
   - UG-2864AMBAG01 / UG-2864HSWEG01
@@ -220,7 +221,7 @@ NuttX EABI "buildroot" Toolchain
   NOTE:  Unfortunately, the 4.6.3 EABI toolchain is not compatible with the
   the NXFLAT tools.  See the top-level TODO file (under "Binary loaders") for
   more information about this problem. If you plan to use NXFLAT, please do not
-  use the GCC 4.6.3 EABI toochain; instead use the GCC 4.3.3 OABI toolchain.
+  use the GCC 4.6.3 EABI toolchain; instead use the GCC 4.3.3 OABI toolchain.
   See instructions below.
 
 NuttX OABI "buildroot" Toolchain
@@ -278,7 +279,7 @@ NXFLAT Toolchain
 LEDs
 ====
 
-The STM32F4Discovery board has four LEDs; green, organge, red and blue on the
+The STM32F4Discovery board has four LEDs; green, orange, red and blue on the
 board. These LEDs are not used by the board port unless CONFIG_ARCH_LEDS is
 defined.  In that case, the usage by the board port is defined in
 include/board.h and src/up_leds.c. The LEDs are used to encode OS-related
@@ -300,7 +301,7 @@ events as follows:
   * If LED1, LED2, LED3 are statically on, then NuttX probably failed to boot
     and these LEDs will give you some indication of where the failure was
  ** The normal state is LED3 ON and LED1 faintly glowing.  This faint glow
-    is because of timer interupts that result in the LED being illuminated
+    is because of timer interrupts that result in the LED being illuminated
     on a small proportion of the time.
 *** LED2 may also flicker normally if signals are processed.
 
@@ -356,8 +357,13 @@ USART6
 Default USART/UART Configuration
 --------------------------------
 
-USART2 is enabled in all configurations (see */defconfig).  RX and TX are
+USART2 is enabled in most configurations (see */defconfig).  RX and TX are
 configured on pins PA3 and PA2, respectively (see include/board.h).
+
+These pins selections, however, conflict with Ethernet pin usage on the
+STM32F4DIS-BB base board.  The STM32F4DIS-BB base board provides RS-232
+drivers and a DB9 connector for USART6.  USART6 is the preferred serial
+console for use with the STM32F4DIS-BB.
 
 Timer Inputs/Outputs
 ====================
@@ -496,6 +502,53 @@ See the section above on Toolchains, NOTE 2, for explanations for some of
 the configuration settings.  Some of the usual settings are just not supported
 by the "Lite" version of the Atollic toolchain.
 
+STM32F4DIS-BB
+=============
+
+On-board PIO usage:
+
+  ---------- ------------- ------------------------------
+  PIO        SIGNAL        FUNCTION
+  ---------- ------------- ------------------------------
+  PB11       TXEN          LAN8720
+  PB12       TXD0
+  PB13       TXD1
+  PC4        RXD0/MODE0
+  PC5        RXD1/MODE1
+  PA7        RXDR/PHYAD0
+  PA2        MDIO
+  PC1        MDC
+  PA1        NINT/REFCLK0
+  PE2        NRST
+  ---------- ------------- ------------------------------
+  PC6        D2            DCMI
+  PC7        D3
+  PE0        D4
+  PE1        D5
+  PE4        D6
+  PB6        D7
+  PE5        D8
+  PE6        D9
+  PA6        PCLK
+  PA4        HS
+  PB7        VS
+  PD6        PWR_EN
+  PD12       RST
+  PB9        SDA
+  PB8        SCL
+  ---------- ------------- ------------------------------
+  USART6_TX  T1IN          SP3232EEY-L
+  USART6_RX  T2OUT
+  ---------- ------------- ------------------------------
+  PB15       NCD           MicroSD
+  PC9        DAT1
+  PC8        DAT0
+  PC12       CLK
+  PD2        CMD
+  PC11       CD/DAT3
+  PC10       DAT2
+  ---------- ------------- ------------------------------
+
 FSMC SRAM
 =========
 
@@ -553,7 +606,7 @@ SSD1289
 
 I purchased an LCD display on eBay from China.  The LCD is 320x240 RGB565 and
 is based on an SSD1289 LCD controller and an XPT2046 touch IC.  The pin out
-from the 2x16 connect on the LCD is labeled as follows:
+from the 2x16 connect on the LCD is labelled as follows:
 
 LCD CONNECTOR:          SSD1289 MPU INTERFACE PINS:
 
@@ -629,9 +682,9 @@ MAPPING TO STM32 F4:
 
 NOTE:  The configuration to test this LCD configuration is available at
 configs/stm32f4discovery/nxlines.  As of this writing, I have not seen the
-LCD working so I probaby have some things wrong.
+LCD working so I probably have some things wrong.
 
-I might need to use a bit-baning interface.  Below is the pin configurationf
+I might need to use a bit-banging interface.  Below is the pin configuration
 of a similar LCD to support a (write-only), bit banging interface:
 
   LCD PIN   BOARD CONNECTION
@@ -646,7 +699,7 @@ of a similar LCD to support a (write-only), bit banging interface:
   CS        Pin configured as output
   RSET      Pin configured as output
 
-The following summarize the bit banging oprations:
+The following summarize the bit banging operations:
 
   /* Rese the LCD */
   void Reset(void)
@@ -723,7 +776,7 @@ that I am using:
   -------------------------------------------------------------------------
 
 Darcy Gong recently added support for the UG-2864HSWEG01 OLED which is also
-an option with this configuratin.  I have little technical information about
+an option with this configuration.  I have little technical information about
 the UG-2864HSWEG01 interface (see configs/stm32f4discovery/src/up_ug2864hsweg01.c).
 
 STM32F4Discovery-specific Configuration Options
@@ -792,10 +845,6 @@ STM32F4Discovery-specific Configuration Options
 
     CONFIG_HEAP2_SIZE - The size of the SRAM in the FSMC address space (decimal)
 
-    CONFIG_ARCH_IRQPRIO - The STM32F4Discovery supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
-
     CONFIG_ARCH_FPU - The STM32F4Discovery supports a floating point unit (FPU)
 
        CONFIG_ARCH_FPU=y
@@ -814,7 +863,7 @@ STM32F4Discovery-specific Configuration Options
 
     CONFIG_ARCH_CALIBRATION - Enables some build in instrumentation that
        cause a 100 second delay during boot-up.  This 100 second delay
-       serves no purpose other than it allows you to calibratre
+       serves no purpose other than it allows you to calibrate
        CONFIG_ARCH_LOOPSPERMSEC.  You simply use a stop watch to measure
        the 100 second delay then adjust CONFIG_ARCH_LOOPSPERMSEC until
        the delay actually is 100 seconds.
@@ -1094,7 +1143,7 @@ Where <subdir> is one of the following:
     3. By default, this project assumes that you are *NOT* using the DFU
        bootloader.
 
-    4. It appears that you cannot excute from CCM RAM.  This is why the
+    4. It appears that you cannot execute from CCM RAM.  This is why the
        following definition appears in the defconfig file:
 
        CONFIG_STM32_CCMEXCLUDE=y
@@ -1107,7 +1156,7 @@ Where <subdir> is one of the following:
   -------
     This is identical to the ostest configuration below except that NuttX
     is built as a kernel-mode, monolithic module and the user applications
-    are built separately.  Is is recommened to use a special make command;
+    are built separately.  Is is recommended to use a special make command;
     not just 'make' but make with the following two arguments:
 
         make pass1 pass2
@@ -1193,6 +1242,52 @@ Where <subdir> is one of the following:
        Then use the combined.hex file with the STM32 ST-Link tool.  If
        you do this a lot, you will probably want to invest a little time
        to develop a tool to automate these steps.
+
+  netnsh:
+  ------
+    This is a special version of the NuttShell (nsh) configuration that is
+    tailored to work with the STM32F4DIS-BB base board.  This version
+    derives from nsh configuration so all of the notes apply there except as
+    noted below.
+
+    NOTES:
+
+    1. This example uses USART6 for the serial console.  The STM32F4DIS-BB
+       provides RS-232 drivers for USART6 and allows access via the DB9
+       connector on the base board.  USART6 is, therefore, the more
+       convenient UART to use for the serial console.
+
+    2. Networking is enabled.  The STM32F4DIS-BB has an SMC LAN2870 PHY
+       and RJ5 network connector.  Support is enabled for ICMP, TCP/IP,
+       UDP, and ARP.
+
+    3. SD card support is enabled.  The STM32F4DIS-BB has an on-board
+       microSD slot that should be automatically registered as the block
+       device /dev/mmcsd0 when an SD card is present.  The SD card can
+       then be mounted by the NSH command:
+
+       nsh> mount -t /dev/mmcsd0 /mnt/sdcard
+
+    4. CCM memory is not included in the heap in this configuration.  That
+       is because the SD card uses DMA and if DMA memory is allocated from
+       the CCM memory, the DMA will failure.  This is an STM32 hardware
+       limitation.
+
+       If you want to get the CCM memory back in the heap, then you can
+
+         a) Disable microSD support (and DMAC2 which is then no longer
+            needed).  If you reduce the clocking by a huge amount, it might
+            be possible to use microSD without DMA.  This, however, may
+            not be possible.
+         b) Develop a strategy to manage CCM memory and DMA memory.  Look
+            at this discussion on the NuttX Wiki:
+            http://www.nuttx.org/doku.php?id=wiki:howtos:stm32-ccm-alloc
+
+       To put the CCM memory back into the heap you would need to change
+       the following in the NuttX configuration:
+
+         CONFIG_STM32_CCMEXCLUDE=n  : Don't exclude CCM memory from the heap
+         CONFIG_MM_REGIONS=2        : With CCM, there will be two memory regions
 
   nsh:
   ---
@@ -1514,7 +1609,7 @@ Where <subdir> is one of the following:
         CONFIG_PM_BUTTONS=y
 
        CONFIG_PM_BUTTONS enables button support for PM testing.  Buttons can
-       drive EXTI interrupts and EXTI interrrupts can be used to wakeup for
+       drive EXTI interrupts and EXTI interrupts can be used to wakeup for
        certain reduced power modes (STOP mode).  The use of the buttons here
        is for PM testing purposes only; buttons would normally be part the
        application code and CONFIG_PM_BUTTONS would not be defined.
@@ -1592,13 +1687,13 @@ Where <subdir> is one of the following:
        those are that you cannot get debug output from interrupt handlers.
        So, in particularly, debug output is not a useful way to debug the
        USB device controller driver.  Instead, use the USB monitor with
-       USB debug off and USB trance on (see below).
+       USB debug off and USB trace on (see below).
 
     4. Enabling USB monitor SYSLOG output.  If tracing is enabled, the USB
        device will save encoded trace output in in-memory buffer; if the
        USB monitor is enabled, that trace buffer will be periodically
-       emptied and dumped to the system loggin device (UART2 in this
-       configuraion):
+       emptied and dumped to the system logging device (UART2 in this
+       configuration):
 
        CONFIG_USBDEV_TRACE=y                   : Enable USB trace feature
        CONFIG_USBDEV_TRACE_NRECORDS=128        : Buffer 128 records in memory

@@ -107,7 +107,7 @@
 #  define MAX1407X_VCELL(v)     MAX14071_VCELL(v)
 #endif
 
-/* "SOC Register. The SOC register is a read-only register that displays the 
+/* "SOC Register. The SOC register is a read-only register that displays the
  *  state of charge of the cell as calculated by the ModelGauge algorithm. The
  *  result is displayed as a percentage of the cell’s full capacity...
  *
@@ -531,7 +531,7 @@ FAR struct battery_dev_s *max1704x_initialize(FAR struct i2c_dev_s *i2c,
 
   /* Initialize the MAX1704x device structure */
 
-  priv = (FAR struct max1704x_dev_s *)kzalloc(sizeof(struct max1704x_dev_s));
+  priv = (FAR struct max1704x_dev_s *)kmm_zalloc(sizeof(struct max1704x_dev_s));
   if (priv)
     {
       /* Initialize the MAX1704x device structure */
@@ -553,7 +553,7 @@ FAR struct battery_dev_s *max1704x_initialize(FAR struct i2c_dev_s *i2c,
       if (ret < 0)
         {
           batdbg("Failed to reset the MAX1704x: %d\n", ret);
-          kfree(priv);
+          kmm_free(priv);
           return NULL;
         }
 #endif

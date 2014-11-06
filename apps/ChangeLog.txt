@@ -639,7 +639,7 @@
 	  exit.  So NSH was hanging in waitpid when msconn started even
 	  though msconn returned.  The USB MSC logic really should not use
 	  a pthread, but we are stuck with that for now.  The work-around
-	  is the msconn now daemonizes itself so that it so that the pthread
+	  is that msconn now daemonizes itself so that it so that the pthread
 	  is created in a different task group (2013-9-7).
 	* apps/system/usbmonitor:  The USB monitor has been extended so
 	  that it can be used with USB device or host trace data (2013-9-9).
@@ -810,11 +810,11 @@
 	  to work.  There are still some display artifacts and probably several
 	  untested conditions (2014-1-21).
 
-6.34 2014-xx-xx Gregory Nutt <gnutt@nuttx.org>
+7.1 2014-03-15 Gregory Nutt <gnutt@nuttx.org>
 
 	* apps/system/cle:  Add a EMACS-like command line editor.  This CLE,
 	  is really more like readline than the NuttX readline is!  (2014-02-02).
-	* apps/nshlib: Use of the standard tiney readline (about .25KB) is now
+	* apps/nshlib: Use of the standard tiny readline (about .25KB) is now
 	  an option and can be replaces with the EMACX-like CLE (about 2KB)
 	  (2014-02-02).
 	* Several changes to restore Windows native build (2014-2-7)
@@ -834,7 +834,7 @@
 	* apps/nshlib: 'mv' can now be used in the pseudo-filesystem.  Hence,
 	  the 'mv' command needs to be available even if there are no write-able
 	  filesystem enabled (2014-2-19).
-	* apps/nshlib: 'rm' can now be used to remove nodes frm the pseudo-
+	* apps/nshlib: 'rm' can now be used to remove nodes from the pseudo-
 	  filesystem.  Hence, the 'rm' command needs to be available even if there
 	  are no write-able filesystem enabled (2014-2-20).
 	* CONFIG_DISABLE_PSEUDOFS_OPERATIONS: This new configuration setting
@@ -842,7 +842,7 @@
 	  (2014-2-20).
 	* nshlib/Kconfig:  Use CONFIG_DEFAULT_SMALL in selecting default
 	  settings (2014-2-20).
-	* nshlib/nsh_telnetd.c:  Use strncpy vs strcpy to avoid overrun the
+	* nshlib/nsh_telnetd.c:  Use strncpy vs strcpy to avoid overruning the
 	  username and password buffers.  From Bertold Van den Bergh (2014-2-22).
 	* nshlib/Kconfig, nsh_proccmds.c:  If the CPU load feature and the procfs
 	  features are enabled, then show CPU load used by each thread in the
@@ -853,9 +853,247 @@
 	  at the end of the file (2014-2-27).
 	* netutils/dhcpd/dhcpd.c: allocipaddr() should not call ntohl(), the
 	  returned IP address is already in host order.
-	* apps/netutils/dhcpd/Kconfig: Add missing DHCPD configuratino
+	* apps/netutils/dhcpd/Kconfig: Add missing DHCPD configuration
 	  settings(2014-3-3).
 	* Support for the legacy configuration mechanism (using appconfig files)
 	  is removed.  Only the newer configuration using the kconfig-frontends
 	  tools is now supported (2014-3-6).
 
+7.2 2014-04-29 Gregory Nutt <gnutt@nuttx.org>
+
+	* apps/nshlib/nsh_parse.c: Fix NuttShell version number display in
+	  welcome message.  version.h was not being included (2014-3-23).
+	* apps/examples/igmp:  Fill out Kconfig file; update makefile so
+	  that the IGMP example can be used as an NSH built-in application.
+	  From Manuel Stühn (2014-3-24).
+	* apps/system/usbmsc:  Back out the USBMSC daemon... it is no longer
+	  needed with the recent fix to the USBMSC class driver (2014-3-25).
+	* apps/examples/lcdrw:  Fill out empty Kconfig file (2014-2-27).
+	* apps/netutils/dhcpd/dhcpd.c:  The correct value of the PAD option
+	  is zero, not one.  From Brennan Ashton (2014-3-31).
+	* apps/sysinfo:   CONFIG_VERSION_BUILD is a string an needs to be
+	  printed with %s, not %d.  Noted by Librae (2014-4-8).
+	* apps/netutils/ntpclient/ and apps/include/netufils/ntpclient.h:  Add
+	  a very primitive NTP client.  The initial check-in is untested and
+	  probably incomplete (2014-4-10).
+	* apps/netutils/resolv:  Long needed major clean up for coding style
+	  and unification of naming conventions (resolv vs dns) (2014-4-11).
+	* apps/netutils/dnsclient and include/netutils/dnsclient.h:  File name
+	  changes that are part of the overal resolv->dns renaming (2014-4-11).
+	* apps/netutils/dnsclient:  Break the one big monolithic file into
+	  three smaller files (2014-4-11).
+	* apps/netutils/ntpclient/ntpclient.c: Corrections to the NTP client
+	  from Manuel Stuehn (2014-4-12).
+	* apps/examples/touchscreen:  Add a configuration option to indicate if
+	  architecture-specific initialized is required, yes or no (2014-4-14).
+	* apps/system/nxplayer/nxplayer.c:  Compilation failure in one
+	  configuration reported by Manuel Stuhn (2014-4-21).
+	* apps/system/sdcard:  Remove an STM32 dependency.  From Bob Doiron
+	  (2014-4-21).
+	* apps/nshlib: malloc/free IOBUFFER for 'cat' and 'hexdump' commands
+	  instead of using the stack.  From Bob Doiron (2014-4-21).
+	* apps/examples/cpuhog, serialblaster, and serialrx:  Stress test
+	  examples added by Bob Doiron (2014-4-22).
+	* apps/examples/telnetd:  Naming is confused.  In someplaces 'telnetd',
+	  and in others 'shell.'  All changes to telnetd.  Noted by Pelle
+	  Windestam (2014-4-38).
+
+7.3 2014-06-25 Gregory Nutt <gnutt@nuttx.org>
+
+	* apps/examples/serialblaster:  Update configuration an make logic in
+	  order to select that the serial blaster task priority and stack size.
+	  From Bob Doiron (2014-4-30).
+	* apps/nshlib/Kconfig and other NSH files:  The alternate console device
+	  CONFIG_NSH_CONDEV must not be defined unconditionally.  This causes errors
+	  when using Telnet sessions.  This was solved by adding CONFIG_NSH_ALTCONDEV:
+	  CONFIG_NSH_ALTCONDEV enables or disables the feature then, if enabled,
+	  CONFIG_NSH_CONDEV provides the alternative console device name (2014-5-5).
+	* apps/system/i2c/i2c_get.c:  Fix to show the updated register address on
+	  each fetch (vs. showing the same starting address each time).  From
+	  Ryan VanSickle (2014-5-8).
+	* apps/interpreters/prun and apps/include/interpreters/prun.h:  Broke out
+	  the P-code execution logic from apps/examples/pashello and moved it to
+	  these directory where it can be used more generally (2014-5-9).
+	* apps/system/prun and apps/include/interpreters/pexec_main.c:  Move the
+	  P-Code execution logic from apps/interpreters/prun to
+	  apps/system/prun; Add pexec_main.c which is an NSH built-in
+	  application that can be used to run P-Code programs from the NSH
+	  command line (2014-5-9).
+	* Several files: Convert all old-style variadic macros to the C99 form.
+	  Recent GCC changes tightens up that behavior and can cause some problems
+	  (at least for the IAR compiler for some reason).  See
+	  https://gcc.gnu.org/onlinedocs/cpp/Variadic-Macros.html#Variadic-Macros.
+	  Noted by Bob Grimes (2014-5-22).
+	* apps/system/cle:  CLE was not returning the terminating newline character.
+	  But reported by Max kriegleder; work-around reported by Lorenz Meier
+	  (2015-5-23).
+	* Misc changes due to moving nuttx/net/uip/uip-arp.h to nuttx/net/arp.h
+	  (2015-5-30).
+	* apps/examples/netpkt/:  A "raw" socket test from Lazlo Sitzer
+	  (2014-6-12).
+	* apps/system/hex2bin/:  A library and built-in task to convert from
+	  Intel HEX to binary format.  Untested on initial commit (2014-6-15).
+	* apps/system/hex2bin/: Appears to be functional but testing is still
+	  light (2014-6-16).
+	* apps/system/hex2bin/hex2mem_main: Add a variant application that will
+	  write Intel HEX files directly to memory (2014-6-16).
+	* netutils/webserver: httpd_fs_open() should return OK on success and
+	  ERROR on failure, not 1 and 0 (2014-6-23)
+
+7.4 2014-08-15 Gregory Nutt <gnutt@nuttx.org>
+
+	* apps/system/mdio:  PHY tool from Daniel Lazlo Sizter (2014-6-27).
+	* apps/nshlib:  Networking logic modified to handler the case of SLIP
+	  transport.  From Max Neklyudov (2014-6-27).
+	* apps/nshlib:  if # appears on line, need to comment ignore additional
+	  commands on the line (2014-7-1).
+	* apps/netlib: Renamed all occurrences of uiplib to netlib.  Renamed
+	  files under netutils/uiplib/uip_*.c to netutils/netlib/netlib_*.c.
+	  Renamed all functions defined in netutils/netlib/ to begin with netlib_,
+	  instead of uip_. (2014-7-2).
+	* apps/nshlib/nsh_usbkeyboard.c:  Add a configuration to use a USB
+	  keyboard for the stdin device (2014-7-3).
+	* apps/neturils/webclient/webclient.c:  Fix to offset calculation from
+	  Rony Xln.  Prevents 0x0a at the beginning of lines (2014-7-7).
+	* netutils/webserver (and other files):  Fix some configuration usage:
+	  CONFIG_NETUTILS_HTTPD_SENDFILE was missing from Kconfig; CONFIG_NET_HAVE_SOLINGER
+	  should be CONFIG_NET_SOLINGER; Type of CONFIG_NET_HTTPD_MAXPATH was wrong
+	  in Kconfig file.  From Max (2014-7-11).
+	* apps/system/nxplayer/nxplayer.c:  Check for file read errors and end-of-file
+	  with zero bytes read (2014-7-23).
+	* apps/system/nxplayer: Misc changes to better integrate with
+	  NxWM::CMediaPlayer (2014-7-23).
+	* apps/system/nxplayer/nxplayer.c and apps/include/nxplayer.h: Add hooks
+	  for fast-forward and rewind needed by CMediaPlayer; add hooks for
+	  equalizer settings needed by the WM8904  (2014-7-24).
+	* apps/include/nxplayer.h and apps/system/nxplayer/nxplayer.c: Changes to
+	  integrate with Ken's NxWM::CMediaPlayer (2014-7-24).
+	* apps/include/nxplayer.h: Move subsampling rate definitions from nxplayer.h
+	  to audio.h *2014-7-27).
+	* apps/system/nxplayer/nxplayer.c: NxPlayer needs to set curbyte field to
+	  zero before enqueuing a buffer.  Otherwise, it looks like beginning of
+	  the buffer has already been consumed. (2014-7-27).
+	* apps/netutils/webserver/httpd.c:  Missing logic to close sockets on loop
+	  termination.  From Max (2014-7-28).
+	* apps/system/nxplayer/nxplayer.c:  Fix some error handling, update
+	  comments, more debug output (2014-7-31).
+	* apps/system/nxplayer/nxplayer.c: Change how the end of the audio
+	  stream is detected by the leaf audio component.  This used by be done
+	  by looking for the first partial buffer.  That does not work with the
+	  in-place sub-sampling performed by the PCM decoder:  That always reduces
+	  the size of the buffer so that all buffers only partially filled by the
+	  time they get to the leaf.  Now, a flag is set in the audio buffer
+	  flags set to indicate the final buffer in the stream (2014-7-31).
+	* apps/system/nxplayer/nxplayer.c: Fix an error I introduced:  Need to
+	  pass through final buffer even if is it zero length because it contains
+	  the end of audio stream flag (2014-8-1).
+	* apps/system/nxplayer/nxplayer.c: Break reading and enqueueing of audio
+	  buffers into two steps so that errors in enqueueing can be
+	  distinguished from errors in reading.  Errors in enqueueing signal a
+	  downstream decoder error.  Add logic to gracefully recover from
+	  downstream decoder errors (2014-8-5).
+	* apps/nshlib/Kconfig, nsh.h, and nsh_netinit.c: Software assigned MAC
+	  address is now configurable. From Lazlo (2014-8-6).
+	* apps/nshlib/Kconfig, nsh.h, and nsh_netinit.c: Also add an option to
+	  let platform-specific logic select the MAC address (2014-8-5).
+	* apps/nshlib/Kconfig, nsh.h, and nsh_netinit.c:  There is now a
+	  configuration option that will bring up the network on an separate
+	  thread.  Since the network bring-up is asynchronous, there are not
+	  serial console start-up delays due to the network negotiation time
+	  (2014-8-6).
+	* apps/system/sudoku:  Add a sudoku game (2014-8-11).
+
+7.5 2014-09-28 Gregory Nutt <gnutt@nuttx.org>
+
+	* apps/nshlib/Kconfig, nsh.h, and nsh_netinit.c:  Extend the NSH network
+	  initialization logic.  There is now an option that will create a
+	  network monitor thread that will monitor the state of the link.  When
+	  the link goes down, the code will attempt to gracefully put the
+	  Ethernet driver in a down state; When the link comes back, the code
+	  will attempt to bring the network back up (2014-8-17).
+	* apps/system/free/free.c and install/install.c: STM32 FLASH fixes:
+	  use size_t instead of uint16_t, make interface more generic.  From
+	  Freddie Chopin (2014-8-28).
+	* apps/examples/elf:  The ELF test/example has been extended so the
+	  individual ELF test programs can link against the SYSCALL library
+	  (if it is available) or against the C library to eliminate or
+	  minimize the need for symbol tables (2014-8-29).
+	* apps/nshlib/nsh_proccmds.c: Fix NSH PS command:  If there are no
+	  arguments, it would print garbage for argument list (2014-9-1).
+	* apps/import/, apps/tools/, apps/Makefile: Beginning of logic that
+	  will, hopefully, allow me to build applications against a NuttX export
+	  package (vs. the nuttx/ source tree) (2014-9-4).
+	* apps/tools/mkimport.sh and apps/import/Makefile: Add .config file to
+	  export package (2014-9-5).
+	* apps/Makefile: Add a 'make import' target.  More is needed before
+	  it will be usable (2014-9-5).
+	* apps/import/Make.defs and .gitignore: Added mostly empty Make.defs
+	  file.  Something like this will be bee needed for the 'make import'
+	  build (2014-9-5).
+	* apps/Makefile, examples/elf/Kconfig, and import/Make.defs: Copy more
+	  logic from nuttx/tools/Config.mk into the Make.defs file (2014-9-5).
+	* apps/import/Make.defs: Also need to define CFLAGS (2015-9-5)
+	* apps/import/scripts/gnu-elf.ld:  Add GCC linker script for ELF
+	  import builds (2014-9-5).
+	* All Makefiles:  Add an install target to all makefiles.  For the
+	  import build, the top-level Makefile now does two passes: (1) builds
+	  libapp.a, then (2) installs the programs (not yet finished) (2014-9-6).
+	* Many files:  With kernel build (CONFIG_BUILD_KERNEL), entry point to
+	  all tasks is main, not some xyz_main (2014-9-6).
+	* Many Makefiles: Add program installation for CONFIG_BUILD_KERNEL in
+	  all Makefiles that build a main() (2014-9-6).
+	* Many Makefiles.  For kernel build, the object file containing main
+	  cannot go into library because of name collisions.  The object file
+	  must be handled as a special case in every Makefile (2014-9-7).
+	* apps/import/Make.defs: libapps.a needs to be added to the list of
+	  libraries to link against (2014-9-7).
+	* apps/nshlib/nsh.h and nsh_ddcmd.c: Several commands must be disabled
+	  in the kernel build because they depend on interfaces that are not
+	  available outside of the kernel: dd, df, losetup, mkfatfs, mkdr, and
+	  ps (2014-9-7).
+	* apps/import/Make.defs: ELF build requires -fno-common in CFLAGS
+	  (2014-9-8).
+	* apps/tools/mkromfsimg.sh:  Add a script to create a BOOT ROMFS
+	  filesystem image (2014-9-9).
+	* Many makefiles:  All makefiles that have separated the MAINOBJ
+	  need to include MAINOBJ in list of C objects to be compiled.
+	  SourceForge tick #31 from Aton (2014-9-11).
+	* apps/examples/elf/tests/Makefile and nxflat/tests/Makefile: Do
+	  not build test cases that use task_create if there is an address
+	  environment (2014-9-14).
+	* apps/examples/null/null_main.c:  Need to include config.h it order know
+	  if this is or is not a kernel build (2014-9-16).
+	* Change all occurrences of NxConsole to NxTerm (2014-9-20).
+	* apps/examples/Konfig, Makefile, README.txt and all of mdrwb/: Add an
+	  example to test MTD R/W buffering (2014-9-25).
+	* apps/examples/ostest:  Add a trivial test of sem_timedwait (2014-9-16).
+
+7.6 2014-xx-xx Gregory Nutt <gnutt@nuttx.org>
+
+	* apps/examples/ostest:  Add a simple test of named semaphores
+	  (2014-9-23).
+	* apps/netutils/webclient/Kconfig and webclient.c: Add implementation of
+	  timeouts for the apps/netutils/webclient.  From Brennan Ashton
+	* apps/nshlib/Kconfig and nsh_romfsetc.c: Add support for a custom NSH
+	  ROMFS startup image header file location.  From Martin Lederhilger
+	  (2014-9-30).
+	* apps/nshlib/nsh_fscmds.c:  Fix ls -l output for regular files (14-9-30).
+	* apps/nshlib/nsh_ddcmd.c: Fix reversed in/out file closing when an
+	  error occurs.  From Ken Pettit (2014-10-2).
+	* apps/examples/ostest/aio.c, Kconfig, Makefile, and ostest_main.c: Add
+	  AIO test case in OS test (2014-10-5).
+	* apps/examples and system:  Remove non-portable uses of syslog
+	  (014-10-8).
+	* apps/: Correct everything under apps to use the corrected syslog
+	  interfaces (2014-10-8).
+	* apps/netutils/netlib/netlib_gethostaddr.c: Fix memcpy of host address
+	  in netlib_gethostaddr().  From Brennan Ashton (2014-10-17).
+	* apps/system/stackmonitor.c and stackmonitor/Makefile: Fix compile
+	  problems introduced when the syslog() prototype changed; Also update
+	  Makefile for kernel build From Radoslaw Adamczyk (2014-10-23).
+	* apps/examples/nxterm/Makefile: Update makefile for kernel-build
+	  issues. From Radoslaw Adamczyk (2014-10-23).
+	* apps/examples/keypadtest/keypadtest_main.c: Fixes to keypadtest from
+	  Pierre-Noel Bouteville (2014-10-23).
+	* apps/nshlib/nsh_parse.c, nsh.h, and Kconfig: Move CONFIG_NSH_TMPDIR
+	  to CONFIG_LIBC_TMPDIR (2014-11-05).

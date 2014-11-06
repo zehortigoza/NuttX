@@ -54,7 +54,6 @@
 #include <arch/serial.h>
 
 #include "up_arch.h"
-#include "os_internal.h"
 #include "up_internal.h"
 
 #include "lpc31_cgudrvr.h"
@@ -113,6 +112,9 @@ static const struct uart_ops_s g_uart_ops =
   .receive        = up_receive,
   .rxint          = up_rxint,
   .rxavailable    = up_rxavailable,
+#ifdef CONFIG_SERIAL_IFLOWCONTROL
+  .rxflowcontrol  = NULL,
+#endif
   .send           = up_send,
   .txint          = up_txint,
   .txready        = up_txready,
@@ -238,7 +240,7 @@ static inline void up_configbaud(void)
    */
 
   /* Get UART block clock divided by 16 */
-  
+
   qtrclk = lpc31_clkfreq(CLKID_UARTUCLK, DOMAINID_UART) >> 4;
 
   /* Try every valid multiplier, tmulval (or until a perfect

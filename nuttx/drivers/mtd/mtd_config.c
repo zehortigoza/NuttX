@@ -1,8 +1,10 @@
 /****************************************************************************
  * drivers/mtd/mtd_config.c
  *
+ *   Copyright (C) 2014 Gregory Nutt. All rights reserved.
  *   Copyright (C) 2013 Ken Pettit. All rights reserved.
  *   Author: Ken Pettit <pettitkd@gmail.com>
+ *           With Updates from Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,22 +91,22 @@
 
 struct mtdconfig_struct_s
 {
-  FAR struct mtd_dev_s *mtd; /* Contained MTD interface */
-  sem_t        exclsem;      /* Supports mutual exclusion */
-  uint16_t     blocksize;    /* Size of blocks in contained MTD */
-  uint16_t     erasesize;    /* Size of erase block  in contained MTD */
-  size_t       nblocks;      /* Number of blocks available */
-  size_t       neraseblocks; /* Number of erase blocks available */
-  off_t        readoff;      /* Read offset (for hexdump) */
-  FAR uint8_t *buffer;       /* Temp block read buffer */
+  FAR struct mtd_dev_s *mtd;  /* Contained MTD interface */
+  sem_t        exclsem;       /* Supports mutual exclusion */
+  uint32_t     blocksize :14; /* Size of blocks in contained MTD */
+  uint32_t     erasesize :18; /* Size of erase block  in contained MTD */
+  size_t       nblocks;       /* Number of blocks available */
+  size_t       neraseblocks;  /* Number of erase blocks available */
+  off_t        readoff;       /* Read offset (for hexdump) */
+  FAR uint8_t *buffer;        /* Temp block read buffer */
 };
 
 struct mtdconfig_header_s
 {
-  uint8_t      flags;        /* Entry control flags */
-  uint8_t      instance;     /* Instance of the item */
-  uint16_t     id;           /* ID of the config data item */
-  uint16_t     len;          /* Length of the data block */
+  uint8_t      flags;         /* Entry control flags */
+  uint8_t      instance;      /* Instance of the item */
+  uint16_t     id;            /* ID of the config data item */
+  uint16_t     len;           /* Length of the data block */
 } packed_struct;
 
 /****************************************************************************
@@ -559,7 +561,7 @@ static off_t  mtdconfig_ramconsolidate(FAR struct mtdconfig_struct_s *dev)
 
   /* Allocate a consolidation buffer */
 
-  pBuf = (uint8_t *)kmalloc(dev->erasesize);
+  pBuf = (uint8_t *)kmm_malloc(dev->erasesize);
   if (pBuf == NULL)
     {
       /* Unable to allocate buffer, can't consolidate! */
@@ -686,7 +688,7 @@ static off_t  mtdconfig_ramconsolidate(FAR struct mtdconfig_struct_s *dev)
     }
 
 errout:
-  kfree(pBuf);
+  kmm_free(pBuf);
   return dst_offset;
 }
 
@@ -728,7 +730,7 @@ static off_t  mtdconfig_consolidate(FAR struct mtdconfig_struct_s *dev)
 
   /* Allocate a small buffer for moving data */
 
-  pBuf = (uint8_t *)kmalloc(dev->blocksize);
+  pBuf = (uint8_t *)kmm_malloc(dev->blocksize);
   if (pBuf == NULL)
     {
       return 0;
@@ -892,7 +894,7 @@ retry_relocate:
     }
 
 errout:
-  kfree(pBuf);
+  kmm_free(pBuf);
   return 0;
 }
 #endif /* CONFIG_MTD_CONFIG_RAM_CONSOLIDATE */
@@ -1034,7 +1036,7 @@ static int mtdconfig_setconfig(FAR struct mtdconfig_struct_s *dev,
 
   /* Allocate a temp block buffer */
 
-  dev->buffer = (FAR uint8_t *) kmalloc(dev->blocksize);
+  dev->buffer = (FAR uint8_t *) kmm_malloc(dev->blocksize);
 
   /* Read and vaidate the signature bytes */
 
@@ -1201,7 +1203,7 @@ errout:
 
   /* Free the buffer */
 
-  kfree(dev->buffer);
+  kmm_free(dev->buffer);
   return ret;
 }
 
@@ -1218,7 +1220,7 @@ static int mtdconfig_getconfig(FAR struct mtdconfig_struct_s *dev,
 
   /* Allocate a temp block buffer */
 
-  dev->buffer = (FAR uint8_t *)kmalloc(dev->blocksize);
+  dev->buffer = (FAR uint8_t *)kmm_malloc(dev->blocksize);
   if (dev->buffer == NULL)
     {
       return -ENOMEM;
@@ -1261,7 +1263,7 @@ static int mtdconfig_getconfig(FAR struct mtdconfig_struct_s *dev,
 errout:
   /* Free the buffer */
 
-  kfree(dev->buffer);
+  kmm_free(dev->buffer);
   return ret;
 }
 
@@ -1337,7 +1339,7 @@ int mtdconfig_register(FAR struct mtd_dev_s *mtd)
   struct mtdconfig_struct_s *dev;
   struct mtd_geometry_s geo;      /* Device geometry */
 
-  dev = (struct mtdconfig_struct_s *)kmalloc(sizeof(struct mtdconfig_struct_s));
+  dev = (struct mtdconfig_struct_s *)kmm_malloc(sizeof(struct mtdconfig_struct_s));
   if (dev)
     {
       /* Initialize the mtdconfig device structure */
@@ -1354,7 +1356,7 @@ int mtdconfig_register(FAR struct mtd_dev_s *mtd)
       if (ret < 0)
         {
           fdbg("MTD ioctl(MTDIOC_GEOMETRY) failed: %d\n", ret);
-          kfree(dev);
+          kmm_free(dev);
           goto errout;
         }
 

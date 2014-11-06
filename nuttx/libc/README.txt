@@ -11,12 +11,15 @@ mode.  In that model, there is no real architectural distinction between
 what is a kernel-mode program and what is a user-mode program; the system is
 more like on multi-threaded program that all runs in kernel-mode.
 
-But if the CONFIG_NUTTX_KERNEL option is selected, NuttX will be built into
-distinct user-mode and kernel-mode sections.  In that case, most of the
+But if the CONFIG_BUILD_PROTECTED option is selected, NuttX will be built
+into distinct user-mode and kernel-mode sections.  In that case, most of the
 code in the nuttx/ directory will run in kernel-mode with with exceptions
 of (1) the user-mode "proxies" found in syscall/proxies, and (2) the
 standard C library functions found in this directory.  In this build model,
 it is critical to separate the user-mode OS interfaces in this way.
+
+If CONFIG_BUILD_KERNEL is selected, then only a NuttX kernel will be built
+with no applications.
 
 Sub-Directories
 ===============
@@ -52,7 +55,7 @@ Library Database
 
 Information about functions available in the NuttX C library information is
 maintained in a database.  That "database" is implemented as a simple comma-
-separated-value file, lib.csv.  Most spreadsheets programs will accept this
+separated-value file, libc.csv.  Most spreadsheets programs will accept this
 format and can be used to maintain the library database.
 
 This library database will (eventually) be used to generate symbol library
@@ -70,7 +73,7 @@ Each type field has a format as follows:
 
   type name:
         For all simpler types
-  formal type | actual type: 
+  formal type | actual type:
         For array types where the form of the formal (eg. int parm[2])
         differs from the type of actual passed parameter (eg. int*).  This
         is necessary because you cannot do simple casts to array types.
@@ -78,7 +81,7 @@ Each type field has a format as follows:
         A similar situation exists for unions.  For example, the formal
         parameter type union sigval -- You cannot cast a uintptr_t to
         a union sigval, but you can cast to the type of one of the union
-        member types when passing the actual paramter.  Similarly, we
+        member types when passing the actual parameter.  Similarly, we
         cannot cast a union sigval to a uinptr_t either.  Rather, we need
         to cast a specific union member fieldname to uintptr_t.
 

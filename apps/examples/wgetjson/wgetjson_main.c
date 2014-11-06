@@ -49,7 +49,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <apps/netutils/uiplib.h>
+#include <apps/netutils/netlib.h>
 #include <apps/netutils/webclient.h>
 #include <apps/netutils/cJSON.h>
 
@@ -289,7 +289,11 @@ static int wgetjson_json_parse(char *text)
  * Name: wgetjson_main
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int wgetjson_main(int argc, char *argv[])
+#endif
 {
   char *buffer = NULL;
   int buffer_len = 512;

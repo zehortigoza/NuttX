@@ -55,7 +55,7 @@
 #include "stm32_otgfs.h"
 #include "stm32f429i-disco.h"
 
-#ifdef CONFIG_STM32_OTGFS2
+#ifdef CONFIG_STM32_OTGHS
 
 /************************************************************************************
  * Pre-processor Definitions
@@ -64,7 +64,7 @@
 #if defined(CONFIG_USBDEV) || defined(CONFIG_USBHOST)
 #  define HAVE_USB 1
 #else
-#  warning "CONFIG_STM32_OTGFS2 is enabled but neither CONFIG_USBDEV nor CONFIG_USBHOST"
+#  warning "CONFIG_STM32_OTGHS is enabled but neither CONFIG_USBDEV nor CONFIG_USBHOST"
 #  undef HAVE_USB
 #endif
 
@@ -148,7 +148,7 @@ void stm32_usbinitialize(void)
 
   /* Configure the OTG HS VBUS sensing GPIO, Power On, and Overcurrent GPIOs */
 
-#ifdef CONFIG_STM32_OTGFS2
+#ifdef CONFIG_STM32_OTGHS
   stm32_configgpio(GPIO_OTGHS_VBUS);
   stm32_configgpio(GPIO_OTGHS_PWRON);
   stm32_configgpio(GPIO_OTGHS_OVER);
@@ -192,7 +192,7 @@ int stm32_usbhost_initialize(void)
 
       uvdbg("Start usbhost_waiter\n");
 
-      pid = TASK_CREATE("usbhost", CONFIG_USBHOST_DEFPRIO,
+      pid = task_create("usbhost", CONFIG_USBHOST_DEFPRIO,
                         CONFIG_USBHOST_STACKSIZE,
                         (main_t)usbhost_waiter, (FAR char * const *)NULL);
       return pid < 0 ? -ENOEXEC : OK;
@@ -209,14 +209,14 @@ int stm32_usbhost_initialize(void)
  *   Enable/disable driving of VBUS 5V output.  This function must be provided be
  *   each platform that implements the STM32 OTG HS host interface
  *
- *   "On-chip 5 V VBUS generation is not supported. For this reason, a charge pump 
- *    or, if 5 V are available on the application board, a basic power switch, must 
- *    be added externally to drive the 5 V VBUS line. The external charge pump can 
- *    be driven by any GPIO output. When the application decides to power on VBUS 
- *    using the chosen GPIO, it must also set the port power bit in the host port 
+ *   "On-chip 5 V VBUS generation is not supported. For this reason, a charge pump
+ *    or, if 5 V are available on the application board, a basic power switch, must
+ *    be added externally to drive the 5 V VBUS line. The external charge pump can
+ *    be driven by any GPIO output. When the application decides to power on VBUS
+ *    using the chosen GPIO, it must also set the port power bit in the host port
  *    control and status register (PPWR bit in OTG_HS_HPRT).
  *
- *   "The application uses this field to control power to this port, and the core 
+ *   "The application uses this field to control power to this port, and the core
  *    clears this bit on an overcurrent condition."
  *
  * Input Parameters:
@@ -232,7 +232,7 @@ int stm32_usbhost_initialize(void)
 void stm32_usbhost_vbusdrive(int iface, bool enable)
 {
   DEBUGASSERT(iface == 0);
-  
+
   if (enable)
     {
       /* Enable the Power Switch by driving the enable pin low */
@@ -240,9 +240,9 @@ void stm32_usbhost_vbusdrive(int iface, bool enable)
       stm32_gpiowrite(GPIO_OTGHS_PWRON, false);
     }
   else
-    { 
+    {
       /* Disable the Power Switch by driving the enable pin high */
- 
+
       stm32_gpiowrite(GPIO_OTGHS_PWRON, true);
     }
 }
@@ -288,5 +288,5 @@ void stm32_usbsuspend(FAR struct usbdev_s *dev, bool resume)
 }
 #endif
 
-#endif /* CONFIG_STM32_OTGFS2 */
+#endif /* CONFIG_STM32_OTGHS */
 

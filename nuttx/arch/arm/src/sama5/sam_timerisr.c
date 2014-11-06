@@ -52,11 +52,16 @@
 #include "chip/sam_pit.h"
 
 /****************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
-/* The PIT counter runs at a rate of the main clock (MCK) divided by 16 */
+/* The PIT counter runs at a rate of the main clock (MCK) divided by 16.
+ *
+ * On the SAMA5D4, the clocking to the PIC may be divided down from MCK.
+ * Perhaps because of H32MXDIV?  We will let the board.h tell us the correct
+ * PIT include clock by defining BOARD_PIT_FREQUENCY.
+ */
 
-#define PIT_CLOCK (BOARD_MCK_FREQUENCY >> 4)
+#define PIT_CLOCK (BOARD_PIT_FREQUENCY >> 4)
 
 /* The desired timer interrupt frequency is provided by the definition
  * CLK_TCK (see include/time.h).  CLK_TCK defines the desired number of
@@ -69,14 +74,6 @@
  */
 
 #define PIT_PIV ((PIT_CLOCK + (CLK_TCK >> 1)) / CLK_TCK)
-
-/* The size of the reload field is 20 bits.  Verify that the reload value
- * will fit in the reload register.
- */
-
-#if PIT_PIV > PIT_MR_PIV_MASK
-#  error PIT_PIV exceeds the maximum value
-#endif
 
 /****************************************************************************
  * Private Types
@@ -121,7 +118,7 @@ int up_timerisr(int irq, uint32_t *regs)
 }
 
 /****************************************************************************
- * Function:  up_timerinit
+ * Function:  up_timer_initialize
  *
  * Description:
  *   This function is called during start-up to initialize
@@ -129,7 +126,7 @@ int up_timerisr(int irq, uint32_t *regs)
  *
  ****************************************************************************/
 
-void up_timerinit(void)
+void up_timer_initialize(void)
 {
   uint32_t regval;
 
@@ -149,7 +146,10 @@ void up_timerinit(void)
    * interrupts from the PIT.
    */
 
-  regval = PIT_PIV | PIT_MR_PITEN | PIT_MR_PITIEN;
+  regval  = PIT_PIV;
+  DEBUGASSERT(regval <= PIT_MR_PIV_MASK);
+
+  regval |= (PIT_MR_PITEN | PIT_MR_PITIEN);
   putreg32(regval, SAM_PIT_MR);
 
   /* And enable the timer interrupt */

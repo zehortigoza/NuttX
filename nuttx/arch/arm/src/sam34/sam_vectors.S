@@ -62,7 +62,7 @@
    * nested interrupt, the interrupt stack if no privileged task has run.
    */
 
-#  if defined(CONFIG_NUTTX_KERNEL) && CONFIG_ARCH_INTERRUPTSTACK < 4
+#  if defined(CONFIG_BUILD_PROTECTED) && CONFIG_ARCH_INTERRUPTSTACK < 4
 #    error Interrupt stack must be used with high priority interrupts in kernel mode
 #  endif
 
@@ -166,6 +166,8 @@ _vectors:
 #  include "chip/sam3u_vectors.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM3X) || defined(CONFIG_ARCH_CHIP_SAM3A)
 #  include "chip/sam3x_vectors.h"
+#elif defined(CONFIG_ARCH_CHIP_SAM4CM)
+#  include "chip/sam4cm_vectors.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM4E)
 #  include "chip/sam4e_vectors.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM4L)
@@ -207,6 +209,8 @@ handlers:
 #  include "chip/sam3u_vectors.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM3X) || defined(CONFIG_ARCH_CHIP_SAM3A)
 #  include "chip/sam3x_vectors.h"
+#elif defined(CONFIG_ARCH_CHIP_SAM4CM)
+#  include "chip/sam4cm_vectors.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM4E)
 #  include "chip/sam4e_vectors.h"
 #elif defined(CONFIG_ARCH_CHIP_SAM4L)
@@ -242,7 +246,7 @@ exception_common:
 
 	/* Complete the context save */
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
 	/* The EXC_RETURN value will be 0xfffffff9 (privileged thread) or 0xfffffff1
 	 * (handler mode) if the stack is on the MSP.  It can only be on the PSP if
 	 * EXC_RETURN is 0xfffffffd (unprivileged thread)
@@ -284,7 +288,7 @@ exception_common:
 	 * r14=register values.
 	 */
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
 	stmdb	sp!, {r2-r11,r14}		/* Save the remaining registers plus the SP value */
 #else
 	stmdb	sp!, {r2-r11}			/* Save the remaining registers plus the SP value */
@@ -372,7 +376,7 @@ exception_common:
 	ldmia	r1, {r4-r11}			/* Fetch eight registers in HW save area */
 	ldr		r1, [r0, #(4*REG_SP)]	/* R1=Value of SP before interrupt */
 	stmdb	r1!, {r4-r11}			/* Store eight registers in HW save area */
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
 	ldmia	r0, {r2-r11,r14}		/* Recover R4-R11, r14 + 2 temp values */
 #else
 	ldmia	r0, {r2-r11}			/* Recover R4-R11 + 2 temp values */
@@ -387,7 +391,7 @@ exception_common:
 	 */
 
 2:
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
 	ldmia	r1!, {r2-r11,r14}		/* Recover R4-R11, r14 + 2 temp values */
 #else
 	ldmia	r1!, {r2-r11}			/* Recover R4-R11 + 2 temp values */
@@ -412,7 +416,7 @@ exception_common:
 
 3:
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
 	/* The EXC_RETURN value will be 0xfffffff9 (privileged thread) or 0xfffffff1
 	 * (handler mode) if the stack is on the MSP.  It can only be on the PSP if
 	 * EXC_RETURN is 0xfffffffd (unprivileged thread)
@@ -440,7 +444,7 @@ exception_common:
 	ldr		r14, =EXC_RETURN_PRIVTHR	/* Load the special value */
 #endif
 
-    /* Restore the interrupt state */
+	/* Restore the interrupt state */
 
 #ifdef CONFIG_ARMV7M_USEBASEPRI
 	msr		basepri, r3				/* Restore interrupts priority masking */
@@ -469,6 +473,7 @@ exception_common:
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
 	.bss
+	.global	g_intstackalloc
 	.global	g_intstackbase
 	.align	4
 g_intstackalloc:

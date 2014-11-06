@@ -41,7 +41,7 @@ SUBDIRS = tiff screenshot
 
 # Sub-directories that might need context setup
 
-CNTXTDIRS = 
+CNTXTDIRS =
 
 all: nothing
 .PHONY: nothing context depend clean distclean
@@ -57,6 +57,8 @@ $(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
 $(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),distclean)))
 
 nothing:
+
+install:
 
 context: # $(foreach SDIR, $(CNTXTDIRS), $(SDIR)_context)
 

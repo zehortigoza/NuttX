@@ -85,7 +85,11 @@
  * Name: relays_main
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int relays_main(int argc, char *argv[])
+#endif
 {
   char *stat = NULL;
   char *no = NULL;
@@ -122,15 +126,15 @@ int relays_main(int argc, char *argv[])
       printf("usage: relays [ -n <relay id> ] <switch-status>\n");
       return -1;
     }
-  
+
   if (optind == argc - 1)
     {
       stat = argv[optind];
       set_stat = (!strcmp(stat,"on") || !strcmp(stat,"ON")) ? true : false ;
     }
-  
+
   up_relaysinit();
-    
+
   if (n >= 0)
     {
       printf("set RELAY ID %d to %s\n", n , set_stat ? "ON" : "OFF");

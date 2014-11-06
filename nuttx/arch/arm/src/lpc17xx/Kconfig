@@ -169,28 +169,33 @@ config LPC17_SDCARD
 
 config LPC17_UART0
 	bool "UART0"
-	select ARCH_HAVE_UART0
 	default n
+	select ARCH_HAVE_UART0
+	select ARCH_HAVE_SERIAL_TERMIOS
 
 config LPC17_UART1
 	bool "UART1"
-	select ARCH_HAVE_UART1
 	default n
+	select ARCH_HAVE_UART1
+	select ARCH_HAVE_SERIAL_TERMIOS
 
 config LPC17_UART2
 	bool "UART2"
-	select ARCH_HAVE_UART2
 	default n
+	select ARCH_HAVE_UART2
+	select ARCH_HAVE_SERIAL_TERMIOS
 
 config LPC17_UART3
 	bool "UART3"
-	select ARCH_HAVE_UART3
 	default n
+	select ARCH_HAVE_UART3
+	select ARCH_HAVE_SERIAL_TERMIOS
 
 config LPC17_UART4
 	bool "UART4"
-	select ARCH_HAVE_UART4
 	default n
+	select ARCH_HAVE_UART4
+	select ARCH_HAVE_SERIAL_TERMIOS
 
 config LPC17_CAN1
 	bool "CAN1"
@@ -244,6 +249,15 @@ config LPC17_TMR0
 	bool "Timer 0"
 	default n
 
+config LPC17_MAT0_PIN
+	int "TIM1 MAT0 Output Pin"
+	default 1
+	range 1 4
+	depends on LPC17_TMR0
+	---help---
+		If TIM1 is enabled for PWM usage, you also need specifies the timer output
+		channel {1,..,4}
+
 config LPC17_TMR1
 	bool "Timer 1"
 	default n
@@ -267,12 +281,30 @@ config LPC17_PWM0
 config LPC17_PWM1
 	bool "PWM1"
 	default n
-	depends on ARCH_FAMILY_LPC177X || ARCH_FAMILY_LPC178X
+	depends on ARCH_FAMILY_LPC177X || ARCH_FAMILY_LPC178X || ARCH_FAMILY_LPC176X
+
+config LPC17_PWM1_PIN
+	int "TIM1 PWM Output Pin"
+	default 1
+	range 1 4
+	depends on LPC17_PWM1
+	---help---
+		If TIM1 is enabled for PWM usage, you also need specifies the timer output
+		channel {1,..,4}
 
 config LPC17_MCPWM
 	bool "MCPWM"
 	default n
 	depends on ARCH_FAMILY_LPC175X || ARCH_FAMILY_LPC176X
+
+config LPC17_MCPWM1_PIN
+	int "TIM1 MCPWM Output Pin"
+	default 1
+	range 1 4
+	depends on LPC17_MCPWM
+	---help---
+		If TIM1 is enabled for PWM usage, you also need specifies the timer output
+		channel {1,..,4}
 
 config LPC17_QEI
 	bool "QEI"
@@ -438,15 +470,6 @@ endmenu
 menu "Serial driver options"
 	depends on LPC17_UART0 || LPC17_UART1 || LPC17_UART2 || LPC17_UART3 || LPC17_UART4
 
-config SERIAL_TERMIOS
-	bool "Serial driver TERMIOS supported"
-	depends on LPC17_UART0 || LPC17_UART1 || LPC17_UART2 || LPC17_UART3
-	default n
-	---help---
-		Serial driver supports termios.h interfaces (tcsetattr, tcflush, etc.).
-		If this is not defined, then the terminal settings (baud, parity, etc).
-		are not configurable at runtime; serial streams cannot be flushed, etc..
-
 config UART1_RINGINDICATOR
 	bool "UART1 ring indicator"
 	depends on LPC17_UART1
@@ -490,10 +513,16 @@ config ADC_CHANLIST
 		(2) provide an array g_adc_chanlist[] with the channel numbers
 		matching the ADC0_MASK within the board-specific library.
 
+config ADC_BURSTMODE
+    bool "One interrupt at the end of all ADC cconversions"
+    default n
+    ---help---
+        Select this if you want to generate only one interrupt once all selected channels has been converted by the ADC
+
 config ADC_NCHANNELS
 	int "ADC0 number of channels"
 	depends on ADC_CHANLIST
-	default 0  
+	default 0
 	---help---
 		If ADC_CHANLIST is enabled, then the platform specific code
 		must do two things:  (1) define ADC_NCHANNELS in the configuration
@@ -606,7 +635,7 @@ config SDIO_DMA
 	default y if LPC17_GPDMA
 	depends on LPC17_GPDMA
 	---help---
-		Support DMA data transfers.  
+		Support DMA data transfers.
 		Enable SD card DMA data transfers.  This is a marginally optional.
 		For most usages, SD accesses will cause data overruns if used without
 		DMA.  Requires LPC17_SDCARD and config LPC17_GPDMA.
@@ -668,9 +697,10 @@ config NET_NRXDESC
 
 config NET_PRIORITY
 	int "Ethernet interrupt priority"
-	default 0
+	default 128
+	depends on ARCH_IRQPRIO && EXPERIMENTAL
 	---help---
-		Ethernet interrupt priority.  The is default is the higest priority (0).
+		Ethernet interrupt priority.  The default is the default priority (128).
 
 config NET_WOL
 	bool "Wake-up on LAN"
@@ -698,6 +728,13 @@ config NET_MULTICAST
 	---help---
 		Enable receipt of multicast (and unicast) frames. Automatically set
 		if NET_IGMP is selected.
+
+config NET_WORKER_THREAD
+    bool "Net worker thread enable"
+    default y
+    depends on SCHED_WORKQUEUE
+    ---help---
+        Enable use of ethernet worker thread (depends on CONFIG_SCHED_WORKQUEUE).
 
 endmenu
 

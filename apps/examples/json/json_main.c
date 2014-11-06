@@ -130,7 +130,7 @@ static void create_objects(void)
   int i;
 
   /* Our "days of the week" array */
-  
+
   static const char *strings[7] =
   {
     "Sunday", "Monday", "Tuesday", "Wednesday",
@@ -138,7 +138,7 @@ static void create_objects(void)
   };
 
   /* Our matrix: */
-  
+
   static const int numbers[3][3] = { {0, -1, 0}, {1, 0, 0}, {0, 0, 1} };
 
   /* Our "gallery" item: */
@@ -229,14 +229,18 @@ static void create_objects(void)
  * Public Functions
  ****************************************************************************/
 /****************************************************************************
- * Name: 
+ * Name:
  *
  * Description:
- *   
+ *
  *
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int json_main(int argc, const char *argv[])
+#endif
 {
   /* a bunch of json: */
 
@@ -252,7 +256,7 @@ int json_main(int argc, const char *argv[])
     "  }\n"
     "}";
 
-  static const char text2[] = 
+  static const char text2[] =
     "[\"Sunday\", \"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\"]";
 
   static const char text3[] =
@@ -261,7 +265,7 @@ int json_main(int argc, const char *argv[])
     "  [1, 0, 0],\n"
     "  [0, 0, 1]\n"
     "]\n";
-  
+
   static const char text4[] =
     "{\n"
     "  \"Image\": {\n"

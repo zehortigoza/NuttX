@@ -48,7 +48,7 @@
 #include "up_internal.h"
 
 /****************************************************************************
- * Pre-Processor Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 #ifndef CONFIG_SIM_FBWIDTH
@@ -303,7 +303,7 @@ static int up_getcursor(FAR struct fb_vtable_s *vtable,
 #endif
 
 /****************************************************************************
- * Name: 
+ * Name:
  ****************************************************************************/
 
 #ifdef CONFIG_FB_HWCURSOR

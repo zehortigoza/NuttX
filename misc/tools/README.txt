@@ -128,7 +128,7 @@ kconfig-frontends-3.3.0-1-libintl.patch
 
   See: http://ymorin.is-a-geek.org/hg/kconfig-frontends/file/tip/docs/known-issues.txt
 
-  Update: Version 3.6.0 (and above) will build on Cygwin with no patches: 
+  Update: Version 3.6.0 (and above) will build on Cygwin with no patches:
 
     http://ymorin.is-a-geek.org/download/kconfig-frontends/
 
@@ -198,7 +198,7 @@ http://uvc.de/posts/linux-kernel-configuration-tool-mconf-under-windows.html
 
 [The remainder of the text in this section is for historical interest only]
 
-From http://tech.groups.yahoo.com/group/nuttx/message/2900:
+From https://groups.yahoo.com/neo/groups/nuttx/conversations/messages/2900:
 
 "The build was quite simple:
 

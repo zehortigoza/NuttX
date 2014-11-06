@@ -908,7 +908,7 @@ static void sam_dma_single(uint8_t epno, struct sam_req_s *privreq,
   /* Flush the contents of the DMA buffer to RAM */
 
   buffer = (uintptr_t)&privreq->req.buf[privreq->req.xfrd];
-  cp15_clean_dcache(buffer, buffer + privreq->inflight);
+  arch_clean_dcache(buffer, buffer + privreq->inflight);
 
   /* Set up the DMA */
 
@@ -1205,7 +1205,6 @@ static void sam_req_wrsetup(struct sam_usbdev_s *priv,
   uint8_t *fifo;
   uint8_t epno;
   int nbytes;
-  int bytesleft;
 
   /* Get the unadorned endpoint number */
 
@@ -1217,61 +1216,45 @@ static void sam_req_wrsetup(struct sam_usbdev_s *priv,
 
   /* Get the number of bytes remaining to be sent. */
 
-  bytesleft = privreq->req.len - privreq->req.xfrd;
+  DEBUGASSERT(privreq->req.xfrd < privreq->req.len);
+  nbytes = privreq->req.len - privreq->req.xfrd;
 
-  /* Clip the requested transfer size to the number of bytes actually
-   * available
+  /* Either send the maxpacketsize or all of the remaining data in
+   * the request.
    */
 
-  nbytes = bytesleft;
-  if (nbytes > bytesleft)
+  if (nbytes >= privep->ep.maxpacket)
     {
-      nbytes = bytesleft;
+      nbytes =  privep->ep.maxpacket;
     }
 
-  /* If we are not sending a zero length packet, then clip the size to
-   * maxpacket and check if we need to send a following zero length packet.
+  /* This is the new number of bytes "in-flight" */
+
+  privreq->inflight = nbytes;
+  usbtrace(TRACE_WRITE(USB_EPNO(privep->ep.eplog)), nbytes);
+
+  /* The new buffer pointer is the started of the buffer plus the number
+   * of bytes successfully transfered plus the number of bytes previously
+   * "in-flight".
    */
 
-  if (nbytes > 0)
+  buf = privreq->req.buf + privreq->req.xfrd;
+
+  /* Write packet in the FIFO buffer */
+
+  fifo = (uint8_t *)
+    ((uint32_t *)SAM_UDPHSRAM_VSECTION + (EPT_VIRTUAL_SIZE * epno));
+
+  for (; nbytes; nbytes--)
     {
-      /* Either send the maxpacketsize or all of the remaining data in
-       * the request.
-       */
-
-      if (nbytes >= privep->ep.maxpacket)
-        {
-          nbytes =  privep->ep.maxpacket;
-        }
-
-      /* This is the new number of bytes "in-flight" */
-
-      privreq->inflight = nbytes;
-      usbtrace(TRACE_WRITE(USB_EPNO(privep->ep.eplog)), nbytes);
-
-      /* The new buffer pointer is the started of the buffer plus the number
-       * of bytes successfully transfered plus the number of bytes previously
-       * "in-flight".
-       */
-
-      buf = privreq->req.buf + privreq->req.xfrd;
-
-      /* Write packet in the FIFO buffer */
-
-      fifo = (uint8_t *)
-        ((uint32_t *)SAM_UDPHSRAM_VSECTION + (EPT_VIRTUAL_SIZE * epno));
-
-      for (; nbytes; nbytes--)
-        {
-          *fifo++ = *buf++;
-        }
-
-        /* Indicate that there is data in the TX packet memory.  This will
-         * be cleared when the next data out interrupt is received.
-         */
-
-        privep->epstate = UDPHS_EPSTATE_SENDING;
+      *fifo++ = *buf++;
     }
+
+  /* Indicate that there is data in the TX packet memory.  This will
+   * be cleared when the next data out interrupt is received.
+   */
+
+  privep->epstate = UDPHS_EPSTATE_SENDING;
 
   /* Initiate the transfer and configure to receive the transfer complete
    * interrupt.
@@ -1390,7 +1373,8 @@ static int sam_req_write(struct sam_usbdev_s *priv, struct sam_ep_s *privep)
             }
 
           /* The way that we handle the transfer is going to depend on
-           * whether or not this endpoint supports DMA.
+           * whether or not this endpoint supports DMA.  In either case
+           * the endpoint state will transition to SENDING.
            */
 
           if ((SAM_EPSET_DMA & SAM_EP_BIT(epno)) != 0)
@@ -1435,21 +1419,22 @@ static int sam_req_write(struct sam_usbdev_s *priv, struct sam_ep_s *privep)
         }
 
       /* If all of the bytes were sent (including any final zero length
-       * packet) then we are finished with the request buffer), then we can
-       * return the request buffer to the class driver.  The transfer is not
-       * finished yet, however.  There are still bytes in flight.  The
-       * transfer is truly finished when we are called again and the
-       * request buffer is empty.
+       * packet) then we are finished with the request buffer and we can
+       * return the request buffer to the class driver.  The state will
+       * remain IDLE only if nothing else was put in flight.
+       *
+       * Note that we will then loop to check to check the next queued
+       * write request.
        */
 
-      if (privreq->req.len >= privreq->req.xfrd &&
-          privep->epstate == UDPHS_EPSTATE_IDLE)
+      if (privep->epstate == UDPHS_EPSTATE_IDLE)
         {
           /* Return the write request to the class driver */
 
           usbtrace(TRACE_COMPLETE(USB_EPNO(privep->ep.eplog)),
                    privreq->req.xfrd);
 
+          DEBUGASSERT(privreq->req.len == privreq->req.xfrd);
           sam_req_complete(privep, OK);
         }
     }
@@ -1582,7 +1567,7 @@ static void sam_req_rddisable(uint8_t epno)
  *     'inflight' field to hold the maximum size of the transfer; but
  *     'inflight' is not used with FIFO transfers.
  *
- *     When the transfer completes, the 'recvsize' paramter must be the
+ *     When the transfer completes, the 'recvsize' parameter must be the
  *     size of the transfer that just completed.   For the case of DMA,
  *     that is the size of the DMA transfer that has just been written to
  *     memory; for the FIFO transfer, recvsize is the number of bytes
@@ -2427,7 +2412,7 @@ static void sam_dma_interrupt(struct sam_usbdev_s *priv, int epno)
 
           DEBUGASSERT(USB_ISEPOUT(privep->ep.eplog));
           buf = &privreq->req.buf[privreq->req.xfrd];
-          cp15_invalidate_dcache((uintptr_t)buf, (uintptr_t)buf + xfrsize);
+          arch_invalidate_dcache((uintptr_t)buf, (uintptr_t)buf + xfrsize);
 
           /* Complete this transfer, return the request to the class
            * implementation, and try to start the next, queue read request.
@@ -2483,7 +2468,7 @@ static void sam_dma_interrupt(struct sam_usbdev_s *priv, int epno)
        */
 
       buf = &privreq->req.buf[privreq->req.xfrd];
-      cp15_invalidate_dcache((uintptr_t)buf, (uintptr_t)buf + xfrsize);
+      arch_invalidate_dcache((uintptr_t)buf, (uintptr_t)buf + xfrsize);
 
       /* Complete this transfer, return the request to the class
        * implementation, and try to start the next, queue read request.
@@ -2602,7 +2587,9 @@ static void sam_ep_interrupt(struct sam_usbdev_s *priv, int epno)
             ((eptsta & UDPHS_EPTSTA_BYTECNT_MASK) >>
             UDPHS_EPTSTA_BYTECNT_SHIFT);
 
-          /* And continue processing the read request */
+          /* And continue processing the read request, clearing RXRDYTXKL in
+           * order to receive more data.
+           */
 
           privep->epstate = UDPHS_EPSTATE_IDLE;
           sam_req_read(priv, privep, pktsize);
@@ -2630,9 +2617,12 @@ static void sam_ep_interrupt(struct sam_usbdev_s *priv, int epno)
           len = GETUINT16(priv->ctrl.len);
           if (len == pktsize)
             {
-              /* Copy the OUT data from the EP0 FIFO into special EP0 buffer. */
+              /* Copy the OUT data from the EP0 FIFO into a special EP0 buffer
+               * and clear RXRDYTXKL in order to receive more data.
+               */
 
               sam_ep0_read(priv->ep0out, len);
+              sam_putreg(UDPHS_EPTSTA_RXRDYTXKL, SAM_UDPHS_EPTCLRSTA(epno));
 
               /* And handle the EP0 SETUP now. */
 
@@ -2641,7 +2631,11 @@ static void sam_ep_interrupt(struct sam_usbdev_s *priv, int epno)
           else
             {
               usbtrace(TRACE_DEVERROR(SAM_TRACEERR_EP0SETUPOUTSIZE), pktsize);
+
+              /* STALL and discard received data. */
+
               (void)sam_ep_stall(&privep->ep, false);
+              sam_putreg(UDPHS_EPTSTA_RXRDYTXKL, SAM_UDPHS_EPTCLRSTA(epno));
             }
         }
       else
@@ -2651,14 +2645,12 @@ static void sam_ep_interrupt(struct sam_usbdev_s *priv, int epno)
           if (eptype == UDPHS_EPTCFG_TYPE_CTRL8 &&
               (eptsta & UDPHS_EPTSTA_BYTECNT_MASK) == 0)
             {
-              sam_putreg(UDPHS_EPTSTA_RXRDYTXKL, SAM_UDPHS_EPTCLRSTA(epno));
             }
 
           /* Data has been STALLed */
 
           else if ((eptsta & UDPHS_EPTSTA_FRCESTALL) != 0)
             {
-              sam_putreg(UDPHS_EPTSTA_RXRDYTXKL, SAM_UDPHS_EPTCLRSTA(epno));
             }
 
           /* NAK the data */
@@ -2669,6 +2661,12 @@ static void sam_ep_interrupt(struct sam_usbdev_s *priv, int epno)
               regval &= ~UDPHS_INT_EPT(epno);
               sam_putreg(regval, SAM_UDPHS_IEN);
             }
+
+          /* Discard any received data and clear UDPHS_EPTSTA_RXRDYTXKL so that we
+           * may receive more data.
+           */
+
+          sam_putreg(UDPHS_EPTSTA_RXRDYTXKL, SAM_UDPHS_EPTCLRSTA(epno));
         }
     }
 
@@ -2750,7 +2748,7 @@ static void sam_ep_interrupt(struct sam_usbdev_s *priv, int epno)
             }
           else
             {
-              /* This is an SETUP OUT command (or a SETUP IN with no data).
+              /* This is an SETUP IN command (or a SETUP IN with no data).
                * Handle the EP0 SETUP now.
                */
 
@@ -3368,12 +3366,6 @@ static int sam_ep_configure_internal(struct sam_ep_s *privep,
     }
 
   sam_putreg(regval, SAM_UDPHS_EPTCTLENB(epno));
-
-  /* If this was the last endpoint, then the class driver is fully
-   * configured.
-   */
-
-  priv->devstate = UDPHS_DEVSTATE_CONFIGURED;
   sam_dumpep(priv, epno);
   return OK;
 }
@@ -3394,6 +3386,8 @@ static int sam_ep_configure(struct usbdev_ep_s *ep,
                             bool last)
 {
   struct sam_ep_s *privep = (struct sam_ep_s *)ep;
+  struct sam_usbdev_s *priv;
+  int ret;
 
   /* Verify parameters.  Endpoint 0 is not available at this interface */
 
@@ -3407,7 +3401,18 @@ static int sam_ep_configure(struct usbdev_ep_s *ep,
 
   /* This logic is implemented in sam_ep_configure_internal */
 
-  return sam_ep_configure_internal(privep, desc);
+  ret = sam_ep_configure_internal(privep, desc);
+  if (ret == OK && last)
+    {
+      /* If this was the last endpoint, then the class driver is fully
+       * configured.
+       */
+
+      priv           = privep->dev;
+      priv->devstate = UDPHS_DEVSTATE_CONFIGURED;
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -3471,7 +3476,7 @@ static struct usbdev_req_s *sam_ep_allocreq(struct usbdev_ep_s *ep)
 #endif
   usbtrace(TRACE_EPALLOCREQ, USB_EPNO(ep->eplog));
 
-  privreq = (struct sam_req_s *)kmalloc(sizeof(struct sam_req_s));
+  privreq = (struct sam_req_s *)kmm_malloc(sizeof(struct sam_req_s));
   if (!privreq)
     {
       usbtrace(TRACE_DEVERROR(SAM_TRACEERR_ALLOCFAIL), 0);
@@ -3503,7 +3508,7 @@ static void sam_ep_freereq(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
 #endif
   usbtrace(TRACE_EPFREEREQ, USB_EPNO(ep->eplog));
 
-  kfree(privreq);
+  kmm_free(privreq);
 }
 
 /****************************************************************************
@@ -3519,7 +3524,7 @@ static void *sam_ep_allocbuffer(struct usbdev_ep_s *ep, uint16_t nbytes)
 {
   /* There is not special buffer allocation requirement */
 
-  return kumalloc(nbytes);
+  return kumm_malloc(nbytes);
 }
 #endif
 
@@ -3536,7 +3541,7 @@ static void sam_ep_freebuffer(struct usbdev_ep_s *ep, void *buf)
 {
   /* There is not special buffer allocation requirement */
 
-  kufree(buf);
+  kumm_free(buf);
 }
 #endif
 
@@ -3584,8 +3589,6 @@ static int sam_ep_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
   req->result       = -EINPROGRESS;
   req->xfrd         = 0;
   privreq->inflight = 0;
-  privep->zlpneeded = false;
-  privep->zlpsent   = false;
   flags             = irqsave();
 
   /* Handle IN (device-to-host) requests.  NOTE:  If the class device is
@@ -4288,7 +4291,7 @@ static void sam_sw_setup(struct sam_usbdev_s *priv)
   /* Allocate a pool of free DMA transfer descriptors */
 
   priv->dtdpool = (struct sam_dtd_s *)
-    kmemalign(16, CONFIG_SAMA5_UDPHS_NDTDS * sizeof(struct sam_dtd_s));
+    kmm_memalign(16, CONFIG_SAMA5_UDPHS_NDTDS * sizeof(struct sam_dtd_s));
   if (!priv->dtdpool)
      {
       udbg("ERROR: Failed to allocate the DMA transfer descriptor pool\n");

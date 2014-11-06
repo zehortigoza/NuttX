@@ -25,8 +25,7 @@ Development Environment
   Either Linux or Cygwin on Windows can be used for the development environment.
   The source has been built only using the GNU toolchain (see below).  Other
   toolchains will likely cause problems. Testing was performed using the Cygwin
-  environment because the Raisonance R-Link emulatator and some RIDE7 development tools
-  were used and those tools works only under Windows.
+  environment.
 
 GNU Toolchain Options
 ^^^^^^^^^^^^^^^^^^^^^
@@ -94,9 +93,8 @@ IDEs
 ^^^^
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
-  
+  effort will be required to create the project.
+
   Makefile Build
   --------------
   Under Eclipse, it is pretty easy to set up an "empty makefile project" and
@@ -119,9 +117,9 @@ IDEs
      on the command line.
 
   Startup files will probably cause you some headaches.  The NuttX startup file
-  is arch/arm/src/stm32/stm32_vectors.S.  With RIDE, I have to build NuttX
+  is arch/arm/src/stm32/stm32_vectors.S.  You may have to build NuttX
   one time from the Cygwin command line in order to obtain the pre-built
-  startup object needed by RIDE.
+  startup object needed by an IDE.
 
 NuttX EABI "buildroot" Toolchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -193,7 +191,7 @@ NXFLAT Toolchain
   tools -- just the NXFLAT tools.  The buildroot with the NXFLAT tools can
   be downloaded from the NuttX SourceForge download site
   (https://sourceforge.net/projects/nuttx/files/).
- 
+
   This GNU toolchain builds and executes in the Linux or Cygwin environment.
 
   1. You must have already configured Nuttx in <some-dir>/nuttx.
@@ -241,7 +239,7 @@ VSN-specific Configuration Options
     CONFIG_ARCH_CHIP_name - For use in C code to identify the exact
        chip:
 
-       CONFIG_ARCH_CHIP_STM32F103RET6
+       CONFIG_ARCH_CHIP_STM32F103RE
 
     CONFIG_ARCH_BOARD - Identifies the configs subdirectory and
        hence, the board that supports the particular chip or SoC.
@@ -249,7 +247,7 @@ VSN-specific Configuration Options
        CONFIG_ARCH_BOARD=vsn (for the VSN development board)
 
     CONFIG_ARCH_BOARD_name - For use in C code
-    
+
        CONFIG_ARCH_BOARD_VSN=y
 
     CONFIG_ARCH_LOOPSPERMSEC - Must be calibrated for correct operation
@@ -265,10 +263,6 @@ VSN-specific Configuration Options
     CONFIG_RAM_START - The start address of installed DRAM
 
        CONFIG_RAM_START=0x20000000
-
-    CONFIG_ARCH_IRQPRIO - The STM32F103Z supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
 
     CONFIG_ARCH_INTERRUPTSTACK - This architecture supports an interrupt
        stack. If defined, this symbol is the size of the interrupt
@@ -304,8 +298,8 @@ Where <subdir> is one of the following:
     Configures the NuttShell (nsh) located at examples/nsh.  The
     Configuration enables both the serial and telnetd NSH interfaces.
 
-    The default configuration sets up a console on front-panel RS-232 
-    interface, sets up device driver of all supported equipment and 
+    The default configuration sets up a console on front-panel RS-232
+    interface, sets up device driver of all supported equipment and
     links in VSN default applications.
 
     NOTES:

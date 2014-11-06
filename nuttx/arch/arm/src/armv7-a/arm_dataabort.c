@@ -39,12 +39,23 @@
 
 #include <nuttx/config.h>
 
+/* Output debug info if stack dump is selected -- even if debug is not
+ * selected.
+ */
+
+#ifdef CONFIG_ARCH_STACKDUMP
+# undef  CONFIG_DEBUG
+# undef  CONFIG_DEBUG_VERBOSE
+# define CONFIG_DEBUG 1
+# define CONFIG_DEBUG_VERBOSE 1
+#endif
+
 #include <stdint.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
 
-#include "os_internal.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 
 #ifdef CONFIG_PAGING
@@ -55,15 +66,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* Output debug info if stack dump is selected -- even if 
- * debug is not selected.
- */
-
-#ifdef CONFIG_ARCH_STACKDUMP
-# undef  lldbg
-# define lldbg lowsyslog
-#endif
 
 /****************************************************************************
  * Private Data
@@ -136,7 +138,7 @@ uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
    * the exception occurred, this address was provided in the DFAR register.
    * (It has not yet been saved in the register context save area).
    */
- 
+
   pgllvdbg("VBASE: %08x VEND: %08x\n", PG_PAGED_VBASE, PG_PAGED_VEND);
   if (dfar < PG_PAGED_VBASE || dfar >= PG_PAGED_VEND)
     {

@@ -54,7 +54,6 @@
 #include "up_internal.h"
 #include "up_arch.h"
 
-#include "os_internal.h"
 
 #include "chip.h"
 #include "stm32.h"
@@ -821,15 +820,15 @@ static int can_send(FAR struct can_dev_s *dev, FAR struct can_msg_s *msg)
   /* Select one empty transmit mailbox */
 
   regval = can_getreg(priv, STM32_CAN_TSR_OFFSET);
-  if ((regval & CAN_TSR_TME0) != 0)
+  if ((regval & CAN_TSR_TME0) != 0 && (regval & CAN_TSR_RQCP0) == 0)
     {
       txmb = 0;
     }
-  else if ((regval & CAN_TSR_TME1) != 0)
+  else if ((regval & CAN_TSR_TME1) != 0 && (regval & CAN_TSR_RQCP1) == 0)
     {
       txmb = 1;
     }
-  else if ((regval & CAN_TSR_TME2) != 0)
+  else if ((regval & CAN_TSR_TME2) != 0 && (regval & CAN_TSR_RQCP2) == 0)
     {
       txmb = 2;
     }
@@ -1236,19 +1235,6 @@ static int can_txinterrupt(int irq, void *context)
         }
     }
 
-  /* Were all transmissions complete in all mailboxes when we entered this
-   * handler?
-   */
-
-  if ((regval & CAN_ALL_MAILBOXES) == CAN_ALL_MAILBOXES)
-    {
-      /* Yes.. disable further TX interrupts */
-
-      regval  = can_getreg(priv, STM32_CAN_IER_OFFSET);
-      regval &= ~CAN_IER_TMEIE;
-      can_putreg(priv, STM32_CAN_IER_OFFSET, regval);
-    }
-
   return OK;
 }
 
@@ -1626,7 +1612,7 @@ FAR struct can_dev_s *stm32_caninitialize(int port)
    */
 
 #ifdef CONFIG_STM32_CAN1
-  if( port == 1 )
+  if (port == 1)
     {
       /* Select the CAN1 device structure */
 
@@ -1642,7 +1628,7 @@ FAR struct can_dev_s *stm32_caninitialize(int port)
   else
 #endif
 #ifdef CONFIG_STM32_CAN2
-  if ( port ==2 )
+  if (port == 2)
     {
       /* Select the CAN2 device structure */
 

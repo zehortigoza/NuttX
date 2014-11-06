@@ -161,11 +161,6 @@ http://nuttx.org/Documentation/NuttXConfigVariables.html.
 Supported Boards
 ^^^^^^^^^^^^^^^^
 
-configs/16z
-  This is the port of NuttX port to the 16z board. The 16z board is based on
-  the ZiLOG ZNEO Z16F2811AL20EG part.  See https://github.com/toyaga/16z for
-  further information.
-
 configs/amber
   This is placeholder for the SoC Robotics Amber Web Server that is based
   on the Atmel AVR ATMega128 MCU.  There is not much there yet and what is
@@ -223,6 +218,13 @@ configs/eagle100
   an ARM Cortex-M3 MCU, the Luminary LM3S6918. This OS is built with the
   arm-nuttx-elf toolchain*.  STATUS:  This port is complete and mature.
 
+configs/efm32-g8xx-stk
+  The port of NuttX to the the EFM32 Gecko Starter Kit (EFM32-G8XX-STK).
+
+configs/efm32gg-stk3700
+  The port of NuttX to the the EFM32 Giant Gecko Starter Kit
+  (EFM32GG-STK3700).
+
 configs/ekk-lm3s9b96
   TI/Stellaris EKK-LM3S9B96 board.  This board is based on the
   an EKK-LM3S9B96 which is a Cortex-M3.
@@ -268,7 +270,7 @@ configs/lm3s8962-ek
 configs/lm4f120-launchpad
   This is the port of NuttX to the Stellaris LM4F120 LaunchPad.  The
   Stellaris® LM4F120 LaunchPad Evaluation Board is a low-cost evaluation
-  platform for ARM® Cortex™-M4F-based microcontrollers from Texas\
+  platform for ARM® Cortex™-M4F-based microcontrollers from Texas
   Instruments.
 
 configs/lpcxpresso-lpc1768
@@ -335,6 +337,12 @@ configs/ntosd-dm320
   STATUS: This port is code complete, verified, and included in the
   NuttX 0.2.1 release.
 
+configs/nucleo-f4x1re
+  STMicro ST Nucleo F401RE and F411RE boards.  See
+  http://mbed.org/platforms/ST-Nucleo-F401RE and
+  http://developer.mbed.org/platforms/ST-Nucleo-F411RE for more
+  information about these boards.
+
 configs/nucleus2g
   This port uses the Nucleus 2G board (with Babel CAN board).  This board
   features an NXP LPC1768 processor.  See the 2G website (http://www.2g-eng.com/)
@@ -344,6 +352,10 @@ configs/nutiny-nuc120
   This is the port of NuttX to the NuvoTon NuTiny-SDK-NUC120 board.  This
   board has the NUC120LE3AN chip with a built-in NuLink debugger.
 
+configs/olimex-efm32g880f128-stk
+  This is the port of NuttX to the Olimex EFM32G880F128-STK development
+  board.
+
 configs/olimex-lpc1766stk
   This port uses the Olimex LPC1766-STK board and a GNU GCC toolchain* under
   Linux or Cygwin.  STATUS: Complete and mature.
@@ -352,6 +364,12 @@ configs/olimex-lpc2378
   This port uses the Olimex-lpc2378 board and a GNU arm-nuttx-elf toolchain* under
   Linux or Cygwin.  STATUS: ostest and NSH configurations available.
   This port for the NXP LPC2378 was contributed by Rommel Marcelo.
+
+configs/olimex-stm32-h405
+  This port uses the Olimex STM32 H405 board and a GNU arm-nuttx-elf
+  toolchain* under Linux or Cygwin. See the http://www.olimex.com for
+  further information. This board features the STMicro STM32F405RGT6 MCU.
+  Contributed by Martin Lederhilger.
 
 configs/olimex-stm32-p107
   This port uses the Olimex STM32-P107 board (STM32F107VC) and a GNU arm-nuttx-elf
@@ -427,10 +445,6 @@ configs/pirelli_dpl10
   It is a variant of the compal_e88 config with the small changes for the
   differences in the board.
 
-configs/pjrc-8051
-  8051 Microcontroller.  This port uses the PJRC 87C52 development system
-  and the SDCC toolchain.   This port is not quite ready for prime time.
-
 config/px4fmu-v2_upstream
   This is a minimal configuration that supports low-level test of the
   PX4FMU v2 in the NuttX source tree.  If you are using PX4, you probably
@@ -466,8 +480,14 @@ configs/sama5d3x-ek
   are supported by NuttX with a simple reconfiguration of the processor
   type.
 
-  There is also the SAMA5D3FAE-EK bundle includes everything:  The base
-  board, all four CPU modules, and the LCD.
+configs/sama5d3-xplained
+  This is the  port of NuttX to the Atmel SAMA5D3x-Xplained development board.
+  This board features the Atmel SAMA5D36.  See
+  http://www.atmel.com/devices/sama5d36.aspx.
+
+configs/sama5d4-ek
+  This is the  port of NuttX to the Atmel SAMA5D4-EK development board.
+  This board features the Atmel SAMA5D44.  See http://www.atmel.com.
 
 configs/samd20-xplained
   The port of NuttX to the Atmel SAMD20-Xplained Pro development board.  This
@@ -477,8 +497,18 @@ configs/samd20-xplained
 configs/sam3u-ek
   The port of NuttX to the Atmel SAM3U-EK development board.
 
+configs/sam4e-ek
+  The port of NuttX to the Atmel SAM4E-EK development board.  This board
+  features the SAM4E16 MCU running at up to 120MHz.
+
 configs/sam4l-xplained
   The port of NuttX to the Atmel SAM4L-Xplained development board.
+
+configs/sam4s-xplained
+  The port of NuttX to the Atmel SAM4S-Xplained development board.
+
+configs/sam4s-xplained-pro
+  The port of NuttX to the Atmel SAM4S-Xplained Pro development board.
 
 configs/sim
   A user-mode port of NuttX to the x86 Linux platform is available.
@@ -542,6 +572,12 @@ configs/teensy
   This is the port of NuttX to the PJRC Teensy++ 2.0 board.  This board is
   developed by http://pjrc.com/teensy/.  The Teensy++ 2.0 is based
   on an Atmel AT90USB1286 MCU.
+
+configs/tm4c123g-launchpad
+  This is the port of NuttX to the Tiva TM4C123G LaunchPad.  The
+  Tiva® TM4C123G LaunchPad Evaluation Board is a low-cost evaluation
+  platform for ARM® Cortex™-M4F-based microcontrollers from Texas
+  Instruments.
 
 configs/twr-k60n512
   Kinetis K60 Cortex-M4 MCU.  This port uses the FreeScale TWR-K60N512
@@ -653,7 +689,7 @@ There are also common-separated value (CSV) values in the source try that
 provide information about symbols.  In particular:
 
   nuttx/syscall/syscall.csv - Describes the NuttX RTOS interface, and
-  nuttx/lib/lib.csv         - Describes the NuttX C library interface.
+  nuttx/lib/libc.csv        - Describes the NuttX C library interface.
 
 There is a tool at nuttx/tools/mksymtab that will use these CSV files as
 input to generate a generic symbol table.  See nuttx/tools/README.txt for

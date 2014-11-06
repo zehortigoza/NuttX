@@ -104,12 +104,12 @@ static int smart_create_test_file(char *filename)
 
       sprintf(string, "This is line %d at offset %d\n", x, g_linePos[x]);
       g_lineLen[x] = strlen(string);
-      fprintf(fd, "%s", string); 
+      fprintf(fd, "%s", string);
 
       printf("\r%d", x);
       fflush(stdout);
-    } 
-  
+    }
+
   /* Close the file */
 
   printf("\r\nDone.\n");
@@ -203,7 +203,7 @@ static int smart_append_test(char *filename)
   /* Now seek to the end of the file and ensure that is where
    * pos is.
    */
-  
+
   fseek(fd, 0, SEEK_END);
   if (ftell(fd) != pos)
     {
@@ -327,7 +327,11 @@ static int smart_seek_with_write_test(char *filename)
  * Public Functions
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int smart_test_main(int argc, char *argv[])
+#endif
 {
   int ret;
 

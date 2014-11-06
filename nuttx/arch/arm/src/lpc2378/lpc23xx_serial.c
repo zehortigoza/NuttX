@@ -60,7 +60,6 @@
 
 #include "chip.h"
 #include "up_arch.h"
-#include "os_internal.h"
 
 #include "internal.h"
 #include "lpc23xx_scb.h"
@@ -121,6 +120,9 @@ static const struct uart_ops_s g_uart_ops =
   .receive     = up_receive,
   .rxint       = up_rxint,
   .rxavailable = up_rxavailable,
+#ifdef CONFIG_SERIAL_IFLOWCONTROL
+  .rxflowcontrol  = NULL,
+#endif
   .send        = up_send,
   .txint       = up_txint,
   .txready     = up_txready,
@@ -348,7 +350,7 @@ static inline void up_configbaud(struct up_dev_s *priv)
 
   for (tmulval = 1; tmulval <= 15 && err > 0; tmulval++)
     {
-      /* Try every valid pre-scale div, tdivaddval (or until a perfect match is 
+      /* Try every valid pre-scale div, tdivaddval (or until a perfect match is
        * found).
        */
 
@@ -481,7 +483,7 @@ static int up_setup(struct uart_dev_s *dev)
                (FCR_FIFO_TRIG8 | FCR_TX_FIFO_RESET |
                 FCR_RX_FIFO_RESET | FCR_FIFO_ENABLE));
 
-  /* The NuttX serial driver waits for the first THRE interrrupt before sending 
+  /* The NuttX serial driver waits for the first THRE interrrupt before sending
    * serial data... However, it appears that the LPC2378 hardware too does not
    * generate that interrupt until a transition from not-empty to empty.  So,
    * the current kludge here is to send one NULL at startup to kick things off.

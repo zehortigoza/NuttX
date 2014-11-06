@@ -28,8 +28,7 @@ Development Environment
   Either Linux or Cygwin on Windows can be used for the development environment.
   The source has been built only using the GNU toolchain (see below).  Other
   toolchains will likely cause problems. Testing was performed using the Cygwin
-  environment because the Raisonance R-Link emulatator and some RIDE7 development tools
-  were used and those tools works only under Windows.
+  environment.
 
 GNU Toolchain Options
 =====================
@@ -97,8 +96,7 @@ IDEs
 ====
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
+  effort will be required to create the project.
 
   Makefile Build
   --------------
@@ -122,9 +120,9 @@ IDEs
      on the command line.
 
   Startup files will probably cause you some headaches.  The NuttX startup file
-  is arch/arm/src/stm32/stm32_vectors.S.  With RIDE, I have to build NuttX
+  is arch/arm/src/stm32/stm32_vectors.S.  You may have to build NuttX
   one time from the Cygwin command line in order to obtain the pre-built
-  startup object needed by RIDE.
+  startup object needed by an IDE.
 
 NuttX EABI "buildroot" Toolchain
 ================================
@@ -442,7 +440,7 @@ STM3210E-EVAL-specific Configuration Options
     CONFIG_ARCH_CHIP_name - For use in C code to identify the exact
        chip:
 
-       CONFIG_ARCH_CHIP_STM32F103ZET6
+       CONFIG_ARCH_CHIP_STM32F103ZE
 
     CONFIG_ARCH_BOARD_STM32_CUSTOM_CLOCKCONFIG - Enables special STM32 clock
        configuration features.
@@ -471,10 +469,6 @@ STM3210E-EVAL-specific Configuration Options
     CONFIG_RAM_START - The start address of installed DRAM
 
        CONFIG_RAM_START=0x20000000
-
-    CONFIG_ARCH_IRQPRIO - The STM32F103Z supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
 
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
@@ -904,10 +898,10 @@ Where <subdir> is one of the following:
         c. Others could be similar configured:  apps/examples/nxhello,
             nximage, ...
 
-  nxconsole:
+  nxterm:
   ----------
     This is yet another NSH configuration.  This NSH configuration differs
-    from the other, however, in that it uses the NxConsole driver to host
+    from the other, however, in that it uses the NxTerm driver to host
     the NSH shell.
 
     NOTES:
@@ -929,14 +923,14 @@ Where <subdir> is one of the following:
          CONFG_NX_MULTIUSER=y
          CONFIG_DISABLE_MQUEUE=n
 
-       The following definition in the defconfig file to enables the NxConsole
+       The following definition in the defconfig file to enables the NxTerm
        driver:
 
-         CONFIG_NXCONSOLE=y
+         CONFIG_NXTERM=y
 
-       And this selects apps/examples/nxconsole instead of apps/examples/nsh:
+       And this selects apps/examples/nxterm instead of apps/examples/nsh:
 
-         CONFIG_EXAMPLES_NXCONSOLE=y
+         CONFIG_EXAMPLES_NXTERM=y
 
        Other configuration settings of interest:
 

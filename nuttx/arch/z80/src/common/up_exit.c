@@ -1,7 +1,7 @@
 /****************************************************************************
  * common/up_exit.c
  *
- *   Copyright (C) 2007-2009, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,13 +45,15 @@
 
 #include <nuttx/arch.h>
 
-#include "chip/chip.h"
-#include "os_internal.h"
-#include "up_internal.h"
-
 #ifdef CONFIG_DUMP_ON_EXIT
 #include <nuttx/fs/fs.h>
 #endif
+
+#include "chip/chip.h"
+#include "task/task.h"
+#include "sched/sched.h"
+#include "group/group.h"
+#include "up_internal.h"
 
 /****************************************************************************
  * Private Definitions
@@ -147,7 +149,7 @@ void _exit(int status)
 
   (void)irqsave();
 
-  slldbg("TCB=%p exitting\n", tcb);
+  slldbg("TCB=%p exiting\n", tcb);
 
 #if defined(CONFIG_DUMP_ON_EXIT) && defined(CONFIG_DEBUG)
   lldbg("Other tasks:\n");
@@ -164,6 +166,16 @@ void _exit(int status)
 
   tcb = (FAR struct tcb_s*)g_readytorun.head;
   slldbg("New Active Task TCB=%p\n", tcb);
+
+#ifdef CONFIG_ARCH_ADDRENV
+  /* Make sure that the address environment for the previously running
+   * task is closed down gracefully (data caches dump, MMU flushed) and
+   * set up the address environment for the new thread at the head of
+   * the ready-to-run list.
+   */
+
+  (void)group_addrenv(tcb);
+#endif
 
   /* Then switch contexts */
 

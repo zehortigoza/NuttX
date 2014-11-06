@@ -48,12 +48,14 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
+#include <sys/types.h>
+
 #include <nuttx/fs/ioctl.h>
 
 #ifdef CONFIG_PLATFORM_CONFIGDATA
 
 /****************************************************************************
- * Pre-Processor Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 /* Configuration ************************************************************/
 /* CONFIG_AUDIO - Enables Audio driver support

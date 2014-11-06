@@ -100,7 +100,7 @@ void up_initial_state(struct tcb_s *tcb)
   /* Save the task entry point */
 
   xcp->regs[REG_EPC]     = (uint32_t)tcb->start;
-  
+
   /* If this task is running PIC, then set the PIC base register to the
    * address of the allocated D-Space region.
    */
@@ -116,7 +116,7 @@ void up_initial_state(struct tcb_s *tcb)
    * privileged thread mode.
    */
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_KERNEL
 #  warning "Missing logic"
 #endif
 

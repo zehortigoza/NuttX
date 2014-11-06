@@ -41,7 +41,7 @@
 #include <stdbool.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
-#include <fs_internal.h>
+#include "inode/inode.h"
 #include <queue.h>
 #include <arch/irq.h>
 #include <rgmp/rtos.h>
@@ -102,7 +102,7 @@ int rtos_bridge_init(struct rgmp_bridge *b)
 	struct bridge *bridge;
     char path[30] = {'/', 'd', 'e', 'v', '/'};
 
-	if ((bridge = kmalloc(sizeof(*bridge))) == NULL)
+	if ((bridge = kmm_malloc(sizeof(*bridge))) == NULL)
 		goto err0;
 
 	bridge->b = b;
@@ -125,7 +125,7 @@ int rtos_bridge_init(struct rgmp_bridge *b)
 	return 0;
 
 err1:
-	kfree(bridge);
+	kmm_free(bridge);
 err0:
 	return -1;
 }

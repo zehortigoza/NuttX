@@ -55,7 +55,7 @@
  * Pre-processor Macros
  ****************************************************************************/
 
-/* MIPS requires at least a 4-byte stack alignment.  For floating point use, 
+/* MIPS requires at least a 4-byte stack alignment.  For floating point use,
  * however, the stack must be aligned to 8-byte addresses.
  */
 
@@ -113,7 +113,7 @@
  *     however, there are certain contexts where the TCB may not be fully
  *     initialized when up_create_stack is called.
  *
- *     If CONFIG_NUTTX_KERNEL is defined, then this thread type may affect
+ *     If CONFIG_BUILD_KERNEL is defined, then this thread type may affect
  *     how the stack is allocated.  For example, kernel thread stacks should
  *     be allocated from protected kernel memory.  Stacks for user tasks and
  *     threads must come from memory that is accessible to user code.
@@ -135,22 +135,22 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
     }
 
   /* Do we need to allocate a new stack? */
- 
+
   if (!tcb->stack_alloc_ptr)
     {
       /* Allocate the stack.  If DEBUG is enabled (but not stack debug),
        * then create a zeroed stack to make stack dumps easier to trace.
        */
 
-#if defined(CONFIG_NUTTX_KERNEL) && defined(CONFIG_MM_KERNEL_HEAP)
+#if defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_MM_KERNEL_HEAP)
       /* Use the kernel allocator if this is a kernel thread */
 
       if (ttype == TCB_FLAG_TTYPE_KERNEL)
         {
 #if defined(CONFIG_DEBUG) && !defined(CONFIG_DEBUG_STACK)
-          tcb->stack_alloc_ptr = (uint32_t *)kzalloc(stack_size);
+          tcb->stack_alloc_ptr = (uint32_t *)kmm_zalloc(stack_size);
 #else
-          tcb->stack_alloc_ptr = (uint32_t *)kmalloc(stack_size);
+          tcb->stack_alloc_ptr = (uint32_t *)kmm_malloc(stack_size);
 #endif
         }
       else
@@ -159,9 +159,9 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
           /* Use the user-space allocator if this is a task or pthread */
 
 #if defined(CONFIG_DEBUG) && !defined(CONFIG_DEBUG_STACK)
-          tcb->stack_alloc_ptr = (uint32_t *)kuzalloc(stack_size);
+          tcb->stack_alloc_ptr = (uint32_t *)kumm_zalloc(stack_size);
 #else
-          tcb->stack_alloc_ptr = (uint32_t *)kumalloc(stack_size);
+          tcb->stack_alloc_ptr = (uint32_t *)kumm_malloc(stack_size);
 #endif
         }
 
@@ -202,7 +202,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
       /* The MIPS stack must be aligned at word (4 byte) boundaries; for
        * floating point use, the stack must be aligned to 8-byte addresses.
        * If necessary top_of_stack must be rounded down to the next
-       * boundary to meet these alignment requirements. 
+       * boundary to meet these alignment requirements.
        */
 
       top_of_stack = STACK_ALIGN_DOWN(top_of_stack);

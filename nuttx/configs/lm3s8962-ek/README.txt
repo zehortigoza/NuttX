@@ -259,7 +259,7 @@ NXFLAT Toolchain
   tools -- just the NXFLAT tools.  The buildroot with the NXFLAT tools can
   be downloaded from the NuttX SourceForge download site
   (https://sourceforge.net/projects/nuttx/files/).
- 
+
   This GNU toolchain builds and executes in the Linux or Cygwin environment.
 
   1. You must have already configured Nuttx in <some-dir>/nuttx.
@@ -299,7 +299,7 @@ USB Device Controller Functions
 
   Debugging with JTAG/SWD
 
-    The FT2232 USB device performs JTAG/SWD serial operations under the control 
+    The FT2232 USB device performs JTAG/SWD serial operations under the control
     of the debugger or the Luminary Flash Programmer.  It also operate as an
     In-Circuit Debugger Interface (ICDI), allowing debugging of any external
     target board.  Debugging modes:
@@ -371,10 +371,6 @@ Stellaris LM3S8962 Evaluation Kit Configuration Options
 
        CONFIG_RAM_START=0x20000000
 
-    CONFIG_ARCH_IRQPRIO - The LM3S8962 supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
-
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
 
@@ -408,7 +404,7 @@ Stellaris LM3S8962 Evaluation Kit Configuration Options
     CONFIG_TIVA_DISABLE_GPIOG_IRQS=n
     CONFIG_TIVA_DISABLE_GPIOH_IRQS=n
     CONFIG_TIVA_DISABLE_GPIOJ_IRQS=y
- 
+
   LM3S8962 specific device driver settings
 
     CONFIG_UARTn_SERIAL_CONSOLE - selects the UARTn for the

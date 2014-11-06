@@ -84,22 +84,22 @@
  ****************************************************************************/
 
 #ifdef CONFIG_BINFMT_CONSTRUCTORS
-static inline int exec_dtors(FAR const struct binary_s *binp)
+static inline int exec_dtors(FAR struct binary_s *binp)
 {
   binfmt_dtor_t *dtor = binp->dtors;
-#ifdef CONFIG_ADDRENV
-  hw_addrenv_t oldenv;
+#ifdef CONFIG_ARCH_ADDRENV
+  save_addrenv_t oldenv;
   int ret;
 #endif
   int i;
 
-  /* Instantiate the address enviroment containing the destructors */
+  /* Instantiate the address environment containing the destructors */
 
-#ifdef CONFIG_ADDRENV
-  ret = up_addrenv_select(binp->addrenv, &oldenv);
+#ifdef CONFIG_ARCH_ADDRENV
+  ret = up_addrenv_select(&binp->addrenv, &oldenv);
   if (ret < 0)
     {
-      bdbg("up_addrenv_select() failed: %d\n", ret);
+      bdbg("ERROR: up_addrenv_select() failed: %d\n", ret);
       return ret;
     }
 #endif
@@ -114,10 +114,10 @@ static inline int exec_dtors(FAR const struct binary_s *binp)
       dtor++;
     }
 
-  /* Restore the address enviroment */
+  /* Restore the address environment */
 
-#ifdef CONFIG_ADDRENV
-  return up_addrenv_restore(oldenv);
+#ifdef CONFIG_ARCH_ADDRENV
+  return up_addrenv_restore(&oldenv);
 #else
   return OK;
 #endif
@@ -136,7 +136,7 @@ static inline int exec_dtors(FAR const struct binary_s *binp)
  *   been started (via exec_module) and has not exited, calling this will
  *   be fatal.
  *
- *   However, this function must be called after the module exist.  How
+ *   However, this function must be called after the module exits.  How
  *   this is done is up to your logic.  Perhaps you register it to be
  *   called by on_exit()?
  *
@@ -147,18 +147,29 @@ static inline int exec_dtors(FAR const struct binary_s *binp)
  *
  ****************************************************************************/
 
-int unload_module(FAR const struct binary_s *binp)
+int unload_module(FAR struct binary_s *binp)
 {
-#ifdef CONFIG_BINFMT_CONSTRUCTORS
   int ret;
-#endif
   int i;
- 
+
   if (binp)
     {
-      /* Execute C++ desctructors */
+      /* Perform any format-specific unload operations */
+
+      if (binp->unload)
+        {
+          ret = binp->unload(binp);
+          if (ret < 0)
+            {
+              bdbg("binp->unload() failed: %d\n", ret);
+              set_errno(-ret);
+              return ERROR;
+            }
+        }
 
 #ifdef CONFIG_BINFMT_CONSTRUCTORS
+      /* Execute C++ destructors */
+
       ret = exec_dtors(binp);
       if (ret < 0)
         {
@@ -167,6 +178,10 @@ int unload_module(FAR const struct binary_s *binp)
           return ERROR;
         }
 #endif
+
+      /* Free any allocated argv[] strings */
+
+      binfmt_freeargv(binp);
 
       /* Unmap mapped address spaces */
 
@@ -184,7 +199,7 @@ int unload_module(FAR const struct binary_s *binp)
           if (binp->alloc[i])
             {
               bvdbg("Freeing alloc[%d]: %p\n", i, binp->alloc[i]);
-              kufree((FAR void *)binp->alloc[i]);
+              kumm_free((FAR void *)binp->alloc[i]);
             }
         }
 
@@ -195,6 +210,33 @@ int unload_module(FAR const struct binary_s *binp)
 
   return OK;
 }
+
+/****************************************************************************
+ * Name: binfmt_freeargv
+ *
+ * Description:
+ *   Release the copied argv[] list.
+ *
+ * Input Parameter:
+ *   binp - Load structure
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
+void binfmt_freeargv(FAR struct binary_s *binp)
+{
+  if (binp->argbuffer)
+    {
+      /* Free the argument buffer */
+
+      kmm_free(binp->argbuffer);
+      binp->argbuffer = NULL;
+    }
+}
+#endif
 
 #endif /* CONFIG_BINFMT_DISABLE */
 

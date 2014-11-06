@@ -46,11 +46,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-
-#ifdef CONFIG_STM32_SDIO
-#  include <nuttx/sdio.h>
-#  include <nuttx/mmcsd.h>
-#endif
+#include <nuttx/sdio.h>
+#include <nuttx/mmcsd.h>
 
 /****************************************************************************
  * Public Function Prototypes
@@ -107,7 +104,11 @@ static int sdcard_start(int slotno)
  * Public Functions
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int sdcard_main(int argc, char *argv[])
+#endif
 {
   int slotno = 0;
 

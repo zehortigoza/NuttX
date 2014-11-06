@@ -1,7 +1,7 @@
 /****************************************************************************
  * include/unistd.h
  *
- *   Copyright (C) 2007-2009, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,7 +47,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* The number of functions that may be registerd to be called
+/* The number of functions that may be registered to be called
  * at program exit.
  */
 
@@ -76,11 +76,11 @@
 #undef  _POSIX_MAPPED_FILES
 #undef  _POSIX_SHARED_MEMORY_OBJECTS
 #define _POSIX_PRIORITY_SCHEDULING 1
-#define _POSIX_TIMERS
+#define _POSIX_TIMERS 1
 #undef  _POSIX_MEMLOCK
 #undef  _POSIX_MEMLOCK_RANGE
 #undef  _POSIX_FSYNC
-#define _POSIX_SYNCHRONIZED_IO
+#define _POSIX_SYNCHRONIZED_IO 1
 #undef  _POSIX_ASYNCHRONOUS_IO
 #undef  _POSIX_PRIORITIZED_IO
 
@@ -90,7 +90,7 @@
 #undef  _POSIX_NO_TRUNC
 #undef  _POSIX_VDISABLE
 
-#define _POSIX_SYNC_IO
+#define _POSIX_SYNC_IO 1
 #undef  _POSIX_ASYNC_IO
 #undef  _POSIX_PRIO_IO
 
@@ -103,7 +103,8 @@
 #undef EXTERN
 #if defined(__cplusplus)
 #define EXTERN extern "C"
-extern "C" {
+extern "C"
+{
 #else
 #define EXTERN extern
 #endif
@@ -119,7 +120,7 @@ EXTERN int       optind; /* Index into argv */
 EXTERN int       optopt; /* unrecognized option character */
 #else
 #  define optarg  (*(getoptargp()))
-#  define optind  (*(getopindgp()))
+#  define optind  (*(getoptindp()))
 #  define optopt  (*(getoptoptp()))
 #endif
 
@@ -145,6 +146,15 @@ int     fsync(int fd);
 off_t   lseek(int fd, off_t offset, int whence);
 ssize_t read(int fd, FAR void *buf, size_t nbytes);
 ssize_t write(int fd, FAR const void *buf, size_t nbytes);
+ssize_t pread(int fd, FAR void *buf, size_t nbytes, off_t offset);
+ssize_t pwrite(int fd, FAR const void *buf, size_t nbytes, off_t offset);
+
+/* Memory management */
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_MM_PGALLOC) && \
+    defined(CONFIG_ARCH_USE_MMU)
+FAR void *sbrk(intptr_t incr);
+#endif
 
 /* Special devices */
 
@@ -165,12 +175,6 @@ int     rmdir(FAR const char *pathname);
 #ifdef CONFIG_LIBC_EXECFUNCS
 int     execl(FAR const char *path, ...);
 int     execv(FAR const char *path, FAR char *const argv[]);
-
-/* Non-standard functions to manage symbol tables */
-
-struct symtab_s; /* See include/nuttx/binfmt/symtab.h */
-void exec_getsymtab(FAR const struct symtab_s **symtab, FAR int *nsymbols);
-void exec_setsymtab(FAR const struct symtab_s *symtab, int nsymbols);
 #endif
 
 /* Other */
@@ -183,8 +187,10 @@ int     getopt(int argc, FAR char *const argv[], FAR const char *optstring);
  */
 
 FAR char **getoptargp(void); /* Optional argument following option */
-int       *getopindgp(void); /* Index into argv */
+int       *getoptindp(void); /* Index into argv */
 int       *getoptoptp(void); /* unrecognized option character */
+
+#define access(...) (0)
 
 #undef EXTERN
 #if defined(__cplusplus)

@@ -51,7 +51,7 @@
 #include <nuttx/streams.h>
 
 /****************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 /* This configuration directory is used in environment variable processing
  * when we need to reference the user's home directory.  There are no user
@@ -80,23 +80,24 @@
  * mode is supported.
  */
 
-#if defined(CONFIG_NUTTX_KERNEL) && defined(__KERNEL__)
+#if (defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)) || \
+     defined(CONFIG_BUILD_KERNEL)
 #  include <nuttx/kmalloc.h>
 
    /* Domain-specific allocations */
 
-#  define lib_malloc(s)     kmalloc(s)
-#  define lib_zalloc(s)     kzalloc(s)
-#  define lib_realloc(p,s)  krealloc(p,s)
-#  define lib_memalign(p,s) krealloc(p,s)
-#  define lib_free(p)       kfree(p)
+#  define lib_malloc(s)     kmm_malloc(s)
+#  define lib_zalloc(s)     kmm_zalloc(s)
+#  define lib_realloc(p,s)  kmm_realloc(p,s)
+#  define lib_memalign(p,s) kmm_memalign(p,s)
+#  define lib_free(p)       kmm_free(p)
 
    /* User-accessible allocations */
 
-#  define lib_umalloc(s)    kumalloc(s)
-#  define lib_uzalloc(s)    kuzalloc(s)
-#  define lib_urealloc(p,s) kurealloc(p,s)
-#  define lib_ufree(p)      kufree(p)
+#  define lib_umalloc(s)    kumm_malloc(s)
+#  define lib_uzalloc(s)    kumm_zalloc(s)
+#  define lib_urealloc(p,s) kumm_realloc(p,s)
+#  define lib_ufree(p)      kumm_free(p)
 
 #else
 #  include <stdlib.h>
@@ -124,7 +125,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Public Variables
+ * Public Data
  ****************************************************************************/
 
 #undef EXTERN
@@ -134,12 +135,6 @@ extern "C"
 {
 #else
 #define EXTERN extern
-#endif
-
-/* Debug output is initially disabled */
-
-#ifdef CONFIG_SYSLOG_ENABLE
-EXTERN bool g_syslogenable;
 #endif
 
 /****************************************************************************
@@ -152,22 +147,6 @@ EXTERN bool g_syslogenable;
 void  stream_semtake(FAR struct streamlist *list);
 void  stream_semgive(FAR struct streamlist *list);
 #endif
-
-/* Defined in lib_libnoflush.c */
-
-#ifdef CONFIG_STDIO_LINEBUFFER
-int lib_noflush(FAR struct lib_outstream_s *this);
-#endif
-
-/* Defined in lib_libsprintf.c */
-
-int lib_sprintf(FAR struct lib_outstream_s *obj,
-                       const char *fmt, ...);
-
-/* Defined lib_libvsprintf.c */
-
-int lib_vsprintf(FAR struct lib_outstream_s *obj,
-                 FAR const char *src, va_list ap);
 
 /* Defined in lib_dtoa.c */
 

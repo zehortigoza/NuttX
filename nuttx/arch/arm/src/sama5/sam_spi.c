@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/sama5/sam_spi.c
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013-2014 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *
  * This derives from SAM3/4 SPI driver:
@@ -50,13 +50,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <semaphore.h>
-#include <wdog.h>
 #include <errno.h>
 #include <assert.h>
 #include <debug.h>
 
 #include <arch/board/board.h>
+
 #include <nuttx/arch.h>
+#include <nuttx/wdog.h>
 #include <nuttx/clock.h>
 #include <nuttx/spi/spi.h>
 
@@ -120,7 +121,7 @@
  */
 
 #define DMA_TIMEOUT_MS    (800)
-#define DMA_TIMEOUT_TICKS ((DMA_TIMEOUT_MS + (MSEC_PER_TICK-1)) / MSEC_PER_TICK)
+#define DMA_TIMEOUT_TICKS MSEC2TICK(DMA_TIMEOUT_MS)
 
 /* Debug *******************************************************************/
 /* Check if SPI debut is enabled (non-standard.. no support in
@@ -736,6 +737,7 @@ static void spi_dma_sampledone(struct sam_spics_s *spics)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SAMA5_SPI_DMA
 static void spi_dmatimeout(int argc, uint32_t arg)
 {
   struct sam_spics_s *spics = (struct sam_spics_s *)arg;
@@ -755,6 +757,7 @@ static void spi_dmatimeout(int argc, uint32_t arg)
 
   sem_post(&spics->dmawait);
 }
+#endif
 
 /****************************************************************************
  * Name: spi_rxcallback
@@ -845,7 +848,7 @@ static void spi_txcallback(DMA_HANDLE handle, void *arg, int result)
  * Name: spi_physregaddr
  *
  * Description:
- *   Return the physical address of an HSMCI register
+ *   Return the physical address of an SPI register
  *
  ****************************************************************************/
 
@@ -1434,14 +1437,12 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
    *    provided on the SPI bus.
    */
 
-  rxflags = DMACH_FLAG_FIFOCFG_LARGEST |
-            ((uint32_t)spi->pid << DMACH_FLAG_PERIPHPID_SHIFT) |
+  rxflags = DMACH_FLAG_FIFOCFG_LARGEST | DMACH_FLAG_PERIPHPID(spi->pid) |
             DMACH_FLAG_PERIPHH2SEL | DMACH_FLAG_PERIPHISPERIPH |
             DMACH_FLAG_PERIPHAHB_AHB_IF2 | DMACH_FLAG_PERIPHWIDTH_8BITS |
-            DMACH_FLAG_PERIPHCHUNKSIZE_1 |
-            ((uint32_t)(0x3f) << DMACH_FLAG_MEMPID_SHIFT) |
+            DMACH_FLAG_PERIPHCHUNKSIZE_1 | DMACH_FLAG_MEMPID_MAX |
             DMACH_FLAG_MEMAHB_AHB_IF0 | DMACH_FLAG_MEMWIDTH_8BITS |
-            DMACH_FLAG_MEMCHUNKSIZE_1;
+            DMACH_FLAG_MEMCHUNKSIZE_1 | DMACH_FLAG_MEMBURST_4;
 
   if (!rxbuffer)
     {
@@ -1458,14 +1459,12 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
       rxflags |= DMACH_FLAG_MEMINCREMENT;
     }
 
-  txflags = DMACH_FLAG_FIFOCFG_LARGEST |
-            ((uint32_t)spi->pid << DMACH_FLAG_PERIPHPID_SHIFT) |
+  txflags = DMACH_FLAG_FIFOCFG_LARGEST | DMACH_FLAG_PERIPHPID(spi->pid) |
             DMACH_FLAG_PERIPHH2SEL | DMACH_FLAG_PERIPHISPERIPH |
             DMACH_FLAG_PERIPHAHB_AHB_IF2 | DMACH_FLAG_PERIPHWIDTH_8BITS |
-            DMACH_FLAG_PERIPHCHUNKSIZE_1 |
-            ((uint32_t)(0x3f) << DMACH_FLAG_MEMPID_SHIFT) |
+            DMACH_FLAG_PERIPHCHUNKSIZE_1 | DMACH_FLAG_MEMPID_MAX |
             DMACH_FLAG_MEMAHB_AHB_IF0 | DMACH_FLAG_MEMWIDTH_8BITS |
-            DMACH_FLAG_MEMCHUNKSIZE_1;
+            DMACH_FLAG_MEMCHUNKSIZE_1 | DMACH_FLAG_MEMBURST_4;
 
   if (!txbuffer)
     {

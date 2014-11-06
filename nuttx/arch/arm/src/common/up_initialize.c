@@ -43,7 +43,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/ramlog.h>
+#include <nuttx/syslog/ramlog.h>
 
 #include <arch/board/board.h>
 
@@ -88,6 +88,32 @@ static void up_calibratedelay(void)
 #endif
 
 /****************************************************************************
+ * Name: up_color_intstack
+ *
+ * Description:
+ *   Set the interrupt stack to a value so that later we can determine how
+ *   much stack space was used by interrupt handling logic
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_DEBUG_STACK) && CONFIG_ARCH_INTERRUPTSTACK > 3
+static inline void up_color_intstack(void)
+{
+  uint32_t *ptr = (uint32_t *)&g_intstackalloc;
+  ssize_t size;
+
+  for (size = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
+       size > 0;
+       size -= sizeof(uint32_t))
+    {
+      *ptr++ = INTSTACK_COLOR;
+    }
+}
+#else
+#  define up_color_intstack()
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -117,6 +143,10 @@ void up_initialize(void)
   /* Calibrate the timing loop */
 
   up_calibratedelay();
+
+  /* Colorize the interrupt stack */
+
+  up_color_intstack();
 
   /* Add any extra memory fragments to the memory manager */
 
@@ -151,8 +181,9 @@ void up_initialize(void)
 
   /* Initialize the system timer interrupt */
 
-#if !defined(CONFIG_SUPPRESS_INTERRUPTS) && !defined(CONFIG_SUPPRESS_TIMER_INTS)
-  up_timerinit();
+#if !defined(CONFIG_SUPPRESS_INTERRUPTS) && !defined(CONFIG_SUPPRESS_TIMER_INTS) && \
+    !defined(CONFIG_SYSTEMTICK_EXTCLK)
+  up_timer_initialize();
 #endif
 
   /* Register devices */
@@ -161,6 +192,14 @@ void up_initialize(void)
 
 #if defined(CONFIG_DEV_NULL)
   devnull_register();   /* Standard /dev/null */
+#endif
+
+#if defined(CONFIG_CRYPTO)
+  up_cryptoinitialize();
+#endif
+
+#if defined(CONFIG_CRYPTO_CRYPTODEV)
+  devcrypto_register(); /* /dev/crypto */
 #endif
 
 #if defined(CONFIG_DEV_ZERO)
@@ -207,5 +246,9 @@ void up_initialize(void)
   /* Initialize USB -- device and/or host */
 
   up_usbinitialize();
+
+  /* Initialize the L2 cache if present and selected */
+
+  up_l2ccinitialize();
   board_led_on(LED_IRQSENABLED);
 }

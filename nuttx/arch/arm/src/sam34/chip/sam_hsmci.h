@@ -43,6 +43,7 @@
 #include <nuttx/config.h>
 
 #include "chip.h"
+#include "chip/sam_pdc.h"
 #include "chip/sam_memorymap.h"
 
 /****************************************************************************************
@@ -85,33 +86,46 @@
 
 /* HSMCI register addresses *************************************************************/
 
-#define SAM_HSMCI_CR                  (SAM_MCI_BASE+SAM_HSMCI_CR_OFFSET)
-#define SAM_HSMCI_MR                  (SAM_MCI_BASE+SAM_HSMCI_MR_OFFSET)
-#define SAM_HSMCI_DTOR                (SAM_MCI_BASE+SAM_HSMCI_DTOR_OFFSET)
-#define SAM_HSMCI_SDCR                (SAM_MCI_BASE+SAM_HSMCI_SDCR_OFFSET)
-#define SAM_HSMCI_ARGR                (SAM_MCI_BASE+SAM_HSMCI_ARGR_OFFSET)
-#define SAM_HSMCI_CMDR                (SAM_MCI_BASE+SAM_HSMCI_CMDR_OFFSET)
-#define SAM_HSMCI_BLKR                (SAM_MCI_BASE+SAM_HSMCI_BLKR_OFFSET)
-#define SAM_HSMCI_CSTOR               (SAM_MCI_BASE+SAM_HSMCI_CSTOR_OFFSET)
-#define SAM_HSMCI_RSPR0               (SAM_MCI_BASE+SAM_HSMCI_RSPR0_OFFSET)
-#define SAM_HSMCI_RSPR1               (SAM_MCI_BASE+SAM_HSMCI_RSPR1_OFFSET)
-#define SAM_HSMCI_RSPR2               (SAM_MCI_BASE+SAM_HSMCI_RSPR2_OFFSET)
-#define SAM_HSMCI_RSPR3               (SAM_MCI_BASE+SAM_HSMCI_RSPR3_OFFSET)
-#define SAM_HSMCI_RDR                 (SAM_MCI_BASE+SAM_HSMCI_RDR_OFFSET)
-#define SAM_HSMCI_TDR                 (SAM_MCI_BASE+SAM_HSMCI_TDR_OFFSET)
-#define SAM_HSMCI_SR                  (SAM_MCI_BASE+SAM_HSMCI_SR_OFFSET)
-#define SAM_HSMCI_IER                 (SAM_MCI_BASE+SAM_HSMCI_IER_OFFSET)
-#define SAM_HSMCI_IDR                 (SAM_MCI_BASE+SAM_HSMCI_IDR_OFFSET)
-#define SAM_HSMCI_IMR                 (SAM_MCI_BASE+SAM_HSMCI_IMR_OFFSET)
+#define SAM_HSMCI_CR                  (SAM_HSMCI_BASE+SAM_HSMCI_CR_OFFSET)
+#define SAM_HSMCI_MR                  (SAM_HSMCI_BASE+SAM_HSMCI_MR_OFFSET)
+#define SAM_HSMCI_DTOR                (SAM_HSMCI_BASE+SAM_HSMCI_DTOR_OFFSET)
+#define SAM_HSMCI_SDCR                (SAM_HSMCI_BASE+SAM_HSMCI_SDCR_OFFSET)
+#define SAM_HSMCI_ARGR                (SAM_HSMCI_BASE+SAM_HSMCI_ARGR_OFFSET)
+#define SAM_HSMCI_CMDR                (SAM_HSMCI_BASE+SAM_HSMCI_CMDR_OFFSET)
+#define SAM_HSMCI_BLKR                (SAM_HSMCI_BASE+SAM_HSMCI_BLKR_OFFSET)
+#define SAM_HSMCI_CSTOR               (SAM_HSMCI_BASE+SAM_HSMCI_CSTOR_OFFSET)
+#define SAM_HSMCI_RSPR0               (SAM_HSMCI_BASE+SAM_HSMCI_RSPR0_OFFSET)
+#define SAM_HSMCI_RSPR1               (SAM_HSMCI_BASE+SAM_HSMCI_RSPR1_OFFSET)
+#define SAM_HSMCI_RSPR2               (SAM_HSMCI_BASE+SAM_HSMCI_RSPR2_OFFSET)
+#define SAM_HSMCI_RSPR3               (SAM_HSMCI_BASE+SAM_HSMCI_RSPR3_OFFSET)
+#define SAM_HSMCI_RDR                 (SAM_HSMCI_BASE+SAM_HSMCI_RDR_OFFSET)
+#define SAM_HSMCI_TDR                 (SAM_HSMCI_BASE+SAM_HSMCI_TDR_OFFSET)
+#define SAM_HSMCI_SR                  (SAM_HSMCI_BASE+SAM_HSMCI_SR_OFFSET)
+#define SAM_HSMCI_IER                 (SAM_HSMCI_BASE+SAM_HSMCI_IER_OFFSET)
+#define SAM_HSMCI_IDR                 (SAM_HSMCI_BASE+SAM_HSMCI_IDR_OFFSET)
+#define SAM_HSMCI_IMR                 (SAM_HSMCI_BASE+SAM_HSMCI_IMR_OFFSET)
 
 #if defined(CONFIG_ARCH_CHIP_SAM3U)
-#  define SAM_HSMCI_DMA               (SAM_MCI_BASE+SAM_HSMCI_DMA_OFFSET)
+#  define SAM_HSMCI_DMA               (SAM_HSMCI_BASE+SAM_HSMCI_DMA_OFFSET)
 #endif
 
-#define SAM_HSMCI_CFG                 (SAM_MCI_BASE+SAM_HSMCI_CFG_OFFSET)
-#define SAM_HSMCI_WPMR                (SAM_MCI_BASE+SAM_HSMCI_WPMR_OFFSET)
-#define SAM_HSMCI_WPSR                (SAM_MCI_BASE+SAM_HSMCI_WPSR_OFFSET)
-#define SAM_HSMCI_FIFO                (SAM_MCI_BASE+SAM_HSMCI_FIFO_OFFSET)
+#define SAM_HSMCI_CFG                 (SAM_HSMCI_BASE+SAM_HSMCI_CFG_OFFSET)
+#define SAM_HSMCI_WPMR                (SAM_HSMCI_BASE+SAM_HSMCI_WPMR_OFFSET)
+#define SAM_HSMCI_WPSR                (SAM_HSMCI_BASE+SAM_HSMCI_WPSR_OFFSET)
+#define SAM_HSMCI_FIFO                (SAM_HSMCI_BASE+SAM_HSMCI_FIFO_OFFSET)
+
+#if (defined(CONFIG_ARCH_CHIP_SAM4S) && defined(CONFIG_SAM34_PDCA))
+#  define SAM_HSMCI_PDC_RPR           (SAM_HSMCI_BASE+SAM_PDC_RPR_OFFSET)
+#  define SAM_HSMCI_PDC_RCR           (SAM_HSMCI_BASE+SAM_PDC_RCR_OFFSET)
+#  define SAM_HSMCI_PDC_TPR           (SAM_HSMCI_BASE+SAM_PDC_TPR_OFFSET)
+#  define SAM_HSMCI_PDC_TCR           (SAM_HSMCI_BASE+SAM_PDC_TCR_OFFSET)
+#  define SAM_HSMCI_PDC_RNPR          (SAM_HSMCI_BASE+SAM_PDC_RNPR_OFFSET)
+#  define SAM_HSMCI_PDC_RNCR          (SAM_HSMCI_BASE+SAM_PDC_RNCR_OFFSET)
+#  define SAM_HSMCI_PDC_TNPR          (SAM_HSMCI_BASE+SAM_PDC_TNPR_OFFSET)
+#  define SAM_HSMCI_PDC_TNCR          (SAM_HSMCI_BASE+SAM_PDC_TNCR_OFFSET)
+#  define SAM_HSMCI_PDC_PTCR          (SAM_HSMCI_BASE+SAM_PDC_PTCR_OFFSET)
+#  define SAM_HSMCI_PDC_PTSR          (SAM_HSMCI_BASE+SAM_PDC_PTSR_OFFSET)
+#endif
 
 /* HSMCI register bit definitions *******************************************************/
 

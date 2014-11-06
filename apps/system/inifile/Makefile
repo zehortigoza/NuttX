@@ -1,5 +1,5 @@
 ############################################################################
-# apps/system/initfile/Makefile
+# apps/system/inifile/Makefile
 #
 #   Copyright (C) 2014 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -59,7 +59,7 @@ endif
 endif
 
 ROOTDEPPATH = --dep-path .
-VPATH = 
+VPATH =
 
 # Build targets
 
@@ -75,6 +75,8 @@ $(COBJS): %$(OBJEXT): %.c
 .built: $(OBJS)
 	$(call ARCHIVE, $(BIN), $(OBJS))
 	$(Q) touch .built
+
+install:
 
 context:
 

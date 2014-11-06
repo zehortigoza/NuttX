@@ -63,7 +63,7 @@
 #     include <nuttx/fs/nfs.h>
 #   endif
 #   ifdef CONFIG_RAMLOG_SYSLOG
-#     include <nuttx/ramlog.h>
+#     include <nuttx/syslog/ramlog.h>
 #   endif
 #endif
 #endif
@@ -284,6 +284,10 @@ static int ls_handler(FAR struct nsh_vtbl_s *vtbl, FAR const char *dirpath,
             {
               details[0]='b';
             }
+          else if (!S_ISREG(buf.st_mode))
+            {
+              details[0]='?';
+            }
 
           if ((buf.st_mode & S_IRUSR) != 0)
             {
@@ -373,7 +377,7 @@ static int ls_handler(FAR struct nsh_vtbl_s *vtbl, FAR const char *dirpath,
  * Name: ls_recursive
  ****************************************************************************/
 
-#if CONFIG_NFILE_DESCRIPTORS > 0
+#if CONFIG_NFILE_DESCRIPTORS > 0 && !defined(CONFIG_NSH_DISABLE_LS)
 static int ls_recursive(FAR struct nsh_vtbl_s *vtbl, const char *dirpath,
                         struct dirent *entryp, void *pvarg)
 {
@@ -405,7 +409,8 @@ static int ls_recursive(FAR struct nsh_vtbl_s *vtbl, const char *dirpath,
     }
   return ret;
 }
-#endif
+
+#endif /* CONFIG_NFILE_DESCRIPTORS > 0 && !CONFIG_NSH_DISABLE_LS */
 
 /****************************************************************************
  * Name: cat_common
@@ -416,7 +421,7 @@ static int ls_recursive(FAR struct nsh_vtbl_s *vtbl, const char *dirpath,
 static int cat_common(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
                       FAR const char *filename)
 {
-  char buffer[IOBUFFERSIZE];
+  FAR char *buffer;
   int fd;
   int ret = OK;
 
@@ -426,6 +431,13 @@ static int cat_common(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
   if (fd < 0)
     {
       nsh_output(vtbl, g_fmtcmdfailed, cmd, "open", NSH_ERRNO);
+      return ERROR;
+    }
+
+  buffer = (FAR char *)malloc(IOBUFFERSIZE);
+  if(buffer == NULL)
+    {
+      nsh_output(vtbl, g_fmtcmdfailed, cmd, "malloc", NSH_ERRNO);
       return ERROR;
     }
 
@@ -514,6 +526,7 @@ static int cat_common(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
    /* Close the input file and return the result */
 
    (void)close(fd);
+   free(buffer);
    return ret;
 }
 #endif

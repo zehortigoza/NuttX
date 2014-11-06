@@ -427,6 +427,7 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
               ret = uart_putxmitchar(dev, '\r', oktoblock);
               if (ret < 0)
                 {
+                  nwritten = ret;
                   break;
                 }
             }
@@ -435,8 +436,8 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
            *
            * OXTABS - primarily a full-screen terminal optimisation
            * ONOEOT - Unix interoperability hack
-           * OLCUC - Not specified by Posix
-           * ONOCR - low-speed interactive optimisation
+           * OLCUC  - Not specified by POSIX
+           * ONOCR  - low-speed interactive optimisation
            */
         }
 
@@ -447,7 +448,6 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
         {
           ret = uart_putxmitchar(dev, '\r', oktoblock);
         }
-
 #endif
 
       /* Put the character into the transmit buffer */
@@ -487,7 +487,7 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
               /* No data was transferred. Return the negated errno value.
                * The VFS layer will set the errno value appropriately).
                */
- 
+
               nwritten = ret;
             }
         }
@@ -766,6 +766,17 @@ static ssize_t uart_read(FAR struct file *filep, FAR char *buffer, size_t buflen
             }
         }
     }
+
+#ifdef CONFIG_SERIAL_IFLOWCONTROL
+  if (dev->recv.head == dev->recv.tail)
+    {
+      /* We might leave Rx interrupt disabled if full recv buffer was read
+       * empty. Enable Rx interrupt to make sure that more input is received.
+       */
+
+      uart_enablerxint(dev);
+    }
+#endif
 
   uart_givesem(&dev->recv.sem);
   return recvd;
@@ -1369,7 +1380,7 @@ void uart_connected(FAR uart_dev_t *dev, bool connected)
           (void)sem_post(&dev->recvsem);
         }
 
-      /* Notify all poll/select waiters that and hangup occurred */
+      /* Notify all poll/select waiters that a hangup occurred */
 
       uart_pollnotify(dev, (POLLERR|POLLHUP));
     }

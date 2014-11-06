@@ -1,7 +1,7 @@
 ############################################################################
 # nxflat/Makefile
 #
-#   Copyright (C) 2007-2009, 2012-2013 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2007-2009, 2012-2014 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@ INCDIROPT = -w
 endif
 CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" "$(TOPDIR)$(DELIM)sched"}
 
-# Basic BINFMT source files 
+# Basic BINFMT source files
 
 BINFMT_ASRCS  =
 BINFMT_CSRCS  = binfmt_globals.c binfmt_register.c binfmt_unregister.c
@@ -61,15 +61,20 @@ endif
 BINFMT_CSRCS += symtab_findbyname.c symtab_findbyvalue.c
 BINFMT_CSRCS += symtab_findorderedbyname.c symtab_findorderedbyvalue.c
 
+ifeq ($(CONFIG_LIBC_EXECFUNCS),y)
+BINFMT_CSRCS += binfmt_execsymtab.c
+endif
+
 # Add configured binary modules
 
-VPATH = 
+VPATH =
 SUBDIRS =
 DEPPATH = --dep-path .
 
 include libnxflat$(DELIM)Make.defs
 include libelf$(DELIM)Make.defs
 include libbuiltin$(DELIM)Make.defs
+include libpcode$(DELIM)Make.defs
 
 BINFMT_AOBJS = $(BINFMT_ASRCS:.S=$(OBJEXT))
 BINFMT_COBJS = $(BINFMT_CSRCS:.c=$(OBJEXT))

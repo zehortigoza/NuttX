@@ -15,9 +15,12 @@ config ARCH_CHIP_A1X
 	select ARCH_CORTEXA8
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_MMU
+	select ARCH_USE_MMU
 	select ARCH_HAVE_LOWVECTORS
 	select ARCH_HAVE_SDRAM
 	select BOOT_RUNFROMSDRAM
+	select ARCH_HAVE_ADDRENV
+	select ARCH_NEED_ADDRENV_MAPPING
 	---help---
 		Allwinner A1X family: A10, A10S (A12), A13 (ARM Cortex-A8)
 
@@ -25,6 +28,7 @@ config ARCH_CHIP_C5471
 	bool "TMS320 C5471"
 	select ARCH_ARM7TDMI
 	select ARCH_HAVE_LOWVECTORS
+	select ARCH_HAVE_OTHER_UART
 	---help---
 		TI TMS320 C5471, A180, or DA180 (ARM7TDMI)
 
@@ -33,6 +37,7 @@ config ARCH_CHIP_CALYPSO
 	select ARCH_ARM7TDMI
 	select ARCH_HAVE_HEAP2
 	select ARCH_HAVE_LOWVECTORS
+	select ARCH_HAVE_OTHER_UART
 	---help---
 		TI Calypso-based cell phones (ARM7TDMI)
 
@@ -42,6 +47,13 @@ config ARCH_CHIP_DM320
 	select ARCH_HAVE_LOWVECTORS
 	---help---
 		TI DMS320 DM320 (ARM926EJS)
+
+config ARCH_CHIP_EFM32
+	bool "Energy Micro"
+	select ARCH_HAVE_CMNVECTOR
+	select ARMV7M_CMNVECTOR
+	---help---
+		Energy Micro EFM32 microcontrollers (ARM Cortex-M).
 
 config ARCH_CHIP_IMX
 	bool "Freescale iMX"
@@ -57,7 +69,6 @@ config ARCH_CHIP_KINETIS
 	select ARCH_HAVE_MPU
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_RAMFUNCS
-	select ARCH_RAMFUNCS
 	---help---
 		Freescale Kinetis Architectures (ARM Cortex-M4)
 
@@ -134,6 +145,10 @@ config ARCH_CHIP_SAMA5
 	select ARCH_CORTEXA5
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_LOWVECTORS
+	select ARCH_HAVE_I2CRESET
+	select ARCH_HAVE_TICKLESS
+	select ARCH_HAVE_ADDRENV
+	select ARCH_NEED_ADDRENV_MAPPING
 	---help---
 		Atmel SAMA5 (ARM Cortex-A5)
 
@@ -177,11 +192,13 @@ config ARCH_ARM926EJS
 	bool
 	default n
 	select ARCH_HAVE_MMU
+	select ARCH_USE_MMU
 
 config ARCH_ARM920T
 	bool
 	default n
 	select ARCH_HAVE_MMU
+	select ARCH_USE_MMU
 
 config ARCH_CORTEXM0
 	bool
@@ -207,12 +224,16 @@ config ARCH_CORTEXA5
 	default n
 	select ARCH_HAVE_IRQPRIO
 	select ARCH_HAVE_MMU
+	select ARCH_USE_MMU
+	select ARCH_HAVE_COHERENT_DCACHE if ELF
 
 config ARCH_CORTEXA8
 	bool
 	default n
 	select ARCH_HAVE_IRQPRIO
 	select ARCH_HAVE_MMU
+	select ARCH_USE_MMU
+	select ARCH_HAVE_COHERENT_DCACHE if ELF
 
 config ARCH_FAMILY
 	string
@@ -227,6 +248,7 @@ config ARCH_CHIP
 	default "c5471"		if ARCH_CHIP_C5471
 	default "calypso"	if ARCH_CHIP_CALYPSO
 	default "dm320"		if ARCH_CHIP_DM320
+	default "efm32"		if ARCH_CHIP_EFM32
 	default "imx"		if ARCH_CHIP_IMX
 	default "kinetis"	if ARCH_CHIP_KINETIS
 	default "kl"		if ARCH_CHIP_KL
@@ -248,11 +270,13 @@ config ARMV7M_USEBASEPRI
 	default n
 	depends on ARCH_CORTEXM3 || ARCH_CORTEXM4
 	---help---
-		Use the BASEPRI register to enable and disable able interrupts.  By
-		default, the PRIMASK register is used for this purpose.  This
-		usually results in hardfaults that are properly handling by the
-		RTOS.  Using the BASEPRI register will avoid these hardfault.
-		That is needed primarily for integration with some toolchains.
+		Use the BASEPRI register to enable and disable interrupts. By
+		default, the PRIMASK register is used for this purpose. This
+		usually results in hardfaults when supervisor calls are made.
+		Though, these hardfaults are properly handled by the RTOS, the
+		hardfaults can confuse some debuggers. With the BASEPRI
+		register, these hardfaults, will be avoided. For more details see
+		http://www.nuttx.org/doku.php?id=wiki:nxinternal:svcall
 
 config ARCH_HAVE_CMNVECTOR
 	bool
@@ -279,14 +303,11 @@ config ARCH_FPU
 		Build in support for the ARM Cortex-M4 Floating Point Unit (FPU).
 		Check your chip specifications first; not all Cortex-M4 chips support the FPU.
 
-config ARCH_HAVE_MPU
-	bool
-	default n
-
 config ARMV7M_MPU
 	bool "MPU support"
 	default n
 	depends on ARCH_HAVE_MPU
+	select ARCH_USE_MPU
 	---help---
 		Build in support for the ARM Cortex-M3/4 Memory Protection Unit (MPU).
 		Check your chip specifications first; not all Cortex-M3/4 chips support the MPU.
@@ -296,7 +317,7 @@ config ARMV7M_MPU_NREGIONS
 	default 8
 	depends on ARMV7M_MPU
 	---help---
-	This is the number of protection regions supported by the MPU.
+		This is the number of protection regions supported by the MPU.
 
 config ARCH_HAVE_LOWVECTORS
 	bool
@@ -311,7 +332,7 @@ config ARCH_LOWVECTORS
 config ARCH_ROMPGTABLE
 	bool "ROM page table"
 	default n
-	depends on ARCH_HAVE_MMU
+	depends on ARCH_USE_MMU
 	---help---
 		Support a fixed memory mapping use a (read-only) page table in ROM/FLASH.
 
@@ -347,6 +368,9 @@ source arch/arm/src/calypso/Kconfig
 endif
 if ARCH_CHIP_DM320
 source arch/arm/src/dm320/Kconfig
+endif
+if ARCH_CHIP_EFM32
+source arch/arm/src/efm32/Kconfig
 endif
 if ARCH_CHIP_IMX
 source arch/arm/src/imx/Kconfig

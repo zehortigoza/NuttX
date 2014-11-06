@@ -1,7 +1,7 @@
 /************************************************************************************
- * configs/sama5df3x-ek/include/board_396mhz.h
+ * configs/sama5d3x-ek/include/board_396mhz.h
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 #include <nuttx/config.h>
 
 /************************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ************************************************************************************/
 
 /* Clocking *************************************************************************/
@@ -115,15 +115,22 @@
 #define BOARD_ADC_PRESCAL          (7)
 #define BOARD_TSD_STARTUP          (40)        /* 40 nanoseconds */
 #define BOARD_TSD_TRACKTIM         (2000)      /* Min 1µs at 8MHz */
-#define BOARD_TSD_DEBOUNCE         (10000000)  /* 10 milliseconds (unis nanoseconds) */
+#define BOARD_TSD_DEBOUNCE         (10000000)  /* 10 milliseconds (units nanoseconds) */
 
 /* Resulting frequencies */
 
-#define BOARD_MAINOSC_FREQUENCY    (12000000)  /* MAINOSC: 12MHz crystal on-board */
+#define BOARD_MAINCK_FREQUENCY     BOARD_MAINOSC_FREQUENCY
 #define BOARD_PLLA_FREQUENCY       (792000000) /* PLLACK:  66 * 12Mhz / 1 */
 #define BOARD_PCK_FREQUENCY        (396000000) /* CPU:     PLLACK / 2 / 1  */
 #define BOARD_MCK_FREQUENCY        (132000000) /* MCK:     PLLACK / 2 / 1 / 3 */
 #define BOARD_ADCCLK_FREQUENCY     (8250000)   /* ADCCLK:  MCK / ((7+1)*2) */
+
+/* On some SAMA5's, the clocking to peripherals may be divided down from MCK,
+ * but not for the SAMA5D3.
+ */
+
+#define BOARD_PIT_FREQUENCY        BOARD_MCK_FREQUENCY
+#define BOARD_USART_FREQUENCY      BOARD_MCK_FREQUENCY
 
 #if defined(CONFIG_SAMA5_EHCI) || defined(CONFIG_SAMA5_OHCI) || \
     defined(CONFIG_SAMA5_UDPHS)
@@ -156,6 +163,12 @@
 #  define BOARD_USE_UPLL             1     /* Use UPLL for clock source */
 #  define BOARD_CKGR_UCKR_UPLLCOUNT  (15)  /* Maximum value */
 #  define BOARD_CKGR_UCKR_BIASCOUNT  (15)  /* Maximum value */
+
+/* REVISIT:  The divisor of 10 produces a rate that is too high. Division
+ * by 5, however, seems to work just fine.  No idea why?
+ */
+
+#  define BOARD_UPLL_OHCI_DIV        (5)   /* Divide by 5 */
 #endif
 
 /* HSMCI clocking
@@ -180,19 +193,6 @@
 
 #define HSMCI_SDXFR_CLKDIV         (2 << HSMCI_MR_CLKDIV_SHIFT)
 #define HSMCI_SDWIDEXFR_CLKDIV     HSMCI_SDXFR_CLKDIV
-
-/* FLASH wait states
- *
- * FWS Max frequency
- *     1.62V 1.8V
- * --- ----- ------
- *  0  24MHz 27MHz
- *  1  40MHz 47MHz
- *  2  72MHz 84MHz
- *  3  84MHz 96MHz
- */
-
-#define BOARD_FWS                  3
 
 /************************************************************************************
  * Public Data

@@ -59,7 +59,7 @@
 #if CONFIG_NFILE_DESCRIPTORS > 0 && !defined(CONFIG_NSH_DISABLE_DD)
 
 /****************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /* If no sector size is specified wity BS=, then the following default value
@@ -113,7 +113,7 @@ struct dd_s
     int fd;            /* File descriptor of the character device */
   } inf;
 #else
-  int infd;            /* File descriptor of the input device */ 
+  int infd;            /* File descriptor of the input device */
 #endif
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
@@ -123,7 +123,7 @@ struct dd_s
     int fd;            /* File descriptor of the character device */
   } outf;
 #else
-  int outfd;           /* File descriptor of the output device */ 
+  int outfd;           /* File descriptor of the output device */
 #endif
 
   uint32_t nsectors;   /* Number of sectors to transfer */
@@ -621,10 +621,10 @@ int cmd_dd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
   ret = OK;
 
 errout_with_outf:
-  DD_INCLOSE(&dd);
+  DD_OUTCLOSE(&dd);
 
 errout_with_inf:
-  DD_OUTCLOSE(&dd);
+  DD_INCLOSE(&dd);
   free(dd.buffer);
 
 errout_with_paths:

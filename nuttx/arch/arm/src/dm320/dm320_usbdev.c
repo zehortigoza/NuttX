@@ -827,7 +827,7 @@ static int dm320_epread(uint8_t epphy, uint8_t *buf, uint16_t nbytes)
           bytesleft = nbytes;
         }
     }
-  else 
+  else
    {
       bytesleft = dm320_getreg8(DM320_USB_RXCOUNT2);
       bytesleft = (bytesleft << 8) + dm320_getreg8(DM320_USB_RXCOUNT1);
@@ -1562,7 +1562,7 @@ static int dm320_ctlrinterrupt(int irq, FAR void *context)
               {
                 /* Now ignore these unknown interrupts */
 
-                dm320_putreg8(USB_PERCSR0_CLRRXRDY | USB_PERCSR0_DATAEND, DM320_USB_PERCSR0); 
+                dm320_putreg8(USB_PERCSR0_CLRRXRDY | USB_PERCSR0_DATAEND, DM320_USB_PERCSR0);
                 usbtrace(TRACE_INTENTRY(DM320_TRACEINTID_UNKNOWN), csr0);
               }
           }
@@ -1719,7 +1719,7 @@ static inline void dm320_epinitialize(struct dm320_usbdev_s *priv)
 
   /* Initialize endpoint 0 */
 
-  dm320_putreg8(USB_EP0_SELECT, DM320_USB_INDEX); 
+  dm320_putreg8(USB_EP0_SELECT, DM320_USB_INDEX);
   dm320_putreg8(USB_PERCSR0_CLRSETEND|USB_PERCSR0_CLRRXRDY, DM320_USB_PERCSR0);
   dm320_putreg8(USB_CSR2_FLFIFO, DM320_USB_CSR2);
   dm320_putreg8(USB_CSR2_FLFIFO, DM320_USB_CSR2);
@@ -1837,7 +1837,7 @@ static void dm320_ctrlinitialize(FAR struct dm320_usbdev_s *priv)
   dm320_putreg8((DM320_EPBULKIN << 1), DM320_USB_INTRRX1E);
   dm320_putreg8((DM320_EPBULKOUT << 1) | USB_EP0, DM320_USB_INTRTX1E);
   dm320_putreg8(USB_INT_RESET|USB_INT_RESUME|USB_INT_SUSPEND|USB_INT_SESSRQ|USB_INT_SOF,
-          DM320_USB_INTRUSBE); 
+          DM320_USB_INTRUSBE);
 
   /* Initialize endpoints ******************************************************/
 
@@ -1937,7 +1937,7 @@ static FAR struct usbdev_req_s *dm320_epallocreq(FAR struct usbdev_ep_s *ep)
 #endif
   usbtrace(TRACE_EPALLOCREQ, ((FAR struct dm320_ep_s *)ep)->epphy);
 
-  privreq = (FAR struct dm320_req_s *)kmalloc(sizeof(struct dm320_req_s));
+  privreq = (FAR struct dm320_req_s *)kmm_malloc(sizeof(struct dm320_req_s));
   if (!privreq)
     {
       usbtrace(TRACE_DEVERROR(DM320_TRACEERR_ALLOCFAIL), 0);
@@ -1969,7 +1969,7 @@ static void dm320_epfreereq(FAR struct usbdev_ep_s *ep, FAR struct usbdev_req_s 
 #endif
 
   usbtrace(TRACE_EPFREEREQ, ((FAR struct dm320_ep_s *)ep)->epphy);
-  kfree(privreq);
+  kmm_free(privreq);
 }
 
 /*******************************************************************************
@@ -1988,7 +1988,7 @@ static void *dm320_epallocbuffer(FAR struct usbdev_ep_s *ep, unsigned bytes)
 #ifdef CONFIG_USBDEV_DMAMEMORY
   return usbdev_dma_alloc(bytes);
 #else
-  return kmalloc(bytes);
+  return kmm_malloc(bytes);
 #endif
 }
 #endif
@@ -2009,7 +2009,7 @@ static void dm320_epfreebuffer(FAR struct usbdev_ep_s *ep, FAR void *buf)
 #ifdef CONFIG_USBDEV_DMAMEMORY
   usbdev_dma_free(buf);
 #else
-  kfree(buf);
+  kmm_free(buf);
 #endif
 }
 #endif
@@ -2288,7 +2288,7 @@ static int dm320_wakeup(struct usbdev_s *dev)
  * Name: dm320_selfpowered
  *
  * Description:
- *   Sets/clears the device selfpowered feature 
+ *   Sets/clears the device selfpowered feature
  *
  *******************************************************************************/
 
@@ -2375,7 +2375,7 @@ void up_usbinitialize(void)
 
   /* Enable USB clock & GIO clock  */
 
-  dm320_putreg16(dm320_getreg16(DM320_CLKC_MOD2) | 0x0060, DM320_CLKC_MOD2); 
+  dm320_putreg16(dm320_getreg16(DM320_CLKC_MOD2) | 0x0060, DM320_CLKC_MOD2);
   dm320_putreg16(dm320_getreg16(DM320_CLKC_DIV4) | (((4) - 1) << 8) | ((1) - 1), DM320_CLKC_DIV4);
 
   /* Initialize  D+ pullup control GIO */

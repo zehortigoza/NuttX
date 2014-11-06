@@ -136,7 +136,7 @@ ITEAD 2.4" TFT with Touch
 
   NOTE:  When used with the ITEAD shield, the power from the USB connector
   seems to be inefficient (for example, I lose the USB connection when I
-  insert an SD card).  I recommends using a 7-12V power supply with the
+  insert an SD card).  I recommend using a 7-12V power supply with the
   Arduino in this case.
 
   Connector:
@@ -323,8 +323,7 @@ IDEs
 ^^^^
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
+  effort will be required to create the project
 
   Makefile Build
   --------------
@@ -350,7 +349,7 @@ IDEs
   Startup files will probably cause you some headaches.  The NuttX startup file
   is arch/arm/src/sam34/sam_vectors.S.  You may need to build NuttX
   one time from the Cygwin command line in order to obtain the pre-built
-  startup object needed by RIDE.
+  startup object needed by an IDE.
 
 NuttX EABI "buildroot" Toolchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -764,10 +763,6 @@ Arduino DUE-specific Configuration Options
 
     CONFIG_RAM_START=0x20000000
 
-  CONFIG_ARCH_IRQPRIO - The SAM3UF103Z supports interrupt prioritization
-
-    CONFIG_ARCH_IRQPRIO=y
-
   CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
   have LEDs
 
@@ -817,7 +812,7 @@ Arduino DUE-specific Configuration Options
     CONFIG_SAM34_PWM         - Pulse Width Modulation
     CONFIG_SAM34_ADC12B      - 12-bit Analog To Digital Converter
     CONFIG_SAM34_DACC        - Digital To Analog Converter
-    CONFIG_SAM34_DMAC        - DMA Controller
+    CONFIG_SAM34_DMAC0       - DMA Controller
     CONFIG_SAM34_UOTGHS      - USB OTG High Speed
     CONFIG_SAM34_TRNG        - True Random Number Generator
     CONFIG_SAM34_EMAC        - Ethernet MAC
@@ -827,12 +822,12 @@ Arduino DUE-specific Configuration Options
   Some subsystems can be configured to operate in different ways. The drivers
   need to know how to configure the subsystem.
 
-    CONFIG_GPIOA_IRQ
-    CONFIG_GPIOB_IRQ
-    CONFIG_GPIOC_IRQ
-    CONFIG_GPIOD_IRQ
-    CONFIG_GPIOE_IRQ
-    CONFIG_GPIOF_IRQ
+    CONFIG_SAM34_GPIOA_IRQ
+    CONFIG_SAM34_GPIOB_IRQ
+    CONFIG_SAM34_GPIOC_IRQ
+    CONFIG_SAM34_GPIOD_IRQ
+    CONFIG_SAM34_GPIOE_IRQ
+    CONFIG_SAM34_GPIOF_IRQ
     CONFIG_USART0_ISUART
     CONFIG_USART1_ISUART
     CONFIG_USART2_ISUART
@@ -1069,8 +1064,8 @@ Configuration sub-directories
          CONFIG_ADS7843E_THRESHY=39
 
        System Type:
-         CONFIG_GPIO_IRQ=y                 : GPIO interrupt support
-         CONFIG_GPIOACIRQ=y                : Enable GPIO interrupts from port C
+         CONFIG_SAM34_GPIO_IRQ=y           : GPIO interrupt support
+         CONFIG_SAM34_GPIOC_IRQ=y          : Enable GPIO interrupts from port C
 
        RTOS Features:
          CONFIG_DISABLE_SIGNALS=n          : Signals are required

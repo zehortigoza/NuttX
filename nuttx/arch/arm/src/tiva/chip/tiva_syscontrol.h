@@ -43,14 +43,18 @@
 #include <nuttx/config.h>
 #include <arch/tiva/chip.h>
 
-/* Include the system control header file for the specific Stellaris chip */
+/* Include the system control header file for the specific Tiva/Stellaris chip */
 
 #if defined(CONFIG_ARCH_CHIP_LM3S)
 #  include "chip/lm3s_syscontrol.h"
 #elif defined(CONFIG_ARCH_CHIP_LM4F)
 #  include "chip/lm4f_syscontrol.h"
+#elif defined(CONFIG_ARCH_CHIP_TM4C)
+#  include "chip/tm4c_syscontrol.h"
+#elif defined(CONFIG_ARCH_CHIP_CC3200)
+#  include "chip/cc3200_syscontrol.h"
 #else
-#  error "Unsupported Stellaris memory map"
+#  error "Unsupported Tiva/Stellaris system control module"
 #endif
 
 /************************************************************************************

@@ -386,10 +386,6 @@ ZKit-ARM Configuration Options
 
        CONFIG_RAM_START=0x10000000
 
-    CONFIG_ARCH_IRQPRIO - The LPC17xx supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
-
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
 
@@ -484,8 +480,6 @@ ZKit-ARM Configuration Options
     CONFIG_NET_EMACRAM_SIZE - Size of EMAC RAM.  Default: 16Kb
     CONFIG_NET_NTXDESC - Configured number of Tx descriptors. Default: 18
     CONFIG_NET_NRXDESC - Configured number of Rx descriptors. Default: 18
-    CONFIG_NET_PRIORITY - Ethernet interrupt priority.  The is default is
-      the higest priority.
     CONFIG_NET_WOL - Enable Wake-up on Lan (not fully implemented).
     CONFIG_NET_REGDEBUG - Enabled low level register debug.  Also needs
       CONFIG_DEBUG.
@@ -549,7 +543,7 @@ Where <subdir> is one of the following:
     apps/examples/README.txt for information about the examples.
 
     NOTES:
- 
+
     1. This configuration uses the mconf-based configuration tool.  To
        change this configuration using that tool, you should:
 
@@ -569,7 +563,7 @@ Where <subdir> is one of the following:
     the apps/examples/thttpd application.
 
     NOTES:
- 
+
     1. This configuration uses the mconf-based configuration tool.  To
        change this configuration using that tool, you should:
 

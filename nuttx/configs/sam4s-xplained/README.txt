@@ -151,8 +151,7 @@ IDEs
 ^^^^
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
+  effort will be required to create the project.
 
   Makefile Build
   --------------
@@ -178,7 +177,7 @@ IDEs
   Startup files will probably cause you some headaches.  The NuttX startup file
   is arch/arm/src/sam34/sam_vectors.S.  You may need to build NuttX
   one time from the Cygwin command line in order to obtain the pre-built
-  startup object needed by RIDE.
+  startup object needed by an IDE.
 
 NuttX EABI "buildroot" Toolchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -410,10 +409,6 @@ SAM4S Xplained-specific Configuration Options
 
     CONFIG_RAM_START=0x20000000
 
-  CONFIG_ARCH_IRQPRIO - The SAM4S supports interrupt prioritization
-
-    CONFIG_ARCH_IRQPRIO=y
-
   CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
   have LEDs
 
@@ -464,9 +459,9 @@ SAM4S Xplained-specific Configuration Options
   Some subsystems can be configured to operate in different ways. The drivers
   need to know how to configure the subsystem.
 
-    CONFIG_GPIOA_IRQ
-    CONFIG_GPIOB_IRQ
-    CONFIG_GPIOC_IRQ
+    CONFIG_SAM34_GPIOA_IRQ
+    CONFIG_SAM34_GPIOB_IRQ
+    CONFIG_SAM34_GPIOC_IRQ
     CONFIG_USART0_ISUART
     CONFIG_USART1_ISUART
     CONFIG_USART2_ISUART
@@ -589,7 +584,7 @@ Configuration sub-directories
     1. The configuration configuration can be modified to include support
        for the on-board SRAM (1MB).
 
-       System Type -> External Memory Configuration       
+       System Type -> External Memory Configuration
          CONFIG_SAM34_EXTSRAM0=y              : Select SRAM on CS0
          CONFIG_SAM34_EXTSRAM0SIZE=1048576    : Size=1MB
 
@@ -598,7 +593,7 @@ Configuration sub-directories
        a)  To enable the NuttX RAM test that may be used to verify the
            external SRAM:
 
-           System Type -> External Memory Configuration       
+           System Type -> External Memory Configuration
              CONFIG_SAM34_EXTSRAM0HEAP=n      : Don't add to heap
 
            Application Configuration -> System NSH Add-Ons
@@ -632,7 +627,7 @@ Configuration sub-directories
         b) To add this RAM to the NuttX heap, you would need to change the
            configuration as follows:
 
-           System Type -> External Memory Configuration       
+           System Type -> External Memory Configuration
              CONFIG_SAM34_EXTSRAM0HEAP=y     : Add external RAM to heap
 
            Memory Management

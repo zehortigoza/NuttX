@@ -1,5 +1,5 @@
 /****************************************************************************
- * up_reprioritizertr.c
+ * arch/sim/src/up_reprioritizertr.c
  *
  *   Copyright (C) 2007-2009, 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -46,11 +46,11 @@
 
 #include <nuttx/arch.h>
 
-#include "os_internal.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 
 /****************************************************************************
- * Private Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /****************************************************************************
@@ -70,7 +70,7 @@
  *
  * Description:
  *   Called when the priority of a running or
- *   ready-to-run task changes and the reprioritization will 
+ *   ready-to-run task changes and the reprioritization will
  *   cause a context switch.  Two cases:
  *
  *   1) The priority of the currently running task drops and the next
@@ -150,7 +150,7 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
 
           if (!up_setjmp(rtcb->xcp.regs))
             {
-              /* Restore the exception context of the rtcb at the (new) head 
+              /* Restore the exception context of the rtcb at the (new) head
                * of the g_readytorun task list.
                */
 

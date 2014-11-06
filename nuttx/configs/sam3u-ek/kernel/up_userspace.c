@@ -43,9 +43,9 @@
 
 #include <nuttx/userspace.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/mm.h>
+#include <nuttx/mm/mm.h>
 
-#if defined(CONFIG_NUTTX_KERNEL) && !defined(__KERNEL__)
+#if defined(CONFIG_BUILD_PROTECTED) && !defined(__KERNEL__)
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -88,7 +88,7 @@ extern uint32_t _ebss;            /* End+1 of .bss */
 
 int CONFIG_USER_ENTRYPOINT(int argc, char *argv[]);
 
-const struct userspace_s userspace __attribute__ ((section (".userspace"))) = 
+const struct userspace_s userspace __attribute__ ((section (".userspace"))) =
 {
   /* General memory map */
 
@@ -114,7 +114,7 @@ const struct userspace_s userspace __attribute__ ((section (".userspace"))) =
   .signal_handler   = up_signal_handler,
 #endif
 
-  /* Memory manager entry points (declared in include/nuttx/mm.h) */
+  /* Memory manager entry points (declared in include/nuttx/mm/mm.h) */
 
   .mm_initialize    = umm_initialize,
   .mm_addregion     = umm_addregion,
@@ -130,7 +130,7 @@ const struct userspace_s userspace __attribute__ ((section (".userspace"))) =
 
   /* User-space work queue support (declared in include/nuttx/wqueue.h) */
 
-#if defined(CONFIG_SCHED_WORKQUEUE) && defined(CONFIG_SCHED_USRWORK)
+#ifdef CONFIG_LIB_USRWORK
   .work_usrstart    = work_usrstart,
 #endif
 };
@@ -139,4 +139,4 @@ const struct userspace_s userspace __attribute__ ((section (".userspace"))) =
  * Public Functions
  ****************************************************************************/
 
-#endif /* CONFIG_NUTTX_KERNEL && !__KERNEL__ */
+#endif /* CONFIG_BUILD_PROTECTED && !__KERNEL__ */

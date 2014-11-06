@@ -75,7 +75,8 @@ examples/buttons
   NOTE: This test exercises internal button driver interfaces.  As such, it
   relies on internal OS interfaces that are not normally available to a
   user-space program.  As a result, this example cannot be used if a
-  NuttX is built as a protected, supervisor kernel (CONFIG_NUTTX_KERNEL).
+  NuttX is built as a protected, supervisor kernel (CONFIG_BUILD_PROTECTED
+  or CONFIG_BUILD_KERNEL).
 
 examples/can
 ^^^^^^^^^^^^
@@ -121,11 +122,18 @@ examples/configdata
 
   This is a Unit Test for the MTD configuration data driver
 
+examples/cpuhog
+^^^^^^^^^^^^^^^
+
+  Attempts to keep the system busy by passing data through a pipe in loop
+  back mode.  This may be useful if you are trying run down other problems
+  that you think might only occur when the system is very busy.
+
 examples/cxxtest
 ^^^^^^^^^^^^^^^^
 
   This is a test of the C++ standard library.  At present a port of the uClibc++
-  C++ library is available.  Due to licensinging issues, the uClibc++ C++ library
+  C++ library is available.  Due to licensing issues, the uClibc++ C++ library
   is not included in the NuttX source tree by default, but must be installed
   (see misc/uClibc++/README.txt for installation).
 
@@ -175,7 +183,7 @@ examples/dhcpd
                                      (as well as various other UDP-related
                                      configuration settings)
     CONFIG_NET_BROADCAST=y         - UDP broadcast support is needed.
-    CONFIG_NETUTILS_UIPLIB=y       - The UIP library is needed
+    CONFIG_NETUTILS_NETLIB=y       - The networking library is needed
 
     CONFIG_EXAMPLES_DHCPD_NOMAC     - (May be defined to use software assigned MAC)
     CONFIG_EXAMPLES_DHCPD_IPADDR    - Target IP address
@@ -284,8 +292,9 @@ examples/flash_test
     * CONFIG_MTD_SMART=y - SMART block driver support
     * CONFIG_NSH_BUILTIN_APPS=y - This example can only be built as an NSH
       command
-    * CONFIG_NUTTX_KERNEL=n - This test uses internal OS interfaces and so
-      is not available in the NUTTX kernel build
+    * CONFIG_BUILD_PROTECTED=n and CONFIG_BUILD_KERNEL=n- This test uses
+      internal OS interfaces and so is not available in the NUTTX kernel
+      builds
 
 examples/ftpc
 ^^^^^^^^^^^^^
@@ -387,7 +396,7 @@ examples/ftpd
   The following netutils libraries should be enabled in your defconfig
   file:
 
-    CONFIG_NETUTILS_UIPLIB=y
+    CONFIG_NETUTILS_NETLIB=y
     CONFIG_NETUTILS_TELNED=y
 
 examples/hello
@@ -482,8 +491,8 @@ examples/igmp
       Network mask
   * CONFIG_EXAMPLES_IGMP_GRPADDR
       Multicast group address
-  * CONFIG_EXAMPLES_UIPLIB
-      The UIP library is needed
+  * CONFIG_EXAMPLES_NETLIB
+      The networking library is needed
 
 examples/adc
 ^^^^^^^^^^^^
@@ -575,7 +584,8 @@ examples/lcdrw
   NOTE: This test exercises internal lcd driver interfaces.  As such, it
   relies on internal OS interfaces that are not normally available to a
   user-space program.  As a result, this example cannot be used if a
-  NuttX is built as a protected, supervisor kernel (CONFIG_NUTTX_KERNEL).
+  NuttX is built as a protected, supervisor kernel (CONFIG_BUILD_PROTECTED
+  or CONFIG_BUILD_KERNEL).
 
 examples/mm
 ^^^^^^^^^^^
@@ -651,6 +661,35 @@ examples/mtdpart
   * CONFIG_EXAMPLES_MTDPART_NEBLOCKS - This value gives the nubmer of erase
     blocks in MTD RAM device.
 
+examples/mtdrwb
+^^^^^^^^^^^^^^^^
+
+  This examples provides a simple test of MTD Read-Ahead/Write buffering
+  logic.
+
+  * CONFIG_EXAMPLES_MTDRWB - Enables the MTD R/W buffering test example
+  * CONFIG_EXAMPLES_MTDRWB_ARCHINIT - The default is to use the RAM MTD
+    device at drivers/mtd/rammtd.c. But an architecture-specific MTD driver
+    can be used instead by defining CONFIG_EXAMPLES_MTDRWB_ARCHINIT.  In
+    this case, the initialization logic will call mtdrwb_archinitialize()
+    to obtain the MTD driver instance.
+
+  When CONFIG_EXAMPLES_MTDRWB_ARCHINIT is not defined, this test will use
+  the RAM MTD device at drivers/mtd/rammtd.c to simulate FLASH. The size of
+  the allocated RAM drive will be: CONFIG_EXMPLES_RAMMTD_ERASESIZE *
+  CONFIG_EXAMPLES_MTDRWB_NEBLOCKS
+
+  * CONFIG_EXAMPLES_MTDRWB_ERASESIZE - This value gives the size of one
+    erase block in the MTD RAM device. This must exactly match the default
+    configuration in drivers/mtd/rammtd.c!
+  * CONFIG_EXAMPLES_MTDRWB_NEBLOCKS - This value gives the nubmer of erase
+    blocks in MTD RAM device.
+
+examples/netpkt
+^^^^^^^^^^^^^^^
+
+  A test of AF_PACKET, "raw" sockets.  Contributed by Lazlo Sitzer.
+
 examples/nettest
 ^^^^^^^^^^^^^^^^
 
@@ -658,7 +697,7 @@ examples/nettest
   functionality in a TCP/IP connection.
 
     CONFIG_EXAMPLES_NETTEST=y - Enables the nettest example
-    CONFIG_EXAMPLES_UIPLIB=y  - The UIP livrary in needed.
+    CONFIG_EXAMPLES_NETLIB=y  - The networking library in needed.
 
   See also examples/tcpecho
 
@@ -701,9 +740,9 @@ examples/nsh
 
   And if networking is included:
 
-    CONFIG_NETUTILS_UIPLIB=y
+    CONFIG_NETUTILS_NETLIB=y
     CONFIG_NETUTILS_DHCPC=y
-    CONFIG_NETUTILS_RESOLV=y
+    CONFIG_NETUTILS_DNSCLIENT=y
     CONFIG_NETUTILS_TFTPC=y
     CONFIG_NETUTILS_WEBCLIENT=y
 
@@ -793,17 +832,17 @@ examples/nx
     CONFIG_DISABLE_PTHREAD=n
     CONFIG_NX_BLOCKING=y
 
-examples/nxconsole
+examples/nxterm
 ^^^^^^^^^^^^^^^^^^
 
   This directory contains yet another version of the NuttShell (NSH).  This
-  version uses the NX console device defined in include/nuttx/nx/nxconsole.h
+  version uses the NX console device defined in include/nuttx/nx/nxterm.h
   for output.  the result is that the NSH input still come from the standard
   console input (probably a serial console).  But the text output will go to
   an NX winbdow.  Prerequisite configuration settings for this test include:
 
     CONFIG_NX=y              -- NX graphics must be enabled
-    CONFIG_NXCONSOLE=y       -- The NX console driver must be built
+    CONFIG_NXTERM=y       -- The NX console driver must be built
     CONFIG_NX_MULTIUSER=y    -- NX multi-user support must be enabled.
     CONFIG_DISABLE_MQUEUE=n  -- Message queue support must be available.
     CONFIG_DISABLE_SIGNALS=n -- Signals are needed
@@ -845,14 +884,14 @@ examples/nxconsole
       #endif
 
     CONFIG_EXAMPLES_NXCON_MINOR -- The NX console device minor number.
-      Default is 0 corresponding to /dev/nxcon0
+      Default is 0 corresponding to /dev/nxterm0
     CONFIG_EXAMPLES_NXCON_DEVNAME -- The quoated, full path to the
       NX console device corresponding to CONFIG_EXAMPLES_NXCON_MINOR.
-      Default: "/dev/nxcon0"
-    CONFIG_EXAMPLES_NXCONSOLE_PRIO - Priority of the NxConsole task.
+      Default: "/dev/nxterm0"
+    CONFIG_EXAMPLES_NXTERM_PRIO - Priority of the NxTerm task.
       Default: SCHED_PRIORITY_DEFAULT
-    CONFIG_EXAMPLES_NXCONSOLE_STACKSIZE - Stack size allocated for the
-      NxConsole task. Default: 2048
+    CONFIG_EXAMPLES_NXTERM_STACKSIZE - Stack size allocated for the
+      NxTerm task. Default: 2048
 
   The following configuration settings determine how to set up the NX
   server (CONFIG_NX_MULTIUSER):
@@ -1206,9 +1245,9 @@ examples/poll
 
   If networking is enabled, applications using this example will need to
   provide the following definition in the defconfig file to enable the
-  UIP library:
+  networking library:
 
-    CONFIG_NETUTILS_UIPLIB=y
+    CONFIG_NETUTILS_NETLIB=y
 
 examples/posix_spawn
 ^^^^^^^^^^^^^^^^^^^^
@@ -1375,7 +1414,8 @@ examples/relays
   NOTE: This test exercises internal relay driver interfaces.  As such, it
   relies on internal OS interfaces that are not normally available to a
   user-space program.  As a result, this example cannot be used if a
-  NuttX is built as a protected, supervisor kernel (CONFIG_NUTTX_KERNEL).
+  NuttX is built as a protected, supervisor kernel (CONFIG_BUILD_PROTECTED
+  or CONFIG_BUILD_KERNEL).
 
 examples/rgmp
 ^^^^^^^^^^^^^
@@ -1439,8 +1479,22 @@ examples/sendmail
   Applications using this example will need to enble the following
   netutils libraries in their defconfig file:
 
-    CONFIG_NETUTILS_UIPLIB=y
+    CONFIG_NETUTILS_NETLIB=y
     CONFIG_NETUTILS_SMTP=y
+
+examples/serialblaster
+^^^^^^^^^^^^^^^^^^^^^^
+
+  Sends a repeating pattern (the alphabet) out a serial port continuously.
+  This may be useful if you are trying run down other problems that you
+  think might only occur when the serial port usage is high.
+
+examples/serialrx
+^^^^^^^^^^^^^^^^^
+
+  Constant receives serial data.  This is the complement to serialblaster.
+  This may be useful if you are trying run down other problems that you
+  think might only occur when the serial port usage is high.
 
 examples/serloop
 ^^^^^^^^^^^^^^^^
@@ -1526,7 +1580,7 @@ examples/telnetd
   tiny shell and also supports telnetd.
 
     CONFIG_EXAMPLES_TELNETD - Enable the Telnetd example
-    CONFIG_NETUTILS_UIPLIB, CONFIG_NETUTILS_TELNED - Enable netutils
+    CONFIG_NETUTILS_NETLIB, CONFIG_NETUTILS_TELNED - Enable netutils
       libraries needed by the Telnetd example.
     CONFIG_EXAMPLES_TELNETD_DAEMONPRIO - Priority of the Telnet daemon.
       Default: SCHED_PRIORITY_DEFAULT
@@ -1564,7 +1618,7 @@ examples/thttpd
   Applications using this example will need to enable the following
   netutils libraries in the defconfig file:
 
-    CONFIG_NETUTILS_UIPLIB=y
+    CONFIG_NETUTILS_NETLIB=y
     CONFIG_NETUTILS_THTTPD=y
 
 examples/tiff
@@ -1642,53 +1696,7 @@ examples/udp
   Applications using this example will need to enabled the following
   netutils libraries in the defconfig file:
 
-    CONFIG_NETUTILS_UIPLIB=y
-
-examples/uip
-^^^^^^^^^^^^
-
-  This is a port of uIP tiny webserver example application.  Settings
-  specific to this example include:
-
-    CONFIG_EXAMPLES_UIP_NOMAC     - (May be defined to use software assigned MAC)
-    CONFIG_EXAMPLES_UIP_IPADDR    - Target IP address
-    CONFIG_EXAMPLES_UIP_DRIPADDR  - Default router IP addess
-    CONFIG_EXAMPLES_UIP_NETMASK   - Network mask
-    CONFIG_EXAMPLES_UIP_DHCPC     - Select to get IP address via DHCP
-
-  If you use DHCPC, then some special configuration network options are
-  required.  These include:
-
-    CONFIG_NET=y                 - Of course
-    CONFIG_NSOCKET_DESCRIPTORS   - And, of course, you must allocate some
-                                   socket descriptors.
-    CONFIG_NET_UDP=y             - UDP support is required for DHCP
-                                   (as well as various other UDP-related
-                                   configuration settings).
-    CONFIG_NET_BROADCAST=y       - UDP broadcast support is needed.
-    CONFIG_NET_BUFSIZE=650       - Per RFC2131 (p. 9), the DHCP client must be
-    (or larger)                    prepared to receive DHCP messages of up to
-                                   576 bytes (excluding Ethernet, IP, or UDP
-                                   headers and FCS).
-
-  Other configuration items apply also to the selected webserver net utility.
-  Additional relevant settings for the uIP webserver net utility are:
-
-    CONFIG_NETUTILS_HTTPDSTACKSIZE
-    CONFIG_NETUTILS_HTTPDFILESTATS
-    CONFIG_NETUTILS_HTTPDNETSTATS
-
-  Applications using this example will need to enable the following
-  netutils libraries in their defconfig file:
-
-    CONFIG_NETUTILS_UIPLIB=y
-    CONFIG_NETUTILS_DHCPC=y
-    CONFIG_NETUTILS_RESOLV=y
-    CONFIG_NETUTILS_WEBSERVER=y
-
-  NOTE:  This example does depend on the perl script at
-  nuttx/tools/mkfsdata.pl.  You must have perl installed on your
-  development system at /usr/bin/perl.
+    CONFIG_NETUTILS_NETLIB=y
 
 examples/usbserial
 ^^^^^^^^^^^^^^^^^^
@@ -1868,6 +1876,52 @@ examples/watchdog
       milliseconds before the watchdog timer expires.  Default:  2000
       milliseconds.
 
+examples/webserver
+^^^^^^^^^^^^^^^^^^
+
+  This is a port of uIP tiny webserver example application.  Settings
+  specific to this example include:
+
+    CONFIG_EXAMPLES_WEBSERVER_NOMAC     - (May be defined to use software assigned MAC)
+    CONFIG_EXAMPLES_WEBSERVER_IPADDR    - Target IP address
+    CONFIG_EXAMPLES_WEBSERVER_DRIPADDR  - Default router IP addess
+    CONFIG_EXAMPLES_WEBSERVER_NETMASK   - Network mask
+    CONFIG_EXAMPLES_WEBSERVER_DHCPC     - Select to get IP address via DHCP
+
+  If you use DHCPC, then some special configuration network options are
+  required.  These include:
+
+    CONFIG_NET=y                 - Of course
+    CONFIG_NSOCKET_DESCRIPTORS   - And, of course, you must allocate some
+                                   socket descriptors.
+    CONFIG_NET_UDP=y             - UDP support is required for DHCP
+                                   (as well as various other UDP-related
+                                   configuration settings).
+    CONFIG_NET_BROADCAST=y       - UDP broadcast support is needed.
+    CONFIG_NET_BUFSIZE=650       - Per RFC2131 (p. 9), the DHCP client must be
+    (or larger)                    prepared to receive DHCP messages of up to
+                                   576 bytes (excluding Ethernet, IP, or UDP
+                                   headers and FCS).
+
+  Other configuration items apply also to the selected webserver net utility.
+  Additional relevant settings for the uIP webserver net utility are:
+
+    CONFIG_NETUTILS_HTTPDSTACKSIZE
+    CONFIG_NETUTILS_HTTPDFILESTATS
+    CONFIG_NETUTILS_HTTPDNETSTATS
+
+  Applications using this example will need to enable the following
+  netutils libraries in their defconfig file:
+
+    CONFIG_NETUTILS_NETLIB=y
+    CONFIG_NETUTILS_DHCPC=y
+    CONFIG_NETUTILS_DNSCLIENT=y
+    CONFIG_NETUTILS_WEBSERVER=y
+
+  NOTE:  This example does depend on the perl script at
+  nuttx/tools/mkfsdata.pl.  You must have perl installed on your
+  development system at /usr/bin/perl.
+
 examples/wget
 ^^^^^^^^^^^^^
 
@@ -1904,8 +1958,8 @@ examples/wget
   Applications using this example will need to enable the following netutils
   libraries in the defconfig file:
 
-    CONFIG_NETUTILS_UIPLIB=y
-    CONFIG_NETUTILS_RESOLV=y
+    CONFIG_NETUTILS_NETLIB=y
+    CONFIG_NETUTILS_DNSCLIENT=y
     CONFIG_NETUTILS_WEBCLIENT=y
 
 examples/wget

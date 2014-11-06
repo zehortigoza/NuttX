@@ -46,7 +46,7 @@
 #include <sched.h>
 
 /****************************************************************************
- * Pre-Processor Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /* Default pthread attribute initializer */
@@ -70,11 +70,11 @@ extern "C" {
 #define EXTERN extern
 #endif
 
-/* Default pthread attributes (see sched/pthread_create.c).  This global
- * can only be shared within the kernel- or within the user- address space.
+/* Default pthread attributes.  This global can only be shared within the
+ * kernel- or within the user- address space.
  */
 
-EXTERN pthread_attr_t g_default_pthread_attr;
+EXTERN const pthread_attr_t g_default_pthread_attr;
 
 /****************************************************************************
  * Public Function Prototypes

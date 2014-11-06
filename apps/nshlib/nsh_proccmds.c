@@ -86,15 +86,15 @@ static const char *g_statenames[] =
 {
   "INVALID ",
   "PENDING ",
-  "READY   ", 
-  "RUNNING ", 
-  "INACTIVE", 
-  "WAITSEM ", 
+  "READY   ",
+  "RUNNING ",
+  "INACTIVE",
+  "WAITSEM ",
 #ifndef CONFIG_DISABLE_MQUEUE
-  "WAITSIG ", 
+  "WAITSIG ",
 #endif
 #ifndef CONFIG_DISABLE_MQUEUE
-  "MQNEMPTY", 
+  "MQNEMPTY",
   "MQNFULL "
 #endif
 };
@@ -182,7 +182,7 @@ static int readfile(FAR const char *filename, FAR char *buffer, size_t buflen)
       else
         {
           /* Successful read.  Make sure that the buffer is null terminated */
-          
+
           DEBUGASSERT(nread <= remaining);
           ntotal += nread;
           buffer[ntotal] = '\0';
@@ -200,7 +200,7 @@ static int readfile(FAR const char *filename, FAR char *buffer, size_t buflen)
   /* Close the file and return. */
 
   close(fd);
-  return ret;  
+  return ret;
 }
 #endif
 
@@ -290,16 +290,16 @@ static void ps_task(FAR struct tcb_s *tcb, FAR void *arg)
       if (ttcb->argv[1])
         {
           nsh_output(vtbl, "%p", ttcb->argv[1]);
-        }
 
-      /* Then any additional arguments */
+          /* Then any additional arguments */
 
 #if CONFIG_MAX_TASK_ARGS > 2
-      for (i = 2; i <= CONFIG_MAX_TASK_ARGS && ttcb->argv[i]; i++)
-        {
-          nsh_output(vtbl, ", %p", ttcb->argv[i]);
-         }
+          for (i = 2; i <= CONFIG_MAX_TASK_ARGS && ttcb->argv[i]; i++)
+            {
+              nsh_output(vtbl, ", %p", ttcb->argv[i]);
+            }
 #endif
+        }
     }
 
   nsh_output(vtbl, ")\n");
@@ -440,6 +440,7 @@ int cmd_sleep(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
        nsh_output(vtbl, g_fmtarginvalid, argv[0]);
        return ERROR;
     }
+
   sleep(secs);
   return OK;
 }

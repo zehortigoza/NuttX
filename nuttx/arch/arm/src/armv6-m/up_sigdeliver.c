@@ -47,7 +47,7 @@
 #include <nuttx/arch.h>
 #include <arch/board/board.h>
 
-#include "os_internal.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 #include "up_arch.h"
 
@@ -109,7 +109,7 @@ void up_sigdeliver(void)
   regs[REG_PC]         = rtcb->xcp.saved_pc;
   regs[REG_PRIMASK]    = rtcb->xcp.saved_primask;
   regs[REG_XPSR]       = rtcb->xcp.saved_xpsr;
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
   regs[REG_LR]         = rtcb->xcp.saved_lr;
 #endif
 

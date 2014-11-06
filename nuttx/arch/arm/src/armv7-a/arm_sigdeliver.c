@@ -47,7 +47,7 @@
 #include <nuttx/arch.h>
 #include <arch/board/board.h>
 
-#include "os_internal.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 #include "up_arch.h"
 
@@ -136,4 +136,3 @@ void up_sigdeliver(void)
 }
 
 #endif /* !CONFIG_DISABLE_SIGNALS */
-

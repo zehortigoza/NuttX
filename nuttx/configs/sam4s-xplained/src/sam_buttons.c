@@ -74,10 +74,10 @@ static xcpt_t g_irqbp2;
  * Name: board_button_initialize
  *
  * Description:
- *   board_button_initialize() must be called to initialize button resources.  After
- *   that, board_buttons() may be called to collect the current state of all
- *   buttons or board_button_irq() may be called to register button interrupt
- *   handlers.
+ *   board_button_initialize() must be called to initialize button resources.
+ *   After that, board_buttons() may be called to collect the current state
+ *   of all buttons or board_button_irq() may be called to register button
+ *   interrupt handlers.
  *
  ****************************************************************************/
 
@@ -86,16 +86,16 @@ void board_button_initialize(void)
   (void)sam_configgpio(GPIO_BP2);
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: board_buttons
  *
  * Description:
- *   After board_button_initialize() has been called, board_buttons() may be called to collect
- *   the state of all buttons.  board_buttons() returns an 8-bit bit set with each bit
- *   associated with a button.  See the BUTTON* definitions above for the meaning of
- *   each bit in the returned value.
+ *   After board_button_initialize() has been called, board_buttons() may be
+ *   called to collect the state of all buttons.  board_buttons() returns an
+ *   8-bit bit set with each bit associated with a button.  See the BUTTON*
+ *   definitions above for the meaning of each bit in the returned value.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 uint8_t board_buttons(void)
 {
@@ -109,7 +109,7 @@ uint8_t board_buttons(void)
  *   This function may be called to register an interrupt handler that will
  *   be called when a button is depressed or released.  The ID value is one
  *   of the BUTTON* definitions provided above. The previous interrupt
- *   handler address isreturned (so that it may restored, if so desired).
+ *   handler address is returned (so that it may restored, if so desired).
  *
  * Configuration Notes:
  *   Configuration CONFIG_AVR32_GPIOIRQ must be selected to enable the
@@ -120,7 +120,7 @@ uint8_t board_buttons(void)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_GPIOA_IRQ) && defined(CONFIG_ARCH_IRQBUTTONS)
+#if defined(CONFIG_SAM34_GPIOA_IRQ) && defined(CONFIG_ARCH_IRQBUTTONS)
 xcpt_t board_button_irq(int id, xcpt_t irqhandler)
 {
   xcpt_t oldhandler = NULL;
@@ -140,11 +140,24 @@ xcpt_t board_button_irq(int id, xcpt_t irqhandler)
       oldhandler = *g_irqbp2;
       *g_irqbp2 = irqhandler;
 
-      /* Configure the interrupt */
+      /* Are we attaching or detaching? */
 
-      sam_gpioirq(IRQ_BP2);
-      (void)irq_attach(IRQ_BP2, irqhandler);
-      sam_gpioirqenable(IRQ_BP2);
+      if (irqhandler != NULL)
+        {
+          /* Configure the interrupt */
+
+          sam_gpioirq(GPIO_BP2);
+          (void)irq_attach(IRQ_BP2, irqhandler);
+          sam_gpioirqenable(IRQ_BP2);
+        }
+      else
+        {
+          /* Detach and disable the interrupt */
+
+          (void)irq_detach(IRQ_BP2);
+          sam_gpioirqdisable(IRQ_BP2);
+        }
+
       irqrestore(flags);
     }
 

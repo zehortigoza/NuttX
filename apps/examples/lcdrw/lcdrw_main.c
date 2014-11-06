@@ -155,7 +155,11 @@ static inline int lcdrw_initialize(FAR struct lcdrw_instance_s *inst)
  * Name: lcdrw_main
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int lcdrw_main(int argc, char *argv[])
+#endif
 {
   struct lcdrw_instance_s inst;
   nxgl_coord_t row;
@@ -181,7 +185,7 @@ int lcdrw_main(int argc, char *argv[])
       /* Create a dummy row.  The important thing is to try all
        * bit combinations in a predictable way.
        */
-  
+
        ptr = (FAR uint16_t*)inst.pinfo.buffer;
        for (col = 0; col < CONFIG_EXAMPLES_LDCRW_XRES; col++)
          {
@@ -214,7 +218,7 @@ int lcdrw_main(int argc, char *argv[])
   for (row = 0; row < CONFIG_EXAMPLES_LDCRW_YRES; row++)
     {
       /* Read the row */
- 
+
       ret = inst.pinfo.getrun(row, 0, inst.pinfo.buffer,
                               CONFIG_EXAMPLES_LDCRW_XRES);
       if (ret < 0)

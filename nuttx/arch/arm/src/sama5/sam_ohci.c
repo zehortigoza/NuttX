@@ -1,5 +1,5 @@
 /*******************************************************************************
- * arch/arm/src/sama5/sam_usbhost.c
+ * arch/arm/src/sama5/sam_ohci.c
  *
  *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
@@ -792,7 +792,7 @@ static inline int sam_addbulked(struct sam_ed_s *ed)
   /* Add the new bulk ED to the head of the bulk list */
 
   ed->hw.nexted = sam_getreg(SAM_USBHOST_BULKHEADED);
-  cp15_clean_dcache((uintptr_t)ed, (uintptr_t)ed + sizeof(struct ohci_ed_s));
+  arch_clean_dcache((uintptr_t)ed, (uintptr_t)ed + sizeof(struct ohci_ed_s));
 
   physed = sam_physramaddr((uintptr_t)ed);
   sam_putreg((uint32_t)physed, SAM_USBHOST_BULKHEADED);
@@ -866,7 +866,7 @@ static inline int sam_rembulked(struct sam_ed_s *ed)
            */
 
           prev->hw.nexted = ed->hw.nexted;
-          cp15_clean_dcache((uintptr_t)prev,
+          arch_clean_dcache((uintptr_t)prev,
                             (uintptr_t)prev + sizeof(struct sam_ed_s));
         }
     }
@@ -955,7 +955,7 @@ static void sam_setinttab(uint32_t value, unsigned int interval, unsigned int of
   /* Make sure that the modified table value is flushed to RAM */
 
   inttbl = (uintptr_t)g_hcca.inttbl;
-  cp15_clean_dcache(inttbl, inttbl + sizeof(uint32_t)*HCCA_INTTBL_WSIZE);
+  arch_clean_dcache(inttbl, inttbl + sizeof(uint32_t)*HCCA_INTTBL_WSIZE);
 }
 #endif
 
@@ -1058,7 +1058,7 @@ static inline int sam_addinted(const FAR struct usbhost_epdesc_s *epdesc,
    */
 
   ed->hw.nexted = physhead;
-  cp15_clean_dcache((uintptr_t)ed, (uintptr_t)ed + sizeof(struct ohci_ed_s));
+  arch_clean_dcache((uintptr_t)ed, (uintptr_t)ed + sizeof(struct ohci_ed_s));
 
   physed =  sam_physramaddr((uintptr_t)ed);
   sam_setinttab((uint32_t)physed, interval, offset);
@@ -1295,7 +1295,7 @@ static int sam_enqueuetd(struct sam_rhport_s *rhport, struct sam_ed_s *ed,
       /* Skip processing of this ED while we modify the TD list. */
 
       ed->hw.ctrl      |= ED_CONTROL_K;
-      cp15_clean_dcache((uintptr_t)ed,
+      arch_clean_dcache((uintptr_t)ed,
                         (uintptr_t)ed + sizeof(struct ohci_ed_s));
 
       /* Get the tail ED for this root hub port */
@@ -1335,19 +1335,19 @@ static int sam_enqueuetd(struct sam_rhport_s *rhport, struct sam_ed_s *ed,
 
       if (buffer && buflen > 0)
         {
-          cp15_clean_dcache((uintptr_t)buffer,
+          arch_clean_dcache((uintptr_t)buffer,
                             (uintptr_t)buffer + buflen);
         }
 
-      cp15_clean_dcache((uintptr_t)tdtail,
+      arch_clean_dcache((uintptr_t)tdtail,
                         (uintptr_t)tdtail + sizeof(struct ohci_gtd_s));
-      cp15_clean_dcache((uintptr_t)td,
+      arch_clean_dcache((uintptr_t)td,
                         (uintptr_t)td + sizeof(struct ohci_gtd_s));
 
       /* Resume processing of this ED */
 
       ed->hw.ctrl      &= ~ED_CONTROL_K;
-      cp15_clean_dcache((uintptr_t)ed,
+      arch_clean_dcache((uintptr_t)ed,
                         (uintptr_t)ed + sizeof(struct ohci_ed_s));
       ret               = OK;
     }
@@ -1394,12 +1394,12 @@ static int sam_ep0enqueue(struct sam_rhport_s *rhport)
   tdtail = sam_tdalloc();
   if (!tdtail)
     {
-      sam_edfree(rhport->ep0.ed);
+      sam_edfree(edctrl);
       irqrestore(flags);
       return -ENOMEM;
     }
 
-  rhport->ep0.ed = edctrl;
+  rhport->ep0.ed   = edctrl;
   rhport->ep0.tail = tdtail;
 
   /* ControlListEnable.  This bit is cleared to disable the processing of the
@@ -1445,9 +1445,9 @@ static int sam_ep0enqueue(struct sam_rhport_s *rhport)
 
   /* Flush the affected control ED and tail TD to RAM */
 
-  cp15_clean_dcache((uintptr_t)edctrl,
+  arch_clean_dcache((uintptr_t)edctrl,
                     (uintptr_t)edctrl + sizeof(struct ohci_ed_s));
-  cp15_clean_dcache((uintptr_t)tdtail,
+  arch_clean_dcache((uintptr_t)tdtail,
                     (uintptr_t)tdtail + sizeof(struct ohci_gtd_s));
 
   /* ControlListEnable.  This bit is set to (re-)enable the processing of the
@@ -1466,7 +1466,7 @@ static int sam_ep0enqueue(struct sam_rhport_s *rhport)
  * Name: sam_ep0dequeue
  *
  * Description:
- *   Remove the ED for EP0 from the control ED list and posssibly disable control
+ *   Remove the ED for EP0 from the control ED list and possibly disable control
  *   list processing.
  *
  * Input Parameters:
@@ -1528,7 +1528,7 @@ static void sam_ep0dequeue(struct sam_rhport_s *rhport)
 
       /* Flush the modified ED to RAM */
 
-      cp15_clean_dcache((uintptr_t)preved,
+      arch_clean_dcache((uintptr_t)preved,
                         (uintptr_t)preved + sizeof(struct ohci_ed_s));
     }
   else
@@ -1548,6 +1548,7 @@ static void sam_ep0dequeue(struct sam_rhport_s *rhport)
           sam_putreg(regval, SAM_USBHOST_CTRL);
         }
     }
+
   irqrestore(flags);
 
   /* Release any TDs that may still be attached to the ED. */
@@ -1567,6 +1568,9 @@ static void sam_ep0dequeue(struct sam_rhport_s *rhport)
 
   sam_tdfree(tdtail);
   sam_edfree(edctrl);
+
+  rhport->ep0.ed   = NULL;
+  rhport->ep0.tail = NULL;
 }
 
 /*******************************************************************************
@@ -1880,11 +1884,11 @@ static void sam_wdh_bottomhalf(void)
 
   /* Invalidate D-cache to force re-reading of the Done Head */
 
-# if 0 /* Apparently insufficient */
-  cp15_invalidate_dcache((uintptr_t)&g_hcca.donehead,
+#if 0 /* Apparently insufficient */
+  arch_invalidate_dcache((uintptr_t)&g_hcca.donehead,
                          (uintptr_t)&g_hcca.donehead + sizeof(uint32_t));
 #else
-  cp15_invalidate_dcache((uintptr_t)&g_hcca,
+  arch_invalidate_dcache((uintptr_t)&g_hcca,
                          (uintptr_t)&g_hcca + sizeof(struct ohci_hcca_s));
 #endif
 
@@ -1902,7 +1906,7 @@ static void sam_wdh_bottomhalf(void)
        * reloaded from memory.
        */
 
-      cp15_invalidate_dcache((uintptr_t)td,
+      arch_invalidate_dcache((uintptr_t)td,
                              (uintptr_t)td + sizeof( struct ohci_gtd_s));
 
       /* Get the ED in which this TD was enqueued */
@@ -1919,7 +1923,7 @@ static void sam_wdh_bottomhalf(void)
        * memory.
        */
 
-      cp15_invalidate_dcache((uintptr_t)ed,
+      arch_invalidate_dcache((uintptr_t)ed,
                              (uintptr_t)ed + sizeof( struct ohci_ed_s));
 
       /* Save the condition code from the (single) TD status/control
@@ -2275,7 +2279,7 @@ static int sam_ep0configure(FAR struct usbhost_driver_s *drvr, uint8_t funcaddr,
 
   /* Flush the modified control ED to RAM */
 
-  cp15_clean_dcache((uintptr_t)edctrl,
+  arch_clean_dcache((uintptr_t)edctrl,
                     (uintptr_t)edctrl + sizeof(struct ohci_ed_s));
   sam_givesem(&g_ohci.exclsem);
 
@@ -2355,7 +2359,7 @@ static int sam_epalloc(FAR struct usbhost_driver_s *drvr,
 
   /* Allocate a container for the endpoint data */
 
-  eplist = (struct sam_eplist_s *)kzalloc(sizeof(struct sam_eplist_s));
+  eplist = (struct sam_eplist_s *)kmm_zalloc(sizeof(struct sam_eplist_s));
   if (!eplist)
     {
       usbhost_trace1(OHCI_TRACE1_EPLISTALLOC_FAILED, 0);
@@ -2447,9 +2451,9 @@ static int sam_epalloc(FAR struct usbhost_driver_s *drvr,
 
   /* Make sure these settings are flushed to RAM */
 
-  cp15_clean_dcache((uintptr_t)ed,
+  arch_clean_dcache((uintptr_t)ed,
                     (uintptr_t)ed + sizeof(struct ohci_ed_s));
-  cp15_clean_dcache((uintptr_t)td,
+  arch_clean_dcache((uintptr_t)td,
                     (uintptr_t)td + sizeof(struct ohci_gtd_s));
 
   /* Now add the endpoint descriptor to the appropriate list */
@@ -2496,7 +2500,7 @@ errout_with_ed:
   sam_edfree(ed);
 errout_with_semaphore:
   sam_givesem(&g_ohci.exclsem);
-  kfree(eplist);
+  kmm_free(eplist);
 errout:
   return ret;
 }
@@ -2510,7 +2514,7 @@ errout:
  * Input Parameters:
  *   drvr - The USB host driver instance obtained as a parameter from the call to
  *      the class create() method.
- *   ep - The endpint to be freed.
+ *   ep - The endpoint to be freed.
  *
  * Returned Values:
  *   On success, zero (OK) is returned. On a failure, a negated errno value is
@@ -2535,8 +2539,7 @@ static int sam_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
   /* There should not be any pending, real TDs linked to this ED */
 
   ed = eplist->ed;
-  DEBUGASSERT((ed->hw.headp & ED_HEADP_ADDR_MASK) ==
-              sam_physramaddr((uintptr_t)rhport->ep0.tail));
+  DEBUGASSERT((ed->hw.headp & ED_HEADP_ADDR_MASK) == ed->hw.tailp);
 
   /* We must have exclusive access to the ED pool, the bulk list, the periodic list
    * and the interrupt table.
@@ -2574,7 +2577,7 @@ static int sam_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
   /* And free the container */
 
   sem_destroy(&eplist->wdhsem);
-  kfree(eplist);
+  kmm_free(eplist);
   sam_givesem(&g_ohci.exclsem);
   return ret;
 }
@@ -2586,7 +2589,7 @@ static int sam_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
  *   Some hardware supports special memory in which request and descriptor data can
  *   be accessed more efficiently.  This method provides a mechanism to allocate
  *   the request/descriptor memory.  If the underlying hardware does not support
- *   such "special" memory, this functions may simply map to kmalloc.
+ *   such "special" memory, this functions may simply map to kmm_malloc.
  *
  *   This interface was optimized under a particular assumption.  It was assumed
  *   that the driver maintains a pool of small, pre-allocated buffers for descriptor
@@ -2639,7 +2642,7 @@ static int sam_alloc(FAR struct usbhost_driver_s *drvr,
  *   Some hardware supports special memory in which request and descriptor data
  *   can be accessed more efficiently.  This method provides a mechanism to
  *   free that request/descriptor memory.  If the underlying hardware does not
- *   support such "special" memory, this functions may simply map to kfree().
+ *   support such "special" memory, this functions may simply map to kmm_free().
  *
  * Input Parameters:
  *   drvr - The USB host driver instance obtained as a parameter from the call
@@ -2674,7 +2677,7 @@ static int sam_free(FAR struct usbhost_driver_s *drvr, FAR uint8_t *buffer)
  *   Some hardware supports special memory in which larger IO buffers can
  *   be accessed more efficiently.  This method provides a mechanism to allocate
  *   the request/descriptor memory.  If the underlying hardware does not support
- *   such "special" memory, this functions may simply map to kumalloc.
+ *   such "special" memory, this functions may simply map to kumm_malloc.
  *
  *   This interface differs from DRVR_ALLOC in that the buffers are variable-sized.
  *
@@ -2699,9 +2702,9 @@ static int sam_ioalloc(FAR struct usbhost_driver_s *drvr, FAR uint8_t **buffer,
 {
   DEBUGASSERT(drvr && buffer);
 
-  /* kumalloc() should return user accessible, DMA-able memory */
+  /* kumm_malloc() should return user accessible, DMA-able memory */
 
-  *buffer = kumalloc(buflen);
+  *buffer = kumm_malloc(buflen);
   return *buffer ? OK : -ENOMEM;
 }
 
@@ -2712,7 +2715,7 @@ static int sam_ioalloc(FAR struct usbhost_driver_s *drvr, FAR uint8_t **buffer,
  *   Some hardware supports special memory in which IO data can  be accessed more
  *   efficiently.  This method provides a mechanism to free that IO buffer
  *   memory.  If the underlying hardware does not support such "special" memory,
- *   this functions may simply map to kufree().
+ *   this functions may simply map to kumm_free().
  *
  * Input Parameters:
  *   drvr - The USB host driver instance obtained as a parameter from the call to
@@ -2732,9 +2735,9 @@ static int sam_iofree(FAR struct usbhost_driver_s *drvr, FAR uint8_t *buffer)
 {
   DEBUGASSERT(drvr && buffer);
 
-  /* kufree is all that is required */
+  /* kumm_free is all that is required */
 
-  kufree(buffer);
+  kumm_free(buffer);
   return OK;
 }
 
@@ -2816,7 +2819,7 @@ static int sam_ctrlin(FAR struct usbhost_driver_s *drvr,
    */
 
   sam_givesem(&g_ohci.exclsem);
-  cp15_invalidate_dcache((uintptr_t)buffer, (uintptr_t)buffer + len);
+  arch_invalidate_dcache((uintptr_t)buffer, (uintptr_t)buffer + len);
   return ret;
 }
 
@@ -3004,7 +3007,7 @@ static int sam_transfer(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
 
       /* Invalidate the D cache to force the ED to be reloaded from RAM */
 
-      cp15_invalidate_dcache((uintptr_t)ed,
+      arch_invalidate_dcache((uintptr_t)ed,
                              (uintptr_t)ed + sizeof(struct ohci_ed_s));
 
       /* Check the TD completion status bits */
@@ -3017,7 +3020,7 @@ static int sam_transfer(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
 
           if (in)
             {
-              cp15_invalidate_dcache((uintptr_t)buffer,
+              arch_invalidate_dcache((uintptr_t)buffer,
                                      (uintptr_t)buffer + buflen);
             }
 
@@ -3193,7 +3196,7 @@ FAR struct usbhost_connection_s *sam_ohci_initialize(int controller)
 
   memset((void*)&g_hcca, 0, sizeof(struct ohci_hcca_s));
 
-  cp15_clean_dcache((uint32_t)&g_hcca,
+  arch_clean_dcache((uint32_t)&g_hcca,
                     (uint32_t)&g_hcca + sizeof(struct ohci_hcca_s));
 
   /* Initialize user-configurable EDs */

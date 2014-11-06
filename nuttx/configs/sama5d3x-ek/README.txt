@@ -66,16 +66,17 @@ Contents
   - GNU Toolchain Options
   - IDEs
   - NuttX EABI "buildroot" Toolchain
-  - NuttX OABI "buildroot" Toolchain
   - NXFLAT Toolchain
   - Loading Code into SRAM with J-Link
   - Writing to FLASH using SAM-BA
   - Creating and Using NORBOOT
+  - Running NuttX from SDRAM
   - Buttons and LEDs
   - Serial Consoles
   - Networking
   - AT25 Serial FLASH
   - HSMCI Card Slots
+  - Auto-Mounter
   - USB Ports
   - USB High-Speed Device
   - USB High-Speed Host
@@ -90,6 +91,7 @@ Contents
   - Watchdog Timer
   - TRNG and /dev/random
   - Touchscreen Testing
+  - Tickless OS
   - OV2640 Camera Interface
   - I2S Audio Support
   - SAMA5D3x-EK Configuration Options
@@ -99,7 +101,7 @@ Contents
 Development Environment
 =======================
 
-  Several possible development environments may be use:
+  Several possible development environments may be used:
 
   - Linux or OSX native
   - Cygwin unders Windows
@@ -129,11 +131,8 @@ GNU Toolchain Options
     CONFIG_ARMV7A_TOOLCHAIN_GNU_EABIW=y      : Generic GCC ARM EABI toolchain for Windows
 
   The CodeSourcery GCC toolchain is selected with
-  CONFIG_ARMV7A_TOOLCHAIN_GNU_EABIW=y and setting the PATH variable
+  CONFIG_ARMV7A_TOOLCHAIN_CODESOURCERYW=y and setting the PATH variable
   appropriately.
-
-  If you are not using AtmelStudio GCC toolchain, then you may also have to
-  modify the PATH in the setenv.h file if your make cannot find the tools.
 
   NOTE about Windows native toolchains
   ------------------------------------
@@ -165,20 +164,11 @@ GNU Toolchain Options
 
        MKDEP                = $(TOPDIR)/tools/mknulldeps.sh
 
-  NOTE 1: Older CodeSourcery toolchains (2009q1) do not work with default
-  optimization level of -Os (See Make.defs).  It will work with -O0, -O1, or
-  -O2, but not with -Os.
-
-  NOTE 2: The devkitARM toolchain includes a version of MSYS make.  Make sure that
-  the paths to Cygwin's /bin and /usr/bin directories appear BEFORE the devkitARM
-  path or will get the wrong version of make.
-
 IDEs
 ====
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
+  effort will be required to create the project.
 
   Makefile Build
   --------------
@@ -204,7 +194,7 @@ IDEs
   Startup files will probably cause you some headaches.  The NuttX startup file
   is arch/arm/src/sam34/sam_vectors.S.  You may need to build NuttX
   one time from the Cygwin command line in order to obtain the pre-built
-  startup object needed by RIDE.
+  startup object needed by an IDE.
 
 NuttX EABI "buildroot" Toolchain
 ================================
@@ -230,9 +220,23 @@ NuttX EABI "buildroot" Toolchain
 
   4. cd <some-dir>/buildroot
 
-  5. cp configs/cortexm3-eabi-defconfig-4.6.3 .config
+  5.  Copy the configuration file from the configs/ sub-directory to the
+      top-level build directory:
 
-  6. make oldconfig
+      cp configs/cortexa8-eabi-defconfig-4.8.2 .config
+
+  6a. You may wish to modify the configuration before you build it.  For
+      example, it is recommended that you build the kconfig-frontends tools,
+      generomfs, and the NXFLAT tools as well.  You may also want to change
+      the selected toolchain.  These reconfigurations can all be done with
+
+      make menuconfig
+
+  6b. If you chose to make the configuration with no changes, then you
+      should still do the following to make certain that the build
+      configuration is up-to-date:
+
+      make oldconfig
 
   7. make
 
@@ -242,21 +246,6 @@ NuttX EABI "buildroot" Toolchain
   See the file configs/README.txt in the buildroot source tree.  That has more
   details PLUS some special instructions that you will need to follow if you are
   building a Cortex-M3 toolchain for Cygwin under Windows.
-
-  NOTE:  Unfortunately, the 4.6.3 EABI toolchain is not compatible with the
-  the NXFLAT tools.  See the top-level TODO file (under "Binary loaders") for
-  more information about this problem. If you plan to use NXFLAT, please do not
-  use the GCC 4.6.3 EABI toochain; instead use the GCC 4.3.3 OABI toolchain.
-  See instructions below.
-
-NuttX OABI "buildroot" Toolchain
-================================
-
-  The older, OABI buildroot toolchain is also available.  To use the OABI
-  toolchain, use the build instructions above, but (1) modify the
-  cortexm3-eabi-defconfig-4.6.3 configuration to use OABI (using 'make
-  menuconfig'), or (2) use an existing OABI configuration such as
-  cortexm3-defconfig-4.3.3
 
 NXFLAT Toolchain
 ================
@@ -290,6 +279,11 @@ NXFLAT Toolchain
 
   8. Edit setenv.h, if necessary, so that the PATH variable includes
      the path to the newly built NXFLAT binaries.
+
+  NOTE:  There are some known incompatibilities with 4.6.3 EABI toolchain
+  and the NXFLAT tools.  See the top-level TODO file (under "Binary
+  loaders") for more information about this problem. If you plan to use
+  NXFLAT, please do not use the GCC 4.6.3 EABI toochain.
 
 Loading Code into SRAM with J-Link
 ==================================
@@ -432,7 +426,7 @@ Creating and Using NORBOOT
 
       The norboot program can also be configured to jump directly into
       NOR FLASH without requiring the final halt and go by setting
-      CONFIG_SAMA5_NOR_START=y in the NuttX configuration.  However,
+      CONFIG_SAMA5D3xEK_NOR_START=y in the NuttX configuration.  However,
       since I have been debugging the early boot sequence, the above
       sequence has been most convenient for me since it allows me to
       step into the program in NOR.
@@ -453,6 +447,330 @@ Creating and Using NORBOOT
         jumper does nothing on my board???  So I have been using the norboot
         configuration exclusively to start the program-under-test in NOR FLASH.
 
+Running NuttX from SDRAM
+========================
+
+  NuttX may be executed from SDRAM.  But this case means that the NuttX
+  binary must reside on some other media (typically NAND FLASH, Serial
+  FLASH, or, perhaps even a TFTP server).  In these cases, an intermediate
+  bootloader such as U-Boot or Barebox must be used to configure the
+  SAMA5D3 clocks and SDRAM and then to copy the NuttX binary into SDRAM.
+
+    - NuttX Configuration
+    - Boot sequence
+    - NAND FLASH Memory Map
+    - Programming the AT91Boostrap Binary
+    - Programming U-Boot
+    - Load NuttX with U-Boot on AT91 boards
+
+  TODO:  Some drivers may require some adjustments to run from SDRAM.  That
+  is because in this case macros like BOARD_MCK_FREQUENCY are not constants
+  but are instead function calls:  The MCK clock frequency is not known in
+  advance but instead has to be calculated from the bootloader PLL configuration.
+  See the TODO list at the end of this file for further information.
+
+NuttX Configuration
+-------------------
+
+  In order to run from SDRAM, NuttX must be built at origin 0x20008000 in
+  SDRAM (skipping over SDRAM memory used by the bootloader).  The following
+  configuration option is required:
+
+    CONFIG_SAMA5_BOOT_SDRAM=y
+    CONFIG_BOOT_RUNFROMSDRAM=y
+
+  These options tell the NuttX code that it will be booting and running from
+  SDRAM.  In this case, the start-logic will do to things:  (1) it will not
+  configure the SAMA5D3 clocking.  Rather, it will use the clock configuration
+  as set up by the bootloader.  And (2) it will not attempt to configure the
+  SDRAM.  Since NuttX is already running from SDRAM, it must accept the SDRAM
+  configuration as set up by the bootloader.
+
+Boot sequence
+-------------
+
+  Reference: http://www.at91.com/linux4sam/bin/view/Linux4SAM/GettingStarted
+
+  Several pieces of software are involved to boot a Nutt5X into SDRAM.  First
+  is the primary bootloader in ROM which is in charge to check if a valid
+  application is present on supported media (NOR FLASH, Serial DataFlash,
+  NAND FLASH, SD card).
+
+  The boot sequence of linux4SAM is done in several steps :
+
+  1. The ROM bootloader checks if a valid application is present in FLASH
+     and if it is the case downloads it into internal SRAM.  This program
+     is usually a second level bootloader called AT91BootStrap.
+
+  2. AT91Bootstrap is the second level bootloader. It is in charge of the
+     hardware configuration.  It downloads U-Boot / Barebox binary from
+     FLASH to SDRAM / DDRAM and starts the third level bootloader
+     (U-Boot / Barebox)
+
+    (see http://www.at91.com/linux4sam/bin/view/Linux4SAM/AT91Bootstrap).
+
+  3. The third level bootloader is either U-Boot or Barebox.  The third
+     level bootloader is in charge of downloading NuttX binary from FLASH,
+     network, SD card, etc.  It then starts NuttX.
+
+   4. Then NuttX runs from SDRAM
+
+DRAMBOOT
+--------
+
+  See also configs/sama5d4-ek/README.txt for a description of the DRAMBOOT
+  program.  This is a tiny version of NuttX that can run out of internal
+  SRAM.  If you put this program on the HSMCI1 microSD card as boot.bin, then
+  it will boot on power up and you can download NuttX directly into DRAM by
+  sending the nuttx.hex file over the serial connection.
+
+NAND FLASH Memory Map
+---------------------
+
+  Reference: http://www.at91.com/linux4sam/bin/view/Linux4SAM/GettingStarted
+
+  0x0000:0000 - 0x0003:ffff: AT91BootStrap
+  0x0004:0000 - 0x000b:ffff: U-Boot
+  0x000c:0000 - 0x000f:ffff: U-Boot environment
+  0x0010:0000 - 0x0017:ffff: U-Boot environement redundant
+  0x0018:0000 - 0x001f:ffff: Device tree (DTB)
+  0x0020:0000 - 0x007f:ffff: NuttX
+  0x0080:0000 - end:         Available for use as a NAND file system
+
+Programming the AT91Boostrap Binary
+-----------------------------------
+
+  Reference: http://www.at91.com/linux4sam/bin/view/Linux4SAM/AT91Bootstrap
+
+  This section describes how to program AT91Bootstrap binary into the boot
+  media with SAM-BA tool using NandFlash as boot media.
+
+  1. Get AT91BootStrap binaries.  Build instructions are available here:
+
+       http://www.at91.com/linux4sam/bin/view/Linux4SAM/AT91Bootstrap#Build_AT91Bootstrap_from_sources
+
+     A pre-built AT91BootStrap binary is available here:
+
+      ftp://www.at91.com/pub/at91bootstrap/AT91Bootstrap3.6.0/sama5d3xek-nandflashboot-uboot-3.6.0.bin
+
+  2. Start the SAM-BA GUI Application:
+
+     - Connect the USB Device interface to your host machine using the USB
+       Device Cable.
+     - Make sure that the chip can execute the SAM-BA Monitor.
+     - Start SAM-BA GUI application.
+     - Select the board in the drop-down menu and choose the USB connection.
+
+  3. In the SAM-BA GUI Application:
+
+     - Choose the "NandFlash" tab in the SAM-BA GUI interface.
+     - Initialize the NandFlash by choosing the "Enable NandFlash" action in
+       the Scripts rolling menu, then press "Execute" button.
+     - Erase the NandFlash device by choosing the "Erase All" action, then
+       press "Execute" button.
+     - Enable the PMECC by choosing the "Enable OS PMECC parameters" action,
+       then press "Execute" button.
+
+         PMECC
+         Number of sectors per page: 4
+         Spare Size: 64
+         Number of ECC bits required: 4
+         Size of the ECC sector: 512
+         ECC offset: 36
+
+   - Choose "Send Boot File" action, then press Execute button to select the
+     at91bootstrap binary file and to program the binary to the NandFlash.
+   - Close SAM-BA, remove the USB Device cable.
+
+Programming U-Boot
+-------------------
+
+  Reference http://www.at91.com/linux4sam/bin/view/Linux4SAM/U-Boot
+
+  1. Get U-Boot Binaries.  Build instructions are available here:
+
+     http://www.at91.com/linux4sam/bin/view/Linux4SAM/U-Boot#Build_U_Boot_from_sources
+
+     A pre-built binary is available here:
+
+     ftp://www.at91.com/pub/uboot/u-boot-v2012.10/u-boot-sama5d3xek_nandflash_linux4sam_4.2.bin
+
+  2. Start the SAM-BA GUI Application:
+
+     - Connect the USB Device interface to your host machine using the USB
+       Device Cable.
+     - Make sure that the chip can execute the SAM-BA Monitor.
+     - Start SAM-BA GUI application.
+     - Select the board in the drop-down menu and choose the USB connection.
+
+  3. In the SAM-BA GUI Application:
+
+     - Choose the NandFlash tab in the SAM-BA GUI interface.
+     - Initialize the NandFlash by choosing the "Enable NandFlash" action in
+       the Scripts rolling menu, then press Execute button.
+     - Enable the PMECC by choosing the "Enable OS PMECC parameters" action,
+       then press Execute button.
+
+         PMECC
+         Number of sectors per page: 4
+         Spare Size: 64
+         Number of ECC bits required: 4
+         Size of the ECC sector: 512
+         ECC offset: 36
+
+     - Press the "Send File Name" Browse button
+     - Choose u-boot.bin binary file and press Open
+     - Enter the proper address on media in the Address text field:
+       0x00040000
+     - Press the "Send File" button
+     - Close SAM-BA, remove the USB Device cable.
+
+  You should now be able to interrupt with U-Boot vie the DBGU interface.
+
+Load NuttX with U-Boot on AT91 boards
+-------------------------------------
+
+  Reference http://www.at91.com/linux4sam/bin/view/Linux4SAM/U-Boot
+
+  Preparing NuttX image
+
+    U-Boot does not support normal binary images.  Instead you have to
+    create an uImage file with the mkimage tool which encapsulates kernel
+    image with header information, CRC32 checksum, etc.
+
+    mkimage comes in source code with U-Boot distribution and it is built
+    during U-Boot compilation (u-boot-source-dir/tools/mkimage).  There
+    are also sites where you can download pre-built mkimage binaries.  For
+    example: http://www.trimslice.com/wiki/index.php/U-Boot_images
+
+    See the U-Boot README file for more information.  More information is
+    also available in the mkimage man page (for example,
+    http://linux.die.net/man/1/mkimage).
+
+    Command to generate an uncompressed uImage file (4) :
+
+      mkimage -A arm -O linux -C none -T kernel -a 20008000 -e 20008000 \
+        -n nuttx -d nuttx.bin uImage
+
+    Where:
+
+      -A arm: Set architecture to ARM
+      -O linux: Select operating system. bootm command of u-boot changes
+         boot method by os type.
+      -T kernel: Set image type.
+      -C none: Set compression type.
+      -a 20008000:  Set load address.
+      -e 20008000: Set entry point.
+      -n nuttx: Set image name.
+      -d nuttx.bin: Use image data from nuttx.bin.
+
+    This will generate a binary called uImage.  If you have the path to
+    mkimage in your PATH variable, then you can automatically build the
+    uImage file by adding the following to your .config file:
+
+      CONFIG_RAW_BINARY=y
+      CONFIG_UBOOT_UIMAGE=y
+      CONFIG_UIMAGE_LOAD_ADDRESS=0x20008000
+      CONFIG_UIMAGE_ENTRY_POINT=0x20008040
+
+    The uImage file can them be loaded into memory from a variety of sources
+    (serial, SD card, JFFS2 on NAND, TFTP).
+
+    STATUS:
+      2014-4-1:  So far, I am unable to get U-Boot to execute the uImage
+                 file.  I get the following error messages (in this case
+                 trying to load from an SD card):
+
+        U-Boot> fatload mmc 0 0x22000000 uimage
+        reading uimage
+        97744 bytes read in 21 ms (4.4 MiB/s)
+
+        U-Boot> bootm 0x22000000
+        ## Booting kernel from Legacy Image at 0x22000000 ...
+           Image Name:   nuttx
+           Image Type:   ARM Linux Kernel Image (uncompressed)
+           Data Size:    97680 Bytes = 95.4 KiB
+           Load Address: 20008000
+           Entry Point:  20008040
+           Verifying Checksum ... OK
+           XIP Kernel Image ... OK
+        FDT and ATAGS support not compiled in - hanging
+        ### ERROR ### Please RESET the board ###
+
+      This, however, appears to be a usable workaround:
+
+        U-Boot> fatload mmc 0 0x20008000 nuttx.bin
+        mci: setting clock 257812 Hz, block size 512
+        mci: setting clock 257812 Hz, block size 512
+        mci: setting clock 257812 Hz, block size 512
+        gen_atmel_mci: CMDR 00001048 ( 8) ARGR 000001aa (SR: 0c100025) Command Time Out
+        mci: setting clock 257812 Hz, block size 512
+        mci: setting clock 22000000 Hz, block size 512
+        reading nuttx.bin
+        108076 bytes read in 23 ms (4.5 MiB/s)
+
+        U-Boot> go 0x20008040
+        ## Starting application at 0x20008040 ...
+
+        NuttShell (NSH) NuttX-7.2
+        nsh>
+
+  Loading through network
+
+    On a development system, it is useful to get the kernel and root file
+    system through the network. U-Boot provides support for loading
+    binaries from a remote host on the network using the TFTP protocol.
+
+    To manage to use TFTP with U-Boot, you will have to configure a TFTP
+    server on your host machine. Check your distribution manual or Internet
+    resources to configure a Linux or Windows TFTP server on your host:
+
+      - U-Boot documentation on a Linux host:
+        http://www.denx.de/wiki/view/DULG/SystemSetup#Section_4.6.
+
+      - Another TFTP configuration reference:
+        http://www.linuxhomenetworking.com/wiki/index.php/Quick_HOWTO_:_Ch16_:_Telnet%2C_TFTP%2C_and_xinetd#TFTP
+
+    On the U-Boot side, you will have to setup the networking parameters:
+
+     1. Setup an Ethernet address (MAC address)
+        Check this U-Boot network BuildRootFAQ entry to choose a proper MAC
+        address: http://www.denx.de/wiki/DULG/EthernetDoesNotWork
+
+          setenv ethaddr 00:e0:de:ad:be:ef
+
+     2. Setup IP parameters:
+        The board ip address
+
+          setenv ipaddr 10.0.0.2
+
+        The server ip address where the TFTP server is running
+
+          setenv serverip 10.0.0.1
+
+     3. saving Environment to flash
+
+          saveenv
+
+     4. If Ethernet Phy has not been detected during former bootup, reset
+        the board to reload U-Boot : the Ethernet address and Phy
+        initialization shall be ok, now
+
+     5. Download the NuttX uImage and the root file system to a ram location
+       using the U-Boot tftp command (Cf. U-Boot script capability chapter).
+
+     6. Launch NuttX issuing a bootm or boot command.
+
+    If the board has both emac and gmac, you can use following to choose
+    which one to use:
+
+       setenv ethact macb0,gmacb0
+       setenv ethprime gmacb0
+
+  STATUS:
+    2014-3-30:  These instructions were adapted from the Linux4SAM website
+                but have not yet been used.
+
 Buttons and LEDs
 ================
 
@@ -469,7 +787,7 @@ Buttons and LEDs
   Only the momentary push button is controllable by software (labeled
   "PB_USER1" on the board):
 
-    - PE27.  Pressing the switch connect PE27 to grounded.  Therefore, PE27
+    - PE27.  Pressing the switch connects PE27 to grounded.  Therefore, PE27
       must be pulled high internally.  When the button is pressed the SAMA5
       will sense "0" is on PE27.
 
@@ -486,12 +804,16 @@ Buttons and LEDs
     PE24.  The red LED is also pulled high but is driven by a transistor so
     that it is illuminated when power is applied even if PE24 is not
     configured as an output.  If PE24 is configured as an output, then the
-    LCD is illuminated by a high output.
+    LED is illuminated by a high output.
+
+      N.B. PE24 Drives the RED Led on the CM (SODIMM200), but unfortunately
+      it is also connected to ISI_RST on the MB (Main Board) and controlling
+      it will reset a Camera connected to the ISI
 
   These LEDs are not used by the board port unless CONFIG_ARCH_LEDS is
   defined.  In that case, the usage by the board port is defined in
   include/board.h and src/sam_leds.c. The LEDs are used to encode OS-related
-  events as follows:
+  events as follows when the red LED (PE24) is available:
 
     SYMBOL                Meaning                     LED state
                                                     Blue     Red
@@ -500,15 +822,31 @@ Buttons and LEDs
     LED_HEAPALLOCATE     Heap has been allocated    OFF      OFF
     LED_IRQSENABLED      Interrupts enabled         OFF      OFF
     LED_STACKCREATED     Idle stack created         ON       OFF
-    LED_INIRQ            In an interrupt              No change
-    LED_SIGNAL           In a signal handler          No change
-    LED_ASSERTION        An assertion failed          No change
+    LED_INIRQ            In an interrupt            -- No change --
+    LED_SIGNAL           In a signal handler        -- No change --
+    LED_ASSERTION        An assertion failed        -- No change --
     LED_PANIC            The system has crashed     OFF      Blinking
-    LED_IDLE             MCU is is sleep mode         Not used
+    LED_IDLE             MCU is is sleep mode       -- Not used  --
+
+  If CONFIG_SAMA5D3xEK_NOREDLED=y, then the red LED is not used by the
+  system and the controls are as follows:
+
+    SYMBOL                Meaning                     LED state
+                                                    Blue        Red
+    -------------------  -----------------------  ----------- -----------
+    LED_STARTED          NuttX has been started     OFF       Not used
+    LED_HEAPALLOCATE     Heap has been allocated    OFF       " " "  "
+    LED_IRQSENABLED      Interrupts enabled         OFF       " " "  "
+    LED_STACKCREATED     Idle stack created         ON        " " "  "
+    LED_INIRQ            In an interrupt            No change " " "  "
+    LED_SIGNAL           In a signal handler        No change " " "  "
+    LED_ASSERTION        An assertion failed        No change " " "  "
+    LED_PANIC            The system has crashed     Blinking  " " "  "
+    LED_IDLE             MCU is is sleep mode       Not used  " " "  "
 
   Thus if the blue LED is statically on, NuttX has successfully booted and
-  is, apparently, running normally.  If the red is flashing at
-  approximately 2Hz, then a fatal error has been detected and the system
+  is, apparently, running normally.  If the red (or blue) LED is flashing
+  at approximately 2Hz, then a fatal error has been detected and the system
   has halted.
 
 Serial Consoles
@@ -531,8 +869,10 @@ Serial Consoles
     PB28 RXD1       PIO_USART1_RXD
     PB26 CTS1       PIO_USART1_CTS
 
-    NOTE: Debug TX and RX pins also go to the ADM3312EARU, but I am
-    uncertain of the functionality.
+    NOTE: Debug TX (DTXD) and RX (DRXD) pins also are routed to the
+    ADM3312EARU via non populated 0 Ohm resistors. Thus allowing one
+    skilled with a soldering iron to choose which UART is level
+    translated by the ADM3312EARU
 
     -------------------------------
     SAMA5 FUNCTION  NUTTX PIO
@@ -566,49 +906,49 @@ Networking
   -----------------------------
 
   System Type
-    CONFIG_ARCH_CHIP_ATSAMA5D31=y       : SAMA5D31 or SAMAD35 support EMAC
-    CONFIG_ARCH_CHIP_ATSAMA5D35=y       : (others do not)
+    CONFIG_ARCH_CHIP_ATSAMA5D31=y        : SAMA5D31 or SAMAD35 support EMAC
+    CONFIG_ARCH_CHIP_ATSAMA5D35=y        : (others do not)
 
   System Type -> SAMA5 Peripheral Support
-    CONFIG_SAMA5_EMAC=y                 : Enable the EMAC peripheral
+    CONFIG_SAMA5_EMACA=y                  : Enable the EMAC (type A) peripheral
 
   System Type -> EMAC device driver options
-    CONFIG_SAMA5_EMAC_NRXBUFFERS=16     : Set aside some RS and TX buffers
+    CONFIG_SAMA5_EMAC_NRXBUFFERS=16      : Set aside some RS and TX buffers
     CONFIG_SAMA5_EMAC_NTXBUFFERS=4
-    CONFIG_SAMA5_EMAC_PHYADDR=1         : KSZ8051 PHY is at address 1
-    CONFIG_SAMA5_EMAC_AUTONEG=y         : Use autonegotiation
-    CONFIG_SAMA5_EMAC_RMII=y            : Either MII or RMII interface should work
-    CONFIG_SAMA5_EMAC_PHYSR=30          : Address of PHY status register on KSZ8051
-    CONFIG_SAMA5_EMAC_PHYSR_ALTCONFIG=y : Needed for KSZ8051
-    CONFIG_SAMA5_EMAC_PHYSR_ALTMODE=0x7 : "    " " " "     "
-    CONFIG_SAMA5_EMAC_PHYSR_10HD=0x1    : "    " " " "     "
-    CONFIG_SAMA5_EMAC_PHYSR_100HD=0x2   : "    " " " "     "
-    CONFIG_SAMA5_EMAC_PHYSR_10FD=0x5    : "    " " " "     "
-    CONFIG_SAMA5_EMAC_PHYSR_100FD=0x6   : "    " " " "     "
+    CONFIG_SAMA5_EMAC_PHYADDR=1          : KSZ8021/31 PHY is at address 1
+    CONFIG_SAMA5_EMAC_AUTONEG=y          : Use autonegotiation
+    CONFIG_SAMA5_EMAC_RMII=y             : Either MII or RMII interface should work
+    CONFIG_SAMA5_EMAC_PHYSR=30           : Address of PHY status register on KSZ8021/31
+    CONFIG_SAMA5_EMAC_PHYSR_ALTCONFIG=y  : Needed for KSZ8021/31
+    CONFIG_SAMA5_EMAC_PHYSR_ALTMODE=0x7  : "    " " " "     "
+    CONFIG_SAMA5_EMAC_PHYSR_10HD=0x1     : "    " " " "     "
+    CONFIG_SAMA5_EMAC_PHYSR_100HD=0x2    : "    " " " "     "
+    CONFIG_SAMA5_EMAC_PHYSR_10FD=0x5     : "    " " " "     "
+    CONFIG_SAMA5_EMAC_PHYSR_100FD=0x6    : "    " " " "     "
 
   PHY selection.  Later in the configuration steps, you will need to select
-  the KSZ8051 PHY for EMAC (See below)
+  the KSZ8021/31 PHY for EMAC (See below)
 
   Selecting the GMAC peripheral
   -----------------------------
 
   System Type
-    CONFIG_ARCH_CHIP_ATSAMA5D33=y       : SAMA5D31, SAMA5D33 and SAMAD35
-    CONFIG_ARCH_CHIP_ATSAMA5D34=y       : support GMAC (others do not)
-    CONFIG_ARCH_CHIP_ATSAMA5D35=y       :
+    CONFIG_ARCH_CHIP_ATSAMA5D33=y        : SAMA5D31, SAMA5D33 and SAMAD35
+    CONFIG_ARCH_CHIP_ATSAMA5D34=y        : support GMAC (others do not)
+    CONFIG_ARCH_CHIP_ATSAMA5D35=y        :
 
   System Type -> SAMA5 Peripheral Support
-    CONFIG_SAMA5_GMAC=y                 : Enable the GMAC peripheral
+    CONFIG_SAMA5_GMAC=y                  : Enable the GMAC peripheral
 
   System Type -> GMAC device driver options
-    CONFIG_SAMA5_GMAC_NRXBUFFERS=16     : Set aside some RS and TX buffers
+    CONFIG_SAMA5_GMAC_NRXBUFFERS=16      : Set aside some RS and TX buffers
     CONFIG_SAMA5_GMAC_NTXBUFFERS=4
-    CONFIG_SAMA5_GMAC_PHYADDR=1         : KSZ8051 PHY is at address 1
-    CONFIG_SAMA5_GMAC_AUTONEG=y         : Use autonegotiation
+    CONFIG_SAMA5_GMAC_PHYADDR=1          : KSZ8051 PHY is at address 1
+    CONFIG_SAMA5_GMAC_AUTONEG=y          : Use autonegotiation
 
   If both EMAC and GMAC are selected, you will also need:
 
-    CONFIG_SAMA5_GMAC_ISETH0=y          : GMAC is "eth0"; EMAC is "eth1"
+    CONFIG_SAMA5_GMAC_ISETH0=y           : GMAC is "eth0"; EMAC is "eth1"
 
   PHY selection.  Later in the configuration steps, you will need to select
   the  KSZ9021/31 PHY for GMAC (See below)
@@ -617,36 +957,36 @@ Networking
   -----------------------------
 
   Networking Support
-    CONFIG_NET=y                        : Enable Neworking
-    CONFIG_NET_SOCKOPTS=y               : Enable socket operations
-    CONFIG_NET_BUFSIZE=562              : Maximum packet size (MTD) 1518 is more standard
-    CONFIG_NET_RECEIVE_WINDOW=562       : Should be the same as CONFIG_NET_BUFSIZE
-    CONFIG_NET_TCP=y                    : Enable TCP/IP networking
-    CONFIG_NET_TCPBACKLOG=y             : Support TCP/IP backlog
-    CONFIG_NET_TCP_READAHEAD_BUFSIZE=562  Read-ahead buffer size
-    CONFIG_NET_UDP=y                    : Enable UDP networking
-    CONFIG_NET_ICMP=y                   : Enable ICMP networking
-    CONFIG_NET_ICMP_PING=y              : Needed for NSH ping command
-                                        : Defaults should be okay for other options
+    CONFIG_NET=y                         : Enable Neworking
+    CONFIG_NET_SOCKOPTS=y                : Enable socket operations
+    CONFIG_NET_BUFSIZE=562               : Maximum packet size (MTD) 1518 is more standard
+    CONFIG_NET_RECEIVE_WINDOW=562        : Should be the same as CONFIG_NET_BUFSIZE
+    CONFIG_NET_TCP=y                     : Enable TCP/IP networking
+    CONFIG_NET_TCPBACKLOG=y              : Support TCP/IP backlog
+    CONFIG_NET_TCP_READAHEAD_BUFSIZE=562 : Read-ahead buffer size
+    CONFIG_NET_UDP=y                     : Enable UDP networking
+    CONFIG_NET_ICMP=y                    : Enable ICMP networking
+    CONFIG_NET_ICMP_PING=y               : Needed for NSH ping command
+                                         : Defaults should be okay for other options
   Device drivers -> Network Device/PHY Support
-    CONFIG_NETDEVICES=y                 : Enabled PHY selection
-    CONFIG_ETH0_PHY_KSZ8051=y           : Select the KSZ8051 PHY (for EMAC), OR
-    CONFIG_ETH0_PHY_KSZ90x1=y           : Select teh KSZ9021/31 PHY (for GMAC)
+    CONFIG_NETDEVICES=y                  : Enabled PHY selection
+    CONFIG_ETH0_PHY_KSZ8051=y            : Select the KSZ8051 PHY (for EMAC), OR
+    CONFIG_ETH0_PHY_KSZ90x1=y            : Select the KSZ9021/31 PHY (for GMAC)
 
   Application Configuration -> Network Utilities
-    CONFIG_NETUTILS_RESOLV=y            : Enable host address resolution
-    CONFIG_NETUTILS_TELNETD=y           : Enable the Telnet daemon
-    CONFIG_NETUTILS_TFTPC=y             : Enable TFTP data file transfers for get and put commands
-    CONFIG_NETUTILS_UIPLIB=y            : Network library support is needed
-    CONFIG_NETUTILS_WEBCLIENT=y         : Needed for wget support
-                                        : Defaults should be okay for other options
+    CONFIG_NETUTILS_DNSCLIENT=y          : Enable host address resolution
+    CONFIG_NETUTILS_TELNETD=y            : Enable the Telnet daemon
+    CONFIG_NETUTILS_TFTPC=y              : Enable TFTP data file transfers for get and put commands
+    CONFIG_NETUTILS_NETLIB=y             : Network library support is needed
+    CONFIG_NETUTILS_WEBCLIENT=y          : Needed for wget support
+                                         : Defaults should be okay for other options
   Application Configuration -> NSH Library
-    CONFIG_NSH_TELNET=y                 : Enable NSH session via Telnet
-    CONFIG_NSH_IPADDR=0x0a000002        : Select an IP address
-    CONFIG_NSH_DRIPADDR=0x0a000001      : IP address of gateway/host PC
-    CONFIG_NSH_NETMASK=0xffffff00       : Netmask
-    CONFIG_NSH_NOMAC=y                  : Need to make up a bogus MAC address
-                                        : Defaults should be okay for other options
+    CONFIG_NSH_TELNET=y                  : Enable NSH session via Telnet
+    CONFIG_NSH_IPADDR=0x0a000002         : Select an IP address
+    CONFIG_NSH_DRIPADDR=0x0a000001       : IP address of gateway/host PC
+    CONFIG_NSH_NETMASK=0xffffff00        : Netmask
+    CONFIG_NSH_NOMAC=y                   : Need to make up a bogus MAC address
+                                         : Defaults should be okay for other options
 
   Using the network with NSH
   --------------------------
@@ -695,7 +1035,7 @@ Networking
   the first time you ping due to the default handling of the ARP
   table.
 
-  On the host side, you should also be able to ping the SAMA5D3-EK:
+  On the host side, you should also be able to ping the SAMA5D3x-EK:
 
     $ ping 10.0.0.2
 
@@ -729,7 +1069,77 @@ Networking
   so that access to the NSH prompt is not delayed.
 
   This delay will be especially long if the board is not connected to
-  a network.
+  a network.  On the order of a minute!  You will probably think that
+  NuttX has crashed!  And then, when it finally does come up, the
+  network will not be available.
+
+  Network Initialization Thread
+  -----------------------------
+  There is a configuration option enabled by CONFIG_NSH_NETINIT_THREAD
+  that will do the NSH network bring-up asynchronously in parallel on
+  a separate thread.  This eliminates the (visible) networking delay
+  altogether.  This networking initialization feature by itself has
+  some limitations:
+
+    - If no network is connected, the network bring-up will fail and
+      the network initialization thread will simply exit.  There are no
+      retries and no mechanism to know if the network initialization was
+      successful.
+
+    - Furthermore, there is no support for detecting loss of the network
+      connection and recovery of networking when the connection is restored.
+
+  Both of these shortcomings can be eliminated by enabling the network
+  monitor:
+
+  Network Monitor
+  ---------------
+  By default the network initialization thread will bring-up the network
+  then exit, freeing all of the resources that it required.  This is a
+  good behavior for systems with limited memory.
+
+  If the CONFIG_NSH_NETINIT_MONITOR option is selected, however, then the
+  network initialization thread will persist forever; it will monitor the
+  network status.  In the event that the network goes down (for example, if
+  a cable is removed), then the thread will monitor the link status and
+  attempt to bring the network back up.  In this case the resources
+  required for network initialization are never released.
+
+  Pre-requisites:
+
+    - CONFIG_NSH_NETINIT_THREAD as described above.
+
+    - CONFIG_NETDEV_PHY_IOCTL. Enable PHY IOCTL commands in the Ethernet
+      device driver. Special IOCTL commands must be provided by the Ethernet
+      driver to support certain PHY operations that will be needed for link
+      management. There operations are not complex and are implemented for
+      the Atmel SAMA5 family.
+
+    - CONFIG_ARCH_PHY_INTERRUPT. This is not a user selectable option.
+      Rather, it is set when you select a board that supports PHY interrupts.
+      In most architectures, the PHY interrupt is not associated with the
+      Ethernet driver at all. Rather, the PHY interrupt is provided via some
+      board-specific GPIO and the board-specific logic must provide support
+      for that GPIO interrupt. To do this, the board logic must do two things:
+      (1) It must provide the function arch_phy_irq() as described and
+      prototyped in the nuttx/include/nuttx/arch.h, and (2) it must select
+      CONFIG_ARCH_PHY_INTERRUPT in the board configuration file to advertise
+      that it supports arch_phy_irq().  This logic can be found at
+      nuttx/configs/sama5d3x-ek/src/sam_ethernet.c.
+
+    - And a few other things: UDP support is required (CONFIG_NET_UDP) and
+      signals must not be disabled (CONFIG_DISABLE_SIGNALS).
+
+  Given those prerequisites, the newtork monitor can be selected with these additional settings.
+
+    Networking Support -> Networking Device Support
+      CONFIG_NETDEV_PHY_IOCTL=y             : Enable PHY ioctl support
+
+    Application Configuration -> NSH Library -> Networking Configuration
+      CONFIG_NSH_NETINIT_THREAD             : Enable the network initialization thread
+      CONFIG_NSH_NETINIT_MONITOR=y          : Enable the network monitor
+      CONFIG_NSH_NETINIT_RETRYMSEC=2000     : Configure the network monitor as you like
+      CONFIG_NSH_NETINIT_SIGNO=18
 
 AT25 Serial FLASH
 =================
@@ -786,8 +1196,8 @@ AT25 Serial FLASH
       CONFIG_NSH_ARCHINIT=y                 : NSH board-initialization
 
     Board Selection
-      CONFIG_SAMA5_AT25_AUTOMOUNT=y         : Mounts AT25 for NSH
-      CONFIG_SAMA5_AT25_FTL=y               : Create block driver for FAT
+      CONFIG_SAMA5D3xEK_AT25_BLOCKMOUNT=y   : Mounts AT25 for NSH
+      CONFIG_SAMA5D3xEK_AT25_FTL=y          : Create block driver for FAT
 
   NOTE that you must close JP1 on the Embest/Ronetix board in order to
   enable the AT25 FLASH chip select.
@@ -821,7 +1231,7 @@ HSMCI Card Slots
   labelled MCI1).
 
   The full size SD card slot connects via HSMCI0.  The card detect discrete
-  is available on PB17 (pulled high).  The write protect discrete is tied to
+  is available on PD17 (pulled high).  The write protect discrete is tied to
   ground (via PP6) and not available to software.  The slot supports 8-bit
   wide transfer mode, but the NuttX driver currently uses only the 4-bit
   wide transfer mode
@@ -839,7 +1249,7 @@ HSMCI Card Slots
     PD0  MCI0_CDA
 
   The microSD connects vi HSMCI1.  The card detect discrete is available on
-  PB18 (pulled high):
+  PD18 (pulled high):
 
     PD18  MCI1_CD
     PB20  MCI1_DA0
@@ -871,6 +1281,7 @@ HSMCI Card Slots
     Device Drivers -> MMC/SD Driver Support
       CONFIG_MMCSD=y                        : Enable MMC/SD support
       CONFIG_MMSCD_NSLOTS=1                 : One slot per driver instance
+      CONFIG_MMCSD_MULTIBLOCK_DISABLE=y     : (REVISIT)
       CONFIG_MMCSD_HAVECARDDETECT=y         : Supports card-detect PIOs
       CONFIG_MMCSD_MMCSUPPORT=n             : Interferes with some SD cards
       CONFIG_MMCSD_SPI=n                    : No SPI-based MMC/SD support
@@ -915,6 +1326,9 @@ HSMCI Card Slots
         nsh> cat /mnt/sd1/atest.txt
         This is a test
 
+       NOTE:  See the next section entitled "Auto-Mounter" for another way
+       to mount your SD card.
+
     4) Before removing the card, you must umount the file system.  This is
        equivalent to "ejecting" or "safely removing" the card on Windows:  It
        flushes any cached data to the card and makes the SD card unavailable
@@ -926,6 +1340,29 @@ HSMCI Card Slots
        that can be used by an application to automatically unmount the
        volume when it is removed.  But those callbacks are not used in
        these configurations.
+
+Auto-Mounter
+============
+
+  NuttX implements an auto-mounter than can make working with SD cards
+  easier.  With the auto-mounter, the file system will be automatically
+  mounted when the SD card is inserted into the HSMCI slot and automatically
+  unmounted when the SD card is removed.
+
+  The auto-mounter is enable with:
+
+      CONFIG_FS_AUTOMOUNTER=y
+
+  However, to use the automounter you will to provide some additional
+  board-level support.  See configs/sama5d4-ek for and example of how
+  you might do this.
+
+  WARNING:  SD cards should never be removed without first unmounting
+  them.  This is to avoid data and possible corruption of the file
+  system.  Certainly this is the case if you are writing to the SD card
+  at the time of the removal.  If you use the SD card for read-only access,
+  however, then I cannot think of any reason why removing the card without
+  mounting would be harmful.
 
 USB Ports
 =========
@@ -1133,11 +1570,6 @@ USB High-Speed Host
     Application Configuration -> NSH Library
       CONFIG_NSH_ARCHINIT=y                 : NSH board-initialization
 
-  NOTE:  When OHCI is selected, the SAMA5 will operate at 384MHz instead of
-  396MHz.  This is so that the PLL generates a frequency which is a multiple
-  of the 48MHz needed for OHCI.  The delay loop calibration values that are
-  used will be off slightly because of this.
-
   EHCI
   ----
 
@@ -1295,9 +1727,11 @@ SDRAM Support
 
     System Type->External Memory Configuration
       CONFIG_SAMA5_DDRCS=y                  : Tell the system that DRAM is at the DDR CS
-      CONFIG_SAMA5_DDRCS_SIZE=268435456     : 2Gb DRAM -> 256GB
+      CONFIG_SAMA5_DDRCS_SIZE=268435456     : 2Gb DRAM -> 256MB
       CONFIG_SAMA5_DDRCS_LPDDR2=y           : Its DDR2
-      CONFIG_SAMA5_MT47H128M16RT=y          : This is the type of DDR2
+
+    Board Selection
+      CONFIG_SAMA5D3xEK_MT47H128M16RT=y     : This is the type of DDR2
 
     System Type->Heap Configuration
       CONFIG_SAMA5_DDRCS_HEAP=y             : Add the SDRAM to the heap
@@ -1327,7 +1761,7 @@ SDRAM Support
       CONFIG_SYSTEM_RAMTEST=y
 
   In this configuration, the SDRAM is not added to heap and so is not
-  accessable to the applications.  So the RAM test can be freely executed
+  accessible to the applications.  So the RAM test can be freely executed
   against the SRAM memory beginning at address 0x2000:0000 (DDR CS):
 
     nsh> ramtest -h
@@ -1352,7 +1786,7 @@ SDRAM Support
 
   SDRAM Data Configuration
   ------------------------
- 
+
   In these configurations, .data and .bss are retained in ISRAM by default.
   .data and .bss can also be retained in SDRAM using these slightly
   different configuration settings.  In this configuration, ISRAM is
@@ -1365,10 +1799,12 @@ SDRAM Support
       CONFIG_SAMA5_DDRCS=y                  : Tell the system that DRAM is at the DDR CS
       CONFIG_SAMA5_DDRCS_SIZE=268435456     : 2Gb DRAM -> 256GB
       CONFIG_SAMA5_DDRCS_LPDDR2=y           : Its DDR2
-      CONFIG_SAMA5_MT47H128M16RT=y          : This is the type of DDR2
+
+    Board Selection
+      CONFIG_SAMA5D3xEK_MT47H128M16RT=y     : This is the type of DDR2
 
     System Type->Heap Configuration
-      CONFIG_SAMA5_ISRAM_HEAP=n              : These do not apply in this case
+      CONFIG_SAMA5_ISRAM_HEAP=n             : These do not apply in this case
       CONFIG_SAMA5_DCRS_HEAP=n
 
     System Type->Boot Memory Configuration
@@ -1507,8 +1943,8 @@ NAND Support
       to enable SDRAM as described above.
 
     Board Selection
-      CONFIG_SAMA5_NAND_AUTOMOUNT=y     : Enable FS support on NAND
-      CONFIG_SAMA5_NAND_NXFFS=y         : Use the NXFFS file system
+      CONFIG_SAMA5D3XEK_NAND_BLOCKMOUNT=y : Enable FS support on NAND
+      CONFIG_SAMA5D3xEK_NAND_NXFFS=y      : Use the NXFFS file system
 
       Other file systems are not recommended because only NXFFS can handle
       bad blocks and only NXFFS performs wear-levelling.
@@ -1531,8 +1967,8 @@ NAND Support
       Defaults for all other NXFFS settings should be okay.
 
     Board Selection
-      CONFIG_SAMA5_NAND_AUTOMOUNT=y     : Enable FS support on NAND
-      CONFIG_SAMA5_NAND_FTL=y           : Use an flash translation layer
+      CONFIG_SAMA5D3XEK_NAND_BLOCKMOUNT=y : Enable FS support on NAND
+      CONFIG_SAMA5D3xEK_NAND_FTL=y        : Use an flash translation layer
 
       NOTE:  FTL will require some significant buffering because of
       the large size of the NAND flash blocks.  You will also need
@@ -1549,8 +1985,8 @@ NAND Support
     Using NAND with NXFFS
     ---------------------
 
-    With the options CONFIG_SAMA5_NAND_AUTOMOUNT=y and
-    CONFIG_SAMA5_NAND_NXFFS=y, the NAND FLASH will be mounted in the NSH
+    With the options CONFIG_SAMA5D3XEK_NAND_BLOCKMOUNT=y and
+    CONFIG_SAMA5D3xEK_NAND_NXFFS=y, the NAND FLASH will be mounted in the NSH
     start-up logic before the NSH prompt appears.  There is no feedback as
     to whether or not the mount was successful.  You can, however, see the
     mounted file systems using the nsh 'mount' command:
@@ -1772,8 +2208,8 @@ AT24 Serial EEPROM
                                             : Other defaults are probably OK
 
     Board Selection
-      CONFIG_SAMA5_AT24_AUTOMOUNT=y         : Mounts AT24 for NSH
-      CONFIG_SAMA5_AT24_NXFFS=y             : Mount the AT24 using NXFFS
+      CONFIG_SAMA5D3xEK_AT24_BLOCKMOUNT=y   : Mounts AT24 for NSH
+      CONFIG_SAMA5D3xEK_AT24_NXFFS=y        : Mount the AT24 using NXFFS
 
   You can then format the AT24 EEPROM for a FAT file system and mount the
   file system at /mnt/at24 using these NSH commands:
@@ -1794,7 +2230,7 @@ I2C Tool
 ========
 
   I2C Tool. NuttX supports an I2C tool at apps/system/i2c that can be used
-  to peek and poke I2C devices.  That tool cal be enabled by setting the
+  to peek and poke I2C devices.  That tool can be enabled by setting the
   following:
 
     System Type -> SAMA5 Peripheral Support
@@ -1930,7 +2366,7 @@ CAN Usage
   CAN connectors
   --------------
 
-  CAN1 and CAN2 are available via RJ-11 connectors on the SAMA5Dx-EK.  Each
+  CAN1 and CAN2 are available via RJ-11 connectors on the SAMA5D3x-EK.  Each
   is wired as follows.  Also shown below is the matching pins if you want connect
   the CAN to a device that uses an DB-9 connector (Such as the IXXAT USB-to-CAN
   Compact).  Both connector types (as well as RJ-45) are common.
@@ -2163,9 +2599,27 @@ RTC
       CONFIG_RTC=y                         : Use the RTC for system time
       CONFIG_RTC_DATETIME=y                : RTC supports data/time
 
-  The RTC supports an alarm that may be enable with the following settings.
-  However, there is nothing in the system that currently makes use of this
-  alarm.
+  You can set the RTC using the NSH date command:
+
+    NuttShell (NSH) NuttX-7.3
+    nsh> help date
+    date usage:  date [-s "MMM DD HH:MM:SS YYYY"]
+    nsh> date
+    Jan 01 00:34:45 2012
+    nsh> date -s "JUN 29 7:30:00 2014"
+    nsh> date
+    Jun 29 07:30:01 2014
+
+  After a power cycle and reboot:
+
+    NuttShell (NSH) NuttX-7.3
+    nsh> date
+    Jun 29 07:30:55 2014
+    nsh>
+
+  The RTC also supports an alarm that may be enable with the following
+  settings.  However, there is nothing in the system that currently makes
+  use of this alarm.
 
     Drivers:
       CONFIG_RTC_ALARM=y                   : Enable the RTC alarm
@@ -2211,13 +2665,17 @@ TRNG and /dev/random
 
   NSH can be configured to enable the SAMA5 TRNG peripheral so that it
   provides /dev/random.  The following configuration will enable the TRNG,
-  /dev/random, and the simple test of /dev/random at apps/examples/ranadom:
+  and support for /dev/random:
 
     System Type:
       CONFIG_SAMA5_TRNG=y                 : Enable the TRNG peripheral
 
-    Drivers (automatically selected):
+    Drivers:
       CONFIG_DEV_RANDOM=y                 : Enable /dev/random
+
+  A simple test of /dev/random is available at apps/examples/random and
+  can be enabled as a NSH application via the following additional
+  configuration settings:
 
     Applications -> Examples
       CONFIG_EXAMPLES_RANDOM=y            : Enable apps/examples/random
@@ -2242,7 +2700,7 @@ Touchscreen Testing
       CONFIG_INPUT=y                      : (automatically selected)
 
     Board Selection:
-       CONFIG_SAMA5_TSD_DEVMINOR=0        : Register as /dev/input0
+       CONFIG_SAMA5D3xEK_TSD_DEVMINOR=0   : Register as /dev/input0
 
     Library Support:
       CONFIG_SCHED_WORKQUEUE=y            : Work queue support required
@@ -2256,6 +2714,93 @@ Touchscreen Testing
       CONFIG_EXAMPLES_TOUCHSCREEN_DEVPATH="/dev/input0"
 
   Defaults should be okay for all related settings.
+
+Tickless OS
+===========
+
+  Background
+  ----------
+  By default, a NuttX configuration uses a periodic timer interrupt that
+  drives all system timing. The timer is provided by architecture-specifi
+  code that calls into NuttX at a rate controlled by CONFIG_USEC_PER_TICK.
+  The default value of CONFIG_USEC_PER_TICK is 10000 microseconds which
+  corresponds to a timer interrupt rate of 100 Hz.
+
+  An option is to configure NuttX to operation in a "tickless" mode. Some
+  limitations of default system timer are, in increasing order of
+  importance:
+
+  - Overhead: Although the CPU usage of the system timer interrupt at 100Hz
+    is really very low, it is still mostly wasted processing time. One most
+    timer interrupts, there is really nothing that needs be done other than
+    incrementing the counter.
+  - Resolution: Resolution of all system timing is also determined by
+    CONFIG_USEC_PER_TICK. So nothing that be time with resolution finer than
+    10 milliseconds be default. To increase this resolution,
+    CONFIG_USEC_PER_TICK an be reduced. However, then the system timer
+    interrupts use more of the CPU bandwidth processing useless interrupts.
+  - Power Usage: But the biggest issue is power usage. When the system is
+    IDLE, it enters a light, low-power mode (for ARMs, this mode is entered
+    with the wfi or wfe instructions for example). But each interrupt
+    awakens the system from this low power mode. Therefore, higher rates
+    of interrupts cause greater power consumption.
+
+  The so-called Tickless OS provides one solution to issue. The basic
+  concept here is that the periodic, timer interrupt is eliminated and
+  replaced with a one-shot, interval timer. It becomes event driven
+  instead of polled: The default system timer is a polled design. On
+  each interrupt, the NuttX logic checks if it needs to do anything
+  and, if so, it does it.
+
+  Using an interval timer, one can anticipate when the next interesting
+  OS event will occur, program the interval time and wait for it to fire.
+  When the interval time fires, then the scheduled activity is performed.
+
+  Configuration
+  -------------
+  The following configuration options will enable support for the Tickless
+  OS for the SAMA5D platforms using TC0 channels 0-3 (other timers or
+  timer channels could be used making the obvious substitutions):
+
+    RTOS Features -> Clocks and Timers
+      CONFIG_SCHED_TICKLESS=y          : Configures the RTOS in tickless mode
+      CONFIG_SCHED_TICKLESS_ALARM=n    : (option not implemented)
+
+    System Type -> SAMA5 Peripheral Support
+      CONFIG_SAMA5_TC0=y               : Enable TC0 (TC channels 0-3
+
+    System Type -> Timer/counter Configuration
+      CONFIG_SAMA5_ONESHOT=y           : Enables one-shot timer wrapper
+      CONFIG_SAMA5_FREERUN=y           : Enabled free-running timer wrapper
+      CONFIG_SAMA5_TICKLESS_ONESHOT=0  : Selects TC0 channel 0 for the one-shot
+      CONFIG_SAMA5_TICKLESS_FREERUN=1  : Selects TC0 channel 1 for the free-
+                                       : running timer
+
+  NOTE: In most cases, the slow clock will be used as the timer/counter
+  input.  You should enable the 32.768KHz crystal for the slow clock by
+  calling sam_sckc_enable().  Otherwise, you will be doing all system
+  timing using the RC clock!  UPDATE: This will now be selected by default
+  when you configure for TICKLESS support.
+
+  SAMA5 Timer Usage
+  -----------------
+  This current implementation uses two timers:  A one-shot timer to
+  provide the timed events and a free running timer to provide the current
+  time.  Since timers are a limited resource, that could be an issue on
+  some systems.
+
+  We could do the job with a single timer if we were to keep the single
+  timer in a free-running at all times.  The SAMA5 timer/counters have
+  32-bit counters with the capability to generate a compare interrupt when
+  the timer matches a compare value but also to continue counting without
+  stopping (giving another, different interrupt when the timer rolls over
+  from 0xffffffff to zero).  So we could potentially used the just set the compare
+  at the number of ticks you want PLUS the current value of timer.  Then
+  you could have both with a single timer:  An interval timer and a free-
+  running counter with the same timer!  In this case, you would want to
+  to set CONFIG_SCHED_TICKLESS_ALARM in the NuttX configuration.
+
+  Patches are welcome!
 
 OV2640 Camera Interface
 =======================
@@ -2310,20 +2855,102 @@ I2S Audio Support
   WM8904 Audio CODEC Interface
   ----------------------------
 
-    ------------- ---------------- -----------------
-    WM8904        SAMA5D3          NuttX Pin Name
-    ------------- ---------------- -----------------
-     3 SDA        PA30 TWD0        PIO_TWI0_D
-     2 SCLK       PA31 TWCK0       PIO_TWI0_CK
-    28 MCLK       PD30 PCK0        PIO_PMC_PCK0
-    29 BCLK/GPIO4 PC16 TK          PIO_SSC0_TK
-    "" "        " PC19 RK          PIO_SSC0_RK
-    30 LRCLK      PC17 TF          PIO_SSC0_TF
-    "" "   "      PC20 RF          PIO_SSC0_RF
-    31 ADCDAT     PC21 RD          PIO_SSC0_RD
-    32 DACDAT     PC18 TD          PIO_SSC0_TD
-     1 IRQ/GPIO1  PD16 INT_AUDIO   N/A
-    ------------- ---------------- -----------------
+    ------------- ---------------- ----------------- ----------------------
+    WM8904        SAMA5D3          NuttX Pin Name    External Access
+    ------------- ---------------- ----------------- ----------------------
+     3 SDA        PA30 TWD0        PIO_TWI0_D        J1 Pin 34
+     2 SCLK       PA31 TWCK0       PIO_TWI0_CK       J1 Pin 36
+    28 MCLK       PD30 PCK0        PIO_PMC_PCK0      (Not available)
+    29 BCLK/GPIO4 PC16 TK          PIO_SSC0_TK       J2 Pin 6
+    "" "        " PC19 RK          PIO_SSC0_RK       J2 Pin 12
+    30 LRCLK      PC17 TF          PIO_SSC0_TF       J2 Pin 8
+    "" "   "      PC20 RF          PIO_SSC0_RF       J2 Pin 14
+    31 ADCDAT     PC21 RD          PIO_SSC0_RD       J2 Pin 16
+    32 DACDAT     PC18 TD          PIO_SSC0_TD       J2 Pin 10
+     1 IRQ/GPIO1  PD16 INT_AUDIO   N/A               (Not available)
+    ------------- ---------------- ----------------- ----------------------
+                                                     Ground at Pins 3,4,37,38
+
+  WM8904 Configuration
+  --------------------
+
+    System Type -> SAMA5 Peripheral Support
+      CONFIG_SAMA5_DMAC0=y                  : DMAC0 required by SSC0
+      CONFIG_SAMA5_TWI0=y                   : Enable TWI0 driver support
+      CONFIG_SAMA5_SSCO=y                   : Enable SSC0 driver support
+
+    System Type -> SSC0 Configuration
+      CONFIG_SAMA5_SSC_MAXINFLIGHT=16
+      CONFIG_SAMA5_SSC0_DATALEN=16
+
+    Device Drivers -> I2C Driver Support
+      CONFIG_I2C=y                          : Enable I2C support
+      CONFIG_I2C_EXCHANGE=y                 : Support the exchange method
+      CONFIG_I2C_RESET=n                    : (Maybe y, if you have bus problems)
+
+    System Type -> SSC Configuration
+      CONFIG_SAMA5_SSC_MAXINFLIGHT=16       : Up to 16 pending DMA transfers
+      CONFIG_SAMA5_SSC0_DATALEN=16          : 16-bit data
+      CONFIG_SAMA5_SSC0_RX=y                : Support a receiver (although it is not used!)
+      CONFIG_SAMA5_SSC0_RX_RKINPUT=y        : Receiver gets clock the RK0 input
+      CONFIG_SAMA5_SSC0_RX_FSLEN=1          : Minimal frame sync length
+      CONFIG_SAMA5_SSC0_RX_STTDLY=1         : Start delay
+      CONFIG_SAMA5_SSC0_TX=y                : Support a transmitter
+      CONFIG_SAMA5_SSC0_TX_RXCLK=y          : Transmitter gets clock the RXCLCK
+      CONFIG_SAMA5_SSC0_TX_FSLEN=0          : Disable frame synch generation
+      CONFIG_SAMA5_SSC0_TX_STTDLY=1         : Start delay
+      CONFIG_SAMA5_SSC0_TX_TKOUTPUT_NONE=y  : No output
+
+    Audio
+      CONFIG_AUDIO=y                        : Audio support needed
+      CONFIG_AUDIO_FORMAT_PCM=y             : Only PCM files are supported
+      CONFIG_AUDIO_NUM_BUFFERS=8            : Number of audio buffers
+      CONFIG_AUDIO_BUFFER_NUMBYTES=8192     : Audio buffer size
+
+    Drivers -> Audio
+      CONFIG_I2S=y                          : General I2S support
+      CONFIG_AUDIO_DEVICES=y                : Audio device support
+      CONFIG_AUDIO_WM8904=y                 : Build WM8904 driver character driver
+
+    Board Selection
+      CONFIG_SAMA5D3xEK_WM8904_I2CFREQUENCY=400000
+      CONFIG_SAMA5D3xEK_WM8904_SRCMAIN=y    : WM8904 MCLK is the SAMA5D Main Clock
+
+    Library Routines
+      CONFIG_SCHED_WORKQUEUE=y              : MW8904 driver needs work queue support
+
+  The NxPlayer
+  ------------
+
+  The NxPlayer is a audio library and command line application for playing
+  audio file.  The NxPlayer can be found at apps/system/nxplayer.  If you
+  would like to add the NxPlayer, here are some recommended configuration
+  settings.
+
+  First of all, the NxPlayer depends on the NuttX audio subsystem.  See the
+  "WM8904 Configuration" above for an example of how the audio subsystem is
+  configured to use the WM8904 CODED with PCM decoding.
+
+  Then the NxPlayer can be enabled as follows:
+
+  System Libraries and NSH Add-Ons -> NxPlayer media player / command line ->
+    CONFIG_SYSTEM_NXPLAYER=y                     : Build the NxPlayer library
+    CONFIG_NXPLAYER_PLAYTHREAD_STACKSIZE=1500    : Size of the audio player stack
+    CONFIG_NXPLAYER_COMMAND_LINE=y               : Build command line application
+    CONFIG_NXPLAYER_INCLUDE_HELP=y               : Includes a help command
+    CONFIG_NXPLAYER_INCLUDE_DEVICE_SEARCH=n      : (Since there is only one audio device)
+    CONFIG_NXPLAYER_INCLUDE_PREFERRED_DEVICE=y   : Only one audio device is supported
+    CONFIG_NXPLAYER_FMT_FROM_EXT=y               : (Since only PCM is supported)
+    CONFIG_NXPLAYER_FMT_FROM_HEADER=n            : (Since only PCM is supported)
+    CONFIG_NXPLAYER_INCLUDE_MEDIADIR=y           : Specify a media directory
+    CONFIG_NXPLAYER_DEFAULT_MEDIADIR="/music"    : See nxplayer configuration
+    CONFIG_NXPLAYER_RECURSIVE_MEDIA_SEARCH=y     : Search all sub-directories
+    CONFIG_NXPLAYER_INCLUDE_SYSTEM_RESET=y       : Add support for reset command
+
+  You must include the full path to the location where NxPlayer can find the
+  media files.  That path is given by CONFIG_NXPLAYER_DEFAULT_MEDIADIR.
+  Here I use the example "/mnt/scard".  That is a location where you could,
+  for example, mount an MMC/SD card driver.
 
   I2S Loopback Test
   -----------------
@@ -2331,9 +2958,6 @@ I2S Audio Support
   The I2S driver was verified using a special I2C character driver (at
   nuttx/drivers/audio/i2schar.c) and a test driver at apps/examples/i2schar.
   The I2S driver was verified in loopback mode with no audio device.
-
-  [NOTE: The above statement is anticipatory:  As of this writing I2S driver
-   verification is underway and still not complete].
 
   This section describes the modifications to the NSH configuration that were
   used to perform the I2S testing:
@@ -2346,7 +2970,7 @@ I2S Audio Support
 
     System Type -> SAMA5 Peripheral Support
       CONFIG_SAMA5_SSC1=y              : Enable SSC0 driver support
-      CONFIG_SAMA5_DMAC1=y             : DMAC0 required by SSC0
+      CONFIG_SAMA5_DMAC0=y             : DMAC0 required by SSC0
 
     System Type -> SSC Configuration
       CONFIG_SAMA5_SSC_MAXINFLIGHT=16  : Up to 16 pending DMA transfers
@@ -2354,8 +2978,10 @@ I2S Audio Support
       CONFIG_SAMA5_SSC0_DATALEN=16     : 16-bit data
       CONFIG_SAMA5_SSC0_RX=y           : Support a receiver
       CONFIG_SAMA5_SSC0_RX_RKINPUT=y   : Receiver gets clock from RK input
+      CONFIG_SAMA5_SSC0_RX_FSLEN=2     : Pick some matching frame synch length
       CONFIG_SAMA5_SSC0_TX=y           : Support a transmitter
       CONFIG_SAMA5_SSC0_TX_MCKDIV=y    : Transmitter gets clock from MCK/2
+      CONFIG_SAMA5_SSC0_TX_FSLEN=2     : Pick some matching frame synch length
       CONFIG_SAMA5_SSC0_MCKDIV_SAMPLERATE=48000 : Sampling at 48K samples/sec
       CONFIG_SAMA5_SSC0_TX_TKOUTPUT_XFR=y  : Outputs clock on TK when transferring data
       CONFIG_SAMA5_SSC0_LOOPBACK=y     : Loopmode mode connects RD/TD and RK/TK
@@ -2384,8 +3010,8 @@ I2S Audio Support
       CONFIG_EXAMPLES_I2SCHAR_DEVINIT=y
 
     Board Selection
-      CONFIG_SAMA5D3X_EK_I2SCHAR_MINOR=0
-      CONFIG_SAMA5D3X_EK_SSC_PORT=0     : 0 or SSC0, 1 for SSC1
+      CONFIG_SAMA5D3xEK_I2SCHAR_MINOR=0
+      CONFIG_SAMA5D3xEK_SSC_PORT=0      : 0 or SSC0, 1 for SSC1
 
     Library Routines
       CONFIG_SCHED_WORKQUEUE=y          : Driver needs work queue support
@@ -2449,10 +3075,6 @@ SAMA5D3x-EK Configuration Options
 
     CONFIG_RAM_VSTART=0x20000000
 
-  CONFIG_ARCH_IRQPRIO - The SAM3UF103Z supports interrupt prioritization
-
-    CONFIG_ARCH_IRQPRIO=y
-
   CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
   have LEDs
 
@@ -2474,10 +3096,10 @@ SAMA5D3x-EK Configuration Options
 
   Individual subsystems can be enabled:
 
-    CONFIG_SAMA5_DBGU        - Debug Unit Interrupt
-    CONFIG_SAMA5_PIT         - Periodic Interval Timer Interrupt
-    CONFIG_SAMA5_WDT         - Watchdog timer Interrupt
-    CONFIG_SAMA5_HSMC        - Multi-bit ECC Interrupt
+    CONFIG_SAMA5_DBGU        - Debug Unit
+    CONFIG_SAMA5_PIT         - Periodic Interval Timer
+    CONFIG_SAMA5_WDT         - Watchdog timer
+    CONFIG_SAMA5_HSMC        - Multi-bit ECC
     CONFIG_SAMA5_SMD         - SMD Soft Modem
     CONFIG_SAMA5_USART0      - USART 0
     CONFIG_SAMA5_USART1      - USART 1
@@ -2502,7 +3124,7 @@ SAMA5D3x-EK Configuration Options
     CONFIG_SAMA5_UHPHS       - USB Host High Speed
     CONFIG_SAMA5_UDPHS       - USB Device High Speed
     CONFIG_SAMA5_GMAC        - Gigabit Ethernet MAC
-    CONFIG_SAMA5_EMAC        - Ethernet MAC
+    CONFIG_SAMA5_EMACA       - Ethernet MAC (Type A)
     CONFIG_SAMA5_LCDC        - LCD Controller
     CONFIG_SAMA5_ISI         - Image Sensor Interface
     CONFIG_SAMA5_SSC0        - Synchronous Serial Controller 0
@@ -2531,7 +3153,16 @@ SAMA5D3x-EK Configuration Options
     CONFIG_USART2_ISUART     - USART2 is configured as a UART
     CONFIG_USART3_ISUART     - USART3 is configured as a UART
 
-  ST91SAMA5 specific device driver settings
+  AT91SAMA5 specific device driver settings
+
+    CONFIG_SAMA5_DBGU_SERIAL_CONSOLE - selects the DBGU
+      for the console and ttyDBGU
+    CONFIG_SAMA5_DBGU_RXBUFSIZE - Characters are buffered as received.
+       This specific the size of the receive buffer
+    CONFIG_SAMA5_DBGU_TXBUFSIZE - Characters are buffered before
+       being sent.  This specific the size of the transmit buffer
+    CONFIG_SAMA5_DBGU_BAUD - The configure BAUD of the DBGU.
+    CONFIG_SAMA5_DBGU_PARITY - 0=no parity, 1=odd parity, 2=even parity
 
     CONFIG_U[S]ARTn_SERIAL_CONSOLE - selects the USARTn (n=0,1,2,3) or UART
            m (m=4,5) for the console and ttys0 (default is the USART1).
@@ -2539,9 +3170,9 @@ SAMA5D3x-EK Configuration Options
        This specific the size of the receive buffer
     CONFIG_U[S]ARTn_TXBUFSIZE - Characters are buffered before
        being sent.  This specific the size of the transmit buffer
-    CONFIG_U[S]ARTn_BAUD - The configure BAUD of the UART.  Must be
+    CONFIG_U[S]ARTn_BAUD - The configure BAUD of the UART.
     CONFIG_U[S]ARTn_BITS - The number of bits.  Must be either 7 or 8.
-    CONFIG_U[S]ARTn_PARTIY - 0=no parity, 1=odd parity, 2=even parity
+    CONFIG_U[S]ARTn_PARITY - 0=no parity, 1=odd parity, 2=even parity
     CONFIG_U[S]ARTn_2STOP - Two stop bits
 
   AT91SAMA5 USB Host Configuration
@@ -2577,7 +3208,7 @@ Configurations
 
   Information Common to All Configurations
   ----------------------------------------
-  Each SAM3U-EK configuration is maintained in a sub-directory and
+  Each SAMA5D3x-EK configuration is maintained in a sub-directory and
   can be selected as follow:
 
     cd tools
@@ -2609,7 +3240,7 @@ Configurations
        reconfiguration process.
 
   2. Unless stated otherwise, all configurations generate console
-     output on UART0 (J3).
+     output on USART1 (J8).
 
   3. All of these configurations use the Code Sourcery for Windows toolchain
      (unless stated otherwise in the description of the configuration).  That
@@ -2644,6 +3275,35 @@ Configurations
      create a very corrupt configuration that may not be easy to recover
      from.
 
+  4. The SAMA5Dx is running at 396MHz by default in these configurations.
+     This is because the original timing for the PLLs, NOR FLASH, and SDRAM
+     came from the Atmel NoOS sample code which runs at that rate.
+
+     The SAMA5Dx is capable of running at 528MHz, however, and is easily
+     re-configured:
+
+       Board Selection -> CPU Frequency
+         CONFIG_SAMA5D3xEK_396MHZ=n     # Disable 396MHz operation
+         CONFIG_SAMA5D3xEK_528MHZ=y     # Enable 528MHz operation
+
+     If you switch to 528MHz, you should also check the loop calibration
+     value in your .config file.  Of course, it would be best to re-calibrate
+     the timing loop, but these values should get you in the ballpark:
+
+       CONFIG_BOARD_LOOPSPERMSEC=49341  # Calibrated on SAMA5D3-EK at 396MHz
+                                        # running from ISRAM
+       CONFIG_BOARD_LOOPSPERMSEC=65775  # Calibrated on SAMA4D3-Xplained at
+                                        # 528MHz running from SDRAM
+
+     Operation at 528MHz has been verified but is not the default in these
+     configurations because most testing was done at 396MHz.  NAND has not
+     been verified at these rates.
+
+  5. By default, all of these configurations run from ISRAM or NOR FLASH
+     (as indicated below in each description of the configuration).
+     Operation from SDRAM is also an option as described in the paragraph
+     entitled, "Running NuttX from SDRAM."
+
   Configuration Sub-directories
   -----------------------------
   Summary:  Some of the descriptions below are long and wordy. Here is the
@@ -2671,11 +3331,13 @@ Configurations
       used to verify the SAMA5D3x-EK TFT LCD.  This test case focuses on
       general window controls, movement, mouse and keyboard input.  It
       requires no user interaction.
-   nxwm: This is a special configuration setup for the NxWM window manager
+    nxplayer:  A command line media player using the on-board WM8904 audio
+      CODEC.
+    nxwm: This is a special configuration setup for the NxWM window manager
       UnitTest.  It integrates support for both the SAMA5 LCDC and the
       SAMA5 ADC touchscreen controller and provides a more advance
       graphics demo. It provides an interactive windowing experience.
-   ov2640:  A test of the SAMA5 ISI using an OV2640 camera.
+    ov2640:  A test of the SAMA5 ISI using an OV2640 camera.  INCOMPLETE!
 
   There may be issues with some of these configurations.  See the details
   before of the status of individual configurations.
@@ -2731,7 +3393,7 @@ Configurations
        Relevant configuration settings are provided in the paragraph entitled
        "SDRAM Support" above.
 
-    6. The Real Time Clock/Calendar RTC) is enabled.  See the section entitled
+    6. The Real Time Clock/Calendar (RTC) is enabled.  See the section entitled
        "RTC" above.
 
     7. The Embest or Ronetix CPU module includes an Atmel AT25DF321A,
@@ -2743,7 +3405,7 @@ Configurations
        card slots:  (1) a full size SD card slot (J7 labelled MCI0), and (2)
        a microSD memory card slot (J6 labelled MCI1).  The full size SD card
        slot connects via HSMCI0; the microSD connects vi HSMCI1.  Relevant
-       configuration settings can be found in the section entitle "HSMCI
+       configuration settings can be found in the section entitled "HSMCI
        Card Slots" above.
 
     9. Support the USB high-speed device (UDPHS) driver is enabled.  See the
@@ -2761,6 +3423,9 @@ Configurations
     STATUS:
        See the To-Do list below
 
+       2014-3-30: I some casual retesting, I am seeing some slow boot-
+                  up times and possible microSD card issues.  I will
+                  need to revisit this.
   hello:
 
     This configuration directory, performs the (almost) simplest of all
@@ -2819,7 +3484,7 @@ Configurations
     2. The default norboot program initializes the NOR memory,
        displays a message and halts.  The norboot program can also be
        configured to jump directly into NOR FLASH without requiring the
-       final halt and go by setting CONFIG_SAMA5_NOR_START=y in the
+       final halt and go by setting CONFIG_SAMA5D3xEK_NOR_START=y in the
        NuttX configuration.
 
     3. Be aware that the default norboot also disables the watchdog.
@@ -2919,7 +3584,7 @@ Configurations
         configuration instrcutions in the section entitled "Touchscreen
         Testing" above.
 
-    16. The Real Time Clock/Calendar RTC) may be enabled by reconfiguring NuttX.
+    16. The Real Time Clock/Calendar (RTC) may be enabled by reconfiguring NuttX.
         See the section entitled "RTC" above for detailed configuration settings.
 
     17. This example can be configured to exercise the watchdog timer test
@@ -2955,6 +3620,61 @@ Configurations
     window controls, movement, mouse and keyboard input.  It requires no
     user interaction.
 
+  nxplayer
+
+    A command line media player using the on-board WM8904 audio CODEC.
+    This configuration is based on the nsh configuration above with the
+    following extensions:
+
+      a. It runs at 528MHz
+      b. It includes SDRAM support
+      c. Support for the WM8904 audio CODEC is enabled along with
+         support for TWI0, SSC0, and DMAC0 needed by the SM8904.
+      d. Support for the full size SD card slot (HSMCI0) is enable
+      e. The NxPlayer command line media player is built in.
+
+    NOTES:
+
+    1. See the NOTEs for the nsh configuration.  Since this configuration
+       derives from that configuration, all notes apply.
+
+    2. Using NxPlayer
+
+       This configuration depends on media files in the default mountpoint
+       at /music.  You will need to mount the media before running
+       NxPlayer,  Here are the general steps to play a file:
+
+         a. You will need an (full size) SD card containing the .WAV files
+            that you want to play (.WAV is only format supported as of this
+            writing).  That SD card should be inserted in the HSMCI0 media
+            slot A (best done before powering up).
+
+         b. If the NuttX auto-mounter is enabled and properly configured,
+            then the FAT file system appear at /music.  If the auto-
+            mounter is not enabled, then here are the steps to manually
+            mount the FAT file system:
+
+             Then from NSH prompt, you need to mount the media volume like:
+
+              nsh> mount -t vfat /dev/mmcsd0 /music
+
+            NOTE:  There is an auto-mounter that could be used to eliminate
+            this step.  The auto mounter is not enabled or integrated into
+            in this configuration, however.  See the section entitle
+            "Auto-Mounter " above.
+
+         c. You can then see the available .wav files like:
+
+               nsh>ls /music
+
+         d. Then you can run the media player like:
+
+               nsh> nxplayer
+               nxplayer> device pcm0
+               nxplayer> play <filename>
+
+            where <filename> is name or path of the .WAV file to be playerd.
+
   nxwm:
 
     This is a special configuration setup for the NxWM window manager
@@ -2963,10 +3683,10 @@ Configurations
     graphics demo. It provides an interactive windowing experience.
 
     The NxWM window manager is a tiny window manager tailored for use
-    with smaller LCDs.  It supports a toolchain, a start window, and
-    multiple application windows.  However, to make the best use of
-    the visible LCD space, only one application window is visible at
-    at time.
+    with smaller LCDs.  It supports a taskbar, a start window, and
+    multiple application windows with toolbars.  However, to make the
+    best use of the visible LCD space, only one application window is
+    visible at at time.
 
     The NxWM window manager can be found here:
 
@@ -2985,7 +3705,7 @@ Configurations
     have these components installed elsewhere.  In that case, you will need
     to adjust all of the paths in the following accordingly:
 
-    1. Intall the nxwm configuration
+    1. Install the nxwm configuration
 
        $ cd ~/nuttx-git/nuttx/tools
        $ ./configure.sh sama5d3x-ek/nxwm
@@ -3046,8 +3766,12 @@ Configurations
        and, in fact, putting a guard band around the framebuffers seems to
        eliminate the problem.
     c) There are some occasional start up issues.  It appears that the LCDC
-       is programed incorrectly and groups of pixels in the images are
+       is programmed incorrectly and groups of pixels in the images are
        reversed (producing an odd serrated look to the images).
+       Update:  I corrected a similar problem on the SAMA5D4-EK by
+       increasing the SCLK from MCK to 2*MCK.  That eliminated all start up
+       problems with the SAMA5D4-EK and needs to be tried on the SAMA5D3e-EK
+       as well.  This is controlled by an LCD setting in include/board.h.
     d) I think that there may be more issues if GRAPHICS and INPUT debug is
        off.  I have not tested with DEBUG off.
     e) The biggest problem is the touchscreen accuracy.  The touchscreen
@@ -3055,15 +3779,11 @@ Configurations
        example requires is a touch in the far, far, upper left corner of
        the display.  In that region, I cannot get reliable touch measurements
        and so I cannot get past the opening display.
-    f) The NxWM example was designed tiny displays.  On this large 800x480
-       display, the icons are too tiny to be usable.  I have created a large
-       320x320 logo for the opening screen and added image scaling to expand
-       the images in the taskbar.  The expanded images are not great.  If I
-       ever get past the opening screen, the same problems will exist in the
-       application toolbar and in the start winow.  These icons are not yet
-       scaled.
 
     Bottom line:  Not ready for prime time.
+
+    2014-9-20:  Trying to verify the build today, there are now compilation
+    errors in the ADC/Touchscreen driver.  See STATUS at the end of this file
 
   ov2640:
 
@@ -3072,25 +3792,32 @@ Configurations
 To-Do List
 ==========
 
-1) Currently the SAMA5Dx is running at 396MHz in these configurations.  This
-   is because the timing for the PLLs, NOR FLASH, and SDRAM came from the
-   Atmel NoOS sample code which runs at that rate.  The SAMA5Dx is capable
-   of running at 528MHz, however.  The setup for that configuration exists
-   in the Bareboard assembly language setup and should be incorporated.
-
-2) Most of these configurations execute from NOR FLASH. I have been unable
+1) Most of these configurations execute from NOR FLASH. I have been unable
    to execute these configurations from NOR FLASH by closing the BMS jumper
    (J9).  As far as I can tell, this jumper does nothing on my board???  I
    have been using the norboot configuration to start the program in NOR
    FLASH (see just above).  See "Creating and Using NORBOOT" above.
 
-3) Neither USB OHCI nor EHCI support Isochronous endpoints.  Interrupt
+   UPDATE: It has been confirmed at that there is an issue with the BMS
+   jumper on my board. However, other NuttX users have confirmed operation
+   booting directly into NOR FLASH.  So although I cannot confirm this
+   behavior, this appears to be no longer an issue.
+
+2) Neither USB OHCI nor EHCI support Isochronous endpoints.  Interrupt
    endpoint support in the EHCI driver is untested (but works in similar
    EHCI drivers).
 
-4) HSCMI TX DMA support is currently commented out.
+3) HSCMI. CONFIG_MMCSD_MULTIBLOCK_DISABLE=y is set to disable multi-block
+   transfers because of some issues that I saw during testing.  The is very
+   low priority to me but might be important to you if you are need very
+   high performance SD card accesses.
 
-5) I believe that there is an issue when the internal AT25 FLASH is
+   HCMDI TX DMA is currently disabled for the SAMA5D3.  There is some
+   issue with the TX DMA setup (HSMCI TX DMA the same driver works with
+   the SAMA5D4 which has a different DMA subsystem).  This is a bug that
+   needs to be resolved.
+
+4) I believe that there is an issue when the internal AT25 FLASH is
    formatted by NuttX.  That format works fine with Linux, but does not
    appear to work with Windows.  Reformatting on Windows can resolve this.
    NOTE:  This is not a SAMA5Dx issue.
@@ -3099,24 +3826,62 @@ To-Do List
    formatting function (mkfatfs).  It is likely that these fixes will
    eliminate this issue, but that has not yet been verified.
 
-6) CAN testing has not yet been performed due to issues with cabling.  I
+5) CAN testing has not yet been performed due to issues with cabling.  I
    just do not have a good test bed (or sufficient CAN knowledge) for
    good CAN testing.
 
-7) The NxWM example does not work well.  This example was designed to work
-   with much smaller displays and does not look good or work well with the
-   SAMA5Dx-EKs 800x480 display.  See above for details.
-
-8) There are lots of LCDC hardware features that are not tested with NuttX.
+6) There are lots of LCDC hardware features that are not tested with NuttX.
    The simple NuttX graphics system does not have support for all of the
    layers and other features of the LCDC.
 
-9) I have a Camera, but there is still no ISI driver.  I am not sure what to
+7) I have a Camera, but there is still no ISI driver.  I am not sure what to
    do with the camera.  NuttX needs something like V4L to provide the
    definition for what a camera driver is supposed to do.
 
    I will probably develop a test harness for ISI, but it is of only
    minimal value with no OS infrastructure to deal with images and video.
 
-10) GMAC has only been tested on a 10/100Base-T network.  I don't have a
-    1000Base-T network to support additional testing.
+8) GMAC has only been tested on a 10/100Base-T network.  I don't have a
+   1000Base-T network to support additional testing.
+
+9) Some drivers may require some adjustments if you intend to run from SDRAM.
+   That is because in this case macros like BOARD_MCK_FREQUENCY are not constants
+   but are instead function calls:  The MCK clock frequency is not known in
+   advance but instead has to be calculated from the bootloader PLL configuration.
+
+   As of this writing, all drivers have been converted to run from SDRAM except
+   for the PWM and the Timer/Counter drivers.  These drivers use the
+   BOARD_MCK_FREQUENCY definition in more complex ways and will require some
+   minor redesign and re-testing before they can be available.
+
+10) 2014-9-20: Failed to build the NxWM configuration:
+
+   CC:  chip/sam_adc.c
+   chip/sam_adc.c: In function 'sam_adc_interrupt':
+   chip/sam_adc.c:886:21: warning: unused variable 'priv' [-Wunused-variable]
+      struct sam_adc_s *priv = &g_adcpriv;
+                        ^
+   chip/sam_adc.c: In function 'sam_adc_initialize':
+   chip/sam_adc.c:1977:7: error: 'g_adcdev' undeclared (first use in this function)
+          g_adcdev.ad_ops  = &g_adcops;
+          ^
+   chip/sam_adc.c:1977:7: note: each undeclared identifier is reported only once for each function it appears in
+   chip/sam_adc.c:1977:27: error: 'g_adcops' undeclared (first use in this function)
+          g_adcdev.ad_ops  = &g_adcops;
+                              ^
+   chip/sam_adc.c:1983:11: error: 'struct sam_adc_s' has no member named 'dev'
+          priv->dev = &g_adcdev;
+              ^
+   chip/sam_adc.c:2090:1: warning: control reaches end of non-void function [-Wreturn-type]
+    }
+    ^
+
+   The failure occurs because there are no ADC channels configured (as there
+   should not be) so SAMA5_ADC_HAVE_CHANNELS is not defined (as it should
+   not be).  However, if there are no configured ADC channel, then
+   sam_adc_initialize() does not compile correctly -- and it should not
+   given nature the logic that is in place there now.
+
+   A quick glance at the history of these files does not reveal what the
+   obvious solution is so I will need to come back and revisit this in the
+   future.

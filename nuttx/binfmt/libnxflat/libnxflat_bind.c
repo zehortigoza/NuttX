@@ -251,17 +251,17 @@ static inline int nxflat_gotrelocs(FAR struct nxflat_loadinfo_s *loadinfo)
 
   relocs = (FAR struct nxflat_reloc_s *)
         (offset - loadinfo->isize + loadinfo->dspace->region);
-  bvdbg("isize: %08lx dpsace: %p relocs: %p\n", 
+  bvdbg("isize: %08lx dpsace: %p relocs: %p\n",
         (long)loadinfo->isize, loadinfo->dspace->region, relocs);
 
   /* All relocations are performed within the D-Space allocation.  If
-   * CONFIG_ADDRENV=y, then that D-Space allocation lies in an address
+   * CONFIG_ARCH_ADDRENV=y, then that D-Space allocation lies in an address
    * environment that may not be in place.  So, in that case, we must call
    * nxflat_addrenv_select to temporarily instantiate that address space
    * before the relocations can be performed.
    */
 
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
   ret = nxflat_addrenv_select(loadinfo);
   if (ret < 0)
     {
@@ -355,7 +355,7 @@ static inline int nxflat_gotrelocs(FAR struct nxflat_loadinfo_s *loadinfo)
 
   /* Restore the original address environment */
 
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
   ret = nxflat_addrenv_restore(loadinfo);
   if (ret < 0)
     {
@@ -390,7 +390,7 @@ static inline int nxflat_bindimports(FAR struct nxflat_loadinfo_s *loadinfo,
   char    *symname;
   uint32_t offset;
   uint16_t nimports;
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
   int      ret;
 #endif
   int      i;
@@ -408,13 +408,13 @@ static inline int nxflat_bindimports(FAR struct nxflat_loadinfo_s *loadinfo,
   bvdbg("Imports offset: %08x nimports: %d\n", offset, nimports);
 
   /* The import[] table resides within the D-Space allocation.  If
-   * CONFIG_ADDRENV=y, then that D-Space allocation lies in an address
+   * CONFIG_ARCH_ADDRENV=y, then that D-Space allocation lies in an address
    * environment that may not be in place.  So, in that case, we must call
    * nxflat_addrenv_select to temporarily instantiate that address space
    * before the import[] table can be modified.
    */
 
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
   ret = nxflat_addrenv_select(loadinfo);
   if (ret < 0)
     {
@@ -474,7 +474,7 @@ static inline int nxflat_bindimports(FAR struct nxflat_loadinfo_s *loadinfo,
           if (!symbol)
             {
               bdbg("Exported symbol \"%s\" not found\n", symname);
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
               (void)nxflat_addrenv_restore(loadinfo);
 #endif
               return -ENOENT;
@@ -500,7 +500,7 @@ static inline int nxflat_bindimports(FAR struct nxflat_loadinfo_s *loadinfo,
 
   /* Restore the original address environment */
 
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
   ret = nxflat_addrenv_restore(loadinfo);
   if (ret < 0)
     {
@@ -527,18 +527,18 @@ static inline int nxflat_bindimports(FAR struct nxflat_loadinfo_s *loadinfo,
 
 static inline int nxflat_clearbss(FAR struct nxflat_loadinfo_s *loadinfo)
 {
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
   int ret;
 #endif
 
-  /* .bss resides within the D-Space allocation.  If CONFIG_ADDRENV=y, then
+  /* .bss resides within the D-Space allocation.  If CONFIG_ARCH_ADDRENV=y, then
    * that D-Space allocation lies in an address environment that may not be
    * in place.  So, in that case, we must call nxflat_addrenv_select to
    * temporarily instantiate that address space before the .bss can be
    * accessed.
    */
 
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
   ret = nxflat_addrenv_select(loadinfo);
   if (ret < 0)
     {
@@ -554,7 +554,7 @@ static inline int nxflat_clearbss(FAR struct nxflat_loadinfo_s *loadinfo)
 
   /* Restore the original address environment */
 
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
   ret = nxflat_addrenv_restore(loadinfo);
   if (ret < 0)
     {

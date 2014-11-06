@@ -67,7 +67,7 @@ static unsigned int g_mmPrevious;
 static unsigned int g_mmPeak;
 
 static FAR const char *g_buttonLabels[BUTTONARRAY_NCOLUMNS*BUTTONARRAY_NROWS] = {
- "=>", "A", "B", "<DEL", 
+ "=>", "A", "B", "<DEL",
  "C", "D", "E", "F",
  "G", "H", "I", "J",
  "K", "L", "M", "N",
@@ -133,8 +133,8 @@ static void updateMemoryUsage(unsigned int previous,
 
   /* Show the change from the previous time */
 
-  message("%s: Before: %8d After: %8d Change: %8d\n",
-           msg, previous, mmcurrent.uordblks, mmcurrent.uordblks - previous);
+  printf("%s: Before: %8d After: %8d Change: %8d\n",
+         msg, previous, mmcurrent.uordblks, mmcurrent.uordblks - previous);
 
   /* Set up for the next test */
 
@@ -243,12 +243,12 @@ int clatchbuttonarray_main(int argc, char *argv[])
 
   bool clicked = false;
   bool latched = false;
- 
+
   for (int j = 0; j < BUTTONARRAY_NROWS; j++)
     {
       for (int i = 0; i < BUTTONARRAY_NCOLUMNS; i++)
         {
-          // Initially, this button should be neither clicked nor latched 
+          // Initially, this button should be neither clicked nor latched
 
           clicked = false;
           latched = false;
@@ -275,7 +275,7 @@ int clatchbuttonarray_main(int argc, char *argv[])
           // Poll for the mouse release event (of course this can hang if something fails)
 
           test->poll(buttonArray);
- 
+
           // Now it should be un-clicked and latched
 
           clicked = false;
@@ -295,7 +295,7 @@ int clatchbuttonarray_main(int argc, char *argv[])
   delete test;
   updateMemoryUsage(g_mmPrevious, "After deleting the test");
   updateMemoryUsage(g_mmInitial, "Final memory usage");
-  message("Peak memory usage: %8d\n", g_mmPeak - g_mmInitial);
+  printf("Peak memory usage: %8d\n", g_mmPeak - g_mmInitial);
   return 0;
 }
 

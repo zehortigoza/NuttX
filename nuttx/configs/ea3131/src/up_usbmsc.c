@@ -89,16 +89,16 @@ int usbmsc_archinitialize(void)
   uint8_t *pbuffer;
   int ret;
 
-  pbuffer = (uint8_t *)kmalloc(BUFFER_SIZE);
+  pbuffer = (uint8_t *)kmm_malloc(BUFFER_SIZE);
   if (!pbuffer)
     {
-      lowsyslog("usbmsc_archinitialize: Failed to allocate ramdisk of size %d\n",
+      lowsyslog(LOG_ERR, "ERROR: Failed to allocate ramdisk of size %d\n",
                 BUFFER_SIZE);
       return -ENOMEM;
     }
 
   /* Register a RAMDISK device to manage this RAM image */
-  
+
   ret = ramdisk_register(CONFIG_SYSTEM_USBMSC_DEVMINOR1,
                          pbuffer,
                          USBMSC_NSECTORS,
@@ -106,9 +106,10 @@ int usbmsc_archinitialize(void)
                          true);
   if (ret < 0)
     {
-      printf("create_ramdisk: Failed to register ramdisk at %s: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: create_ramdisk: Failed to register ramdisk at %s: %d\n",
              g_source, -ret);
-      kfree(pbuffer);
+      kmm_free(pbuffer);
       return ret;
     }
 
@@ -117,9 +118,10 @@ int usbmsc_archinitialize(void)
   ret = mkfatfs(g_source, &g_fmt);
   if (ret < 0)
     {
-      printf("create_ramdisk: Failed to create FAT filesystem on ramdisk at %s\n",
+      syslog(LOG_ERR,
+             "ERROR: create_ramdisk: Failed to create FAT filesystem on ramdisk at %s\n",
              g_source);
-      /* kfree(pbuffer); -- RAM disk is registered */
+      /* kmm_free(pbuffer); -- RAM disk is registered */
       return ret;
     }
 

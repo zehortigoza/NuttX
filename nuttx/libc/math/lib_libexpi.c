@@ -10,11 +10,11 @@
  * a compatibile, MIT-style license:
  *
  * Copyright (C) 2009-2011 Nick Johnson <nickbjohnson4224 at gmail.com>
- * 
+ *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -60,17 +60,17 @@
 
 static double _expi_square_tbl[11] =
 {
-  M_E,                          // e^1
-  M_E2,                         // e^2
-  M_E4,                         // e^4
-  M_E8,                         // e^8
-  M_E16,                        // e^16
-  M_E32,                        // e^32
-  M_E64,                        // e^64
-  M_E128,                       // e^128
-  M_E256,                       // e^256
-  M_E512,                       // e^512
-  M_E1024,                      // e^1024
+  M_E,                          /* e^1 */
+  M_E2,                         /* e^2 */
+  M_E4,                         /* e^4 */
+  M_E8,                         /* e^8 */
+  M_E16,                        /* e^16 */
+  M_E32,                        /* e^32 */
+  M_E64,                        /* e^64 */
+  M_E128,                       /* e^128 */
+  M_E256,                       /* e^256 */
+  M_E512,                       /* e^512 */
+  M_E1024,                      /* e^1024 */
 };
 
 /************************************************************************

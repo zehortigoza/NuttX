@@ -41,7 +41,8 @@
 
 #include <stdint.h>
 
-#include "os_internal.h"
+#include <arch/irq.h>
+
 #include "up_internal.h"
 
 #ifdef CONFIG_ARCH_FPU
@@ -88,7 +89,7 @@ void up_copyarmstate(uint32_t *dest, uint32_t *src)
 
       up_savefpu(dest);
 
-      /* Then copy all of the ARM registers (mitting the floating point
+      /* Then copy all of the ARM registers (omitting the floating point
        * registers).  Indices: 0 through (ARM_CONTEXT_REGS-1).
        */
 

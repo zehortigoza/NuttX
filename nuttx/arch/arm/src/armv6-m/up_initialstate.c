@@ -96,7 +96,7 @@ void up_initial_state(struct tcb_s *tcb)
   /* Save the task entry point (stripping off the thumb bit) */
 
   xcp->regs[REG_PC]      = (uint32_t)tcb->start & ~1;
-  
+
   /* Specify thumb mode */
 
   xcp->regs[REG_XPSR]    = ARMV6M_XPSR_T;
@@ -126,9 +126,9 @@ void up_initial_state(struct tcb_s *tcb)
 #endif
 #endif /* CONFIG_PIC */
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
   /* All tasks start via a stub function in kernel space.  So all
-   * tasks must start in privileged thread mode.  If CONFIG_NUTTX_KERNEL
+   * tasks must start in privileged thread mode.  If CONFIG_BUILD_PROTECTED
    * is defined, then that stub function will switch to unprivileged
    * mode before transferring control to the user task.
    */

@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/avr/src/common/up_assert.c
  *
- *   Copyright (C) 2010-2011, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2010-2011, 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,17 @@
 
 #include <nuttx/config.h>
 
+/* Output debug info if stack dump is selected -- even if debug is not
+ * selected.
+ */
+
+#ifdef CONFIG_ARCH_STACKDUMP
+# undef  CONFIG_DEBUG
+# undef  CONFIG_DEBUG_VERBOSE
+# define CONFIG_DEBUG 1
+# define CONFIG_DEBUG_VERBOSE 1
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -46,15 +57,22 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/usb/usbdev_trace.h>
+
 #include <arch/board/board.h>
 
 #include "up_arch.h"
-#include "os_internal.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+/* USB trace dumping */
+
+#ifndef CONFIG_USBDEV_TRACE
+#  undef CONFIG_ARCH_USBDUMP
+#endif
 
 /* The following is just intended to keep some ugliness out of the mainline
  * code.  We are going to print the task name if:
@@ -67,15 +85,6 @@
 #undef CONFIG_PRINT_TASKNAME
 #if CONFIG_TASK_NAME_SIZE > 0 && (defined(CONFIG_DEBUG) || defined(CONFIG_ARCH_STACKDUMP))
 #  define CONFIG_PRINT_TASKNAME 1
-#endif
-
-/* If there is going to be stackdump output, then we should turn on output
- * here unconditionally as well.
- */
-
-#ifdef CONFIG_ARCH_STACKDUMP
-#  undef  lldbg
-#  define lldbg lowsyslog
 #endif
 
 /****************************************************************************
@@ -98,7 +107,7 @@ static void _up_assert(int errorcode)
   if (current_regs || ((struct tcb_s*)g_readytorun.head)->pid == 0)
     {
        (void)irqsave();
-        for(;;)
+        for (;;)
           {
 #ifdef CONFIG_ARCH_LEDS
             board_led_on(LED_PANIC);
@@ -113,6 +122,31 @@ static void _up_assert(int errorcode)
       exit(errorcode);
     }
 }
+
+/****************************************************************************
+ * Name: assert_tracecallback
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_USBDUMP
+static int usbtrace_syslog(FAR const char *fmt, ...)
+{
+  va_list ap;
+  int ret;
+
+  /* Let vsyslog do the real work */
+
+  va_start(ap, fmt);
+  ret = lowvsyslog(LOG_INFO, fmt, ap);
+  va_end(ap);
+  return ret;
+}
+
+static int assert_tracecallback(FAR struct usbtrace_s *trace, FAR void *arg)
+{
+  usbtrace_trprintf(usbtrace_syslog, trace->event, trace->value);
+  return 0;
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -139,5 +173,12 @@ void up_assert(const uint8_t *filename, int lineno)
 #endif
 
   up_dumpstate();
+
+#ifdef CONFIG_ARCH_USBDUMP
+  /* Dump USB trace data */
+
+  (void)usbtrace_enumerate(assert_tracecallback, NULL);
+#endif
+
   _up_assert(EXIT_FAILURE);
 }

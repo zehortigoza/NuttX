@@ -56,7 +56,8 @@
 #  include <debug.h>                 /* For ndbg, vdbg */
 #  include <nuttx/compiler.h>        /* For CONFIG_CPP_HAVE_WARNING */
 #  include <arch/irq.h>              /* For irqstore() and friends -- REVISIT */
-#  include <nuttx/net/uip/uip-arp.h> /* For low-level ARP interfaces -- REVISIT */
+#  include <nuttx/net/net.h>         /* For net_lock() and friends */
+#  include <nuttx/net/arp.h>         /* For low-level ARP interfaces -- REVISIT */
 #  include <apps/netutils/dhcpd.h>   /* Advertised DHCPD APIs */
 #endif
 
@@ -84,7 +85,7 @@
 /* Option codes understood in this file                                     */
 /*                              Code    Data   Description                  */
 /*                                      Length                              */
-#define DHCP_OPTION_PAD           1  /*  1     Pad                          */
+#define DHCP_OPTION_PAD           0  /*  1     Pad                          */
 #define DHCP_OPTION_REQ_IPADDR   50  /*  4     Requested IP Address         */
 #define DHCP_OPTION_LEASE_TIME   51  /*  4     IP address lease time        */
 #define DHCP_OPTION_OVERLOAD     52  /*  1     Option overload              */
@@ -270,15 +271,15 @@ static struct dhcpd_state_s g_state;
 #ifndef CONFIG_NETUTILS_DHCPD_HOST
 static inline void dhcpd_arpupdate(uint16_t *pipaddr, uint8_t *phwaddr)
 {
-  uip_lock_t flags;
+  net_lock_t flags;
 
   /* Disable interrupts and update the ARP table -- very non-portable hack.
    * REVISIT -- switch to the SIOCSARP ioctl call if/when it is implemented.
    */
 
-  flags = uip_lock();
-  uip_arp_update(pipaddr, phwaddr);
-  uip_unlock(flags);
+  flags = net_lock();
+  arp_update(pipaddr, phwaddr);
+  net_unlock(flags);
 }
 #else
 #  define dhcpd_arpupdate(pipaddr,phwaddr)
@@ -830,7 +831,7 @@ static inline int dhcpd_openresponder(void)
 static void dhcpd_initpacket(uint8_t mtype)
 {
   uint32_t nulladdr = 0;
-  
+
   /* Set up the generic parts of the DHCP server message */
 
   memset(&g_state.ds_outpacket, 0, sizeof(struct dhcpmsg_s));
@@ -889,7 +890,7 @@ static int dhcpd_sendpacket(int bbroadcast)
    * (1) If he caller know that it needs to multicast the response, it will set bbroadcast.
    * (2) Otherwise, if the client already has and address (ciaddr), then use that for uni-cast
    * (3) Broadcast if the client says it can't handle uni-cast (BOOTP_BROADCAST set)
-   * (4) Otherwise, the client claims it can handle the uni-casst response and we 
+   * (4) Otherwise, the client claims it can handle the uni-casst response and we
    *     will uni-cast to the offered address (yiaddr).
    *
    * NOTE: We really should also check the giaddr field.  If no zero, the server should
@@ -936,7 +937,7 @@ static int dhcpd_sendpacket(int bbroadcast)
       len = (g_state.ds_optend - (uint8_t*)&g_state.ds_outpacket) + 1;
       nvdbg("sendto %08lx:%04x len=%d\n",
             (long)ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port), len);
- 
+
       ret = sendto(sockfd, &g_state.ds_outpacket, len, 0,
                    (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
       close(sockfd);
@@ -1138,7 +1139,7 @@ static inline int dhcpd_request(void)
       if (g_state.ds_optserverip)
         {
           /* ACK if the serverip is correct and the requested IP address is the one
-           * already offered to the client. 
+           * already offered to the client.
            */
 
           if (g_state.ds_optserverip == ntohl(g_state.ds_serverip) &&

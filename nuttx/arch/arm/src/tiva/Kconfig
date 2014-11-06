@@ -48,12 +48,24 @@ config ARCH_CHIP_LM4F120
 	select ARCH_CHIP_LM4F
 	select ARCH_HAVE_FPU
 
-config CONFIG_ARCH_CHIP_TM4C123GH6ZRB
+config ARCH_CHIP_TM4C123GH6ZRB
 	bool "TM4C123GH6ZRB"
 	depends on ARCH_CHIP_TIVA
 	select ARCH_CORTEXM4
 	select ARCH_CHIP_TM4C
 	select ARCH_HAVE_FPU
+
+config ARCH_CHIP_TM4C123GH6PMI
+	bool "TM4C123GH6PMI"
+	depends on ARCH_CHIP_TIVA
+	select ARCH_CORTEXM4
+	select ARCH_CHIP_TM4C
+	select ARCH_HAVE_FPU
+
+config ARCH_CHIP_CC3200
+       bool "CC3200"
+       depends on ARCH_CHIP_TIVA
+       select ARCH_CORTEXM4
 
 endchoice
 
@@ -78,6 +90,10 @@ config LM_REVA2
 	---help---
 		Some early silicon returned an increase LDO voltage or 2.75V to work
 		around a PLL bug
+
+config TIVA_BOARD_EARLYINIT
+	bool
+	default n
 
 menu "Tiva/Stellaris Peripheral Support"
 

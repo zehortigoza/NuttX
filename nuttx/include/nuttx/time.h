@@ -46,7 +46,7 @@
 #include <time.h>
 
 /****************************************************************************
- * Pre-Processor Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /* If Gregorian time is not supported, then neither is Julian */
@@ -106,7 +106,7 @@ EXTERN int clock_daysbeforemonth(int month, bool leapyear);
  *    Calendar/UTC conversion based on algorithms from p. 604
  *    of Seidelman, P. K. 1992.  Explanatory Supplement to
  *    the Astronomical Almanac.  University Science Books,
- *    Mill Valley. 
+ *    Mill Valley.
  *
  ****************************************************************************/
 

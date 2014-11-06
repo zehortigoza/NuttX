@@ -1,7 +1,7 @@
 /************************************************************************************
  * include/nuttx/usb/usbhost.h
  *
- *   Copyright (C) 2010-2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2010-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * References:
@@ -318,7 +318,7 @@
  *   Some hardware supports special memory in which request and descriptor data can
  *   be accessed more efficiently.  This method provides a mechanism to allocate
  *   the request/descriptor memory.  If the underlying hardware does not support
- *   such "special" memory, this functions may simply map to kmalloc.
+ *   such "special" memory, this functions may simply map to kmm_malloc.
  *
  *   This interface was optimized under a particular assumption.  It was assumed
  *   that the driver maintains a pool of small, pre-allocated buffers for descriptor
@@ -351,7 +351,7 @@
  *   Some hardware supports special memory in which request and descriptor data can
  *   be accessed more efficiently.  This method provides a mechanism to free that
  *   request/descriptor memory.  If the underlying hardware does not support
- *   such "special" memory, this functions may simply map to kfree().
+ *   such "special" memory, this functions may simply map to kmm_free().
  *
  * Input Parameters:
  *   drvr - The USB host driver instance obtained as a parameter from the call to
@@ -376,7 +376,7 @@
  *   Some hardware supports special memory in which larger IO buffers can
  *   be accessed more efficiently.  This method provides a mechanism to allocate
  *   the request/descriptor memory.  If the underlying hardware does not support
- *   such "special" memory, this functions may simply map to kmalloc.
+ *   such "special" memory, this functions may simply map to kmm_malloc.
  *
  *   This interface differs from DRVR_ALLOC in that the buffers are variable-sized.
  *
@@ -405,7 +405,7 @@
  *   Some hardware supports special memory in which IO data can  be accessed more
  *   efficiently.  This method provides a mechanism to free that IO buffer
  *   memory.  If the underlying hardware does not support such "special" memory,
- *   this functions may simply map to kfree().
+ *   this functions may simply map to kmm_free().
  *
  * Input Parameters:
  *   drvr - The USB host driver instance obtained as a parameter from the call to
@@ -561,9 +561,9 @@ struct usbhost_registry_s
    * environments where there may be multiple USB ports and multiple USB devices
    * simultaneously connected (see the CLASS_CREATE() macro above).
    */
- 
+
   FAR struct usbhost_class_s     *(*create)(FAR struct usbhost_driver_s *drvr,
-                                           FAR const struct usbhost_id_s *id);
+                                            FAR const struct usbhost_id_s *id);
 
   /* This information uniquely identifies the USB host class implementation that
    * goes with a specific USB device.
@@ -676,7 +676,7 @@ struct usbhost_driver_s
    * be accessed more efficiently.  The following methods provide a mechanism
    * to allocate and free the transfer descriptor memory.  If the underlying
    * hardware does not support such "special" memory, these functions may
-   * simply map to kmalloc and kfree.
+   * simply map to kmm_malloc and kmm_free.
    *
    * This interface was optimized under a particular assumption.  It was assumed
    * that the driver maintains a pool of small, pre-allocated buffers for descriptor
@@ -691,7 +691,7 @@ struct usbhost_driver_s
   /*   Some hardware supports special memory in which larger IO buffers can
    *   be accessed more efficiently.  This method provides a mechanism to allocate
    *   the request/descriptor memory.  If the underlying hardware does not support
-   *   such "special" memory, this functions may simply map to kmalloc.
+   *   such "special" memory, this functions may simply map to kmm_malloc.
    *
    *   This interface differs from DRVR_ALLOC in that the buffers are variable-sized.
    */
@@ -798,6 +798,7 @@ int usbhost_registerclass(struct usbhost_registry_s *class);
 
 const struct usbhost_registry_s *usbhost_findclass(const struct usbhost_id_s *id);
 
+#ifdef CONFIG_USBHOST_MSC
 /****************************************************************************
  * Name: usbhost_storageinit
  *
@@ -816,7 +817,9 @@ const struct usbhost_registry_s *usbhost_findclass(const struct usbhost_id_s *id
  ****************************************************************************/
 
 int usbhost_storageinit(void);
+#endif
 
+#ifdef CONFIG_USBHOST_HIDKBD
 /****************************************************************************
  * Name: usbhost_kbdinit
  *
@@ -835,7 +838,9 @@ int usbhost_storageinit(void);
  ****************************************************************************/
 
 int usbhost_kbdinit(void);
+#endif
 
+#ifdef CONFIG_USBHOST_HIDMOUSE
 /****************************************************************************
  * Name: usbhost_mouse_init
  *
@@ -854,6 +859,7 @@ int usbhost_kbdinit(void);
  ****************************************************************************/
 
 int usbhost_mouse_init(void);
+#endif
 
 /****************************************************************************
  * Name: usbhost_wlaninit

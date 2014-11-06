@@ -56,7 +56,7 @@ int ramtron_start(int spino)
   int retval;
 
   /* Get the SPI port */
-  
+
   spi = up_spiinitialize(spino);
   if (!spi)
     {
@@ -83,20 +83,24 @@ int ramtron_start(int spino)
 }
 
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int ramtron_main(int argc, char *argv[])
+#endif
 {
   int spino;
-  
+
   if (argc == 3)
     {
       spino = atoi(argv[2]);
-    
+
       if (!strcmp(argv[1], "start"))
         {
         return ramtron_start(spino);
         }
     }
-  
+
   /* todo: write protect */
 
   printf("%s: <start> <spino>\n", argv[0]);

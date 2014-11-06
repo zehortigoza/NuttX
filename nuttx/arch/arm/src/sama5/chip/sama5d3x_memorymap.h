@@ -594,10 +594,10 @@
    * in the way at that position.
    */
 
-#  if defined(CONFIG_BOOT_RUNFROMISRAM) && defined(CONFIG_ARCH_LOWVECTORS)
+#  if defined(CONFIG_SAMA5_BOOT_ISRAM) && defined(CONFIG_ARCH_LOWVECTORS)
 
-  /* In this case, table must lie at the top 16Kb of ISRAM1 (or ISRAM0 if ISRAM1
-   * is not available in this architecture)
+  /* In this case, page table must lie at the top 16Kb of ISRAM1 (or ISRAM0
+   * if ISRAM1 is not available in this architecture)
    *
    * If CONFIG_PAGING is defined, then mmu.h assign the virtual address
    * of the page table.
@@ -616,11 +616,22 @@
 #    endif
 #    define PGTABLE_IN_HIGHSRAM   1
 
+  /* If we execute from SRAM but keep data in SDRAM, then we will also have
+   * to position the initial, IDLE stack in SRAM.  SDRAM will not be ready
+   * soon enough to serve as the stack.
+   *
+   * In this case, the initial IDLE stack can just follow the vector table,
+   * lying between the vector table and the page table.  We don't really
+   * know how much memory to set aside for the vector table, but 4KiB should
+   * be much more than enough
+   */
+
 #    ifdef CONFIG_BOOT_SDRAM_DATA
-#      error CONFIG_BOOT_SDRAM_DATA not suupported in this configuration
+#      define IDLE_STACK_PBASE    (SAM_ISRAM0_PADDR + 0x0001000)
+#      define IDLE_STACK_VBASE    (SAM_ISRAM0_VADDR + 0x0001000)
 #    endif
 
-#  else /* CONFIG_BOOT_RUNFROMISRAM && CONFIG_ARCH_LOWVECTORS */
+#  else /* CONFIG_SAMA5_BOOT_ISRAM && CONFIG_ARCH_LOWVECTORS */
 
   /* Otherwise, the vectors lie at another location (perhaps in NOR FLASH, perhaps
    * elsewhere in internal SRAM).  The page table will then be positioned at
@@ -638,7 +649,7 @@
 #      define IDLE_STACK_VBASE    (PGTABLE_BASE_VADDR + PGTABLE_SIZE)
 #    endif
 
-#  endif /* CONFIG_BOOT_RUNFROMISRAM && CONFIG_ARCH_LOWVECTORS */
+#  endif /* CONFIG_SAMA5_BOOT_ISRAM && CONFIG_ARCH_LOWVECTORS */
 
   /* In either case, the page table lies in ISRAM.  If ISRAM is not the
    * primary RAM region, then we will need to set-up a special mapping for
@@ -657,7 +668,13 @@
 #    error "One of PGTABLE_BASE_PADDR or PGTABLE_BASE_VADDR is undefined"
 #  endif
 
-  /* If data is in SDRAM, then the IDLE stack at the beginning of ISRAM */
+  /* If we execute from SRAM but keep data in SDRAM, then we will also have
+   * to position the initial, IDLE stack in SRAM.  SDRAM will not be ready
+   * soon enough to serve as the stack.
+   *
+   * In this case, the initial IDLE stack can just follow the page table
+   * in ISRAM.
+   */
 
 #    ifdef CONFIG_BOOT_SDRAM_DATA
 #      define IDLE_STACK_PBASE    (SAM_ISRAM0_PADDR + PGTABLE_SIZE)

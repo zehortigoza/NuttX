@@ -1,7 +1,7 @@
 /****************************************************************************
  * include/nuttx/net/cs89x0.h
  *
- *   Copyright (C) 2009, 2012 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2009, 2012, 2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <wdog.h>
- 
+
+#include <nuttx/wdog.h>
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -110,7 +111,7 @@ struct cs89x0_driver_s
 
   /* This holds the information visible to uIP/NuttX */
 
-  struct uip_driver_s cs_dev;  /* Interface understood by uIP */
+  struct net_driver_s cs_dev;  /* Interface understood by uIP */
 
   /* Driver statistics */
 

@@ -297,7 +297,7 @@ STMPE811_HANDLE stmpe811_instantiate(FAR struct i2c_dev_s *dev,
   /* Allocate the device state structure */
 
 #ifdef CONFIG_STMPE811_MULTIPLE
-  priv = (FAR struct stmpe811_dev_s *)kzalloc(sizeof(struct stmpe811_dev_s));
+  priv = (FAR struct stmpe811_dev_s *)kmm_zalloc(sizeof(struct stmpe811_dev_s));
   if (!priv)
     {
       return NULL;
@@ -339,7 +339,7 @@ STMPE811_HANDLE stmpe811_instantiate(FAR struct i2c_dev_s *dev,
   if (ret < 0)
     {
 #ifdef CONFIG_STMPE811_MULTIPLE
-      kfree(priv);
+      kmm_free(priv);
 #endif
       return NULL;
     }
@@ -397,7 +397,7 @@ uint8_t stmpe811_getreg8(FAR struct stmpe811_dev_s *priv, uint8_t regaddr)
 {
   /* 8-bit data read sequence:
    *
-   *  Start - I2C_Write_Address - STMPE811_Reg_Address - 
+   *  Start - I2C_Write_Address - STMPE811_Reg_Address -
    *    Repeated_Start - I2C_Read_Address  - STMPE811_Read_Data - STOP
    */
 
@@ -414,7 +414,7 @@ uint8_t stmpe811_getreg8(FAR struct stmpe811_dev_s *priv, uint8_t regaddr)
                                           * (no STOP) */
 
   /* Set up the 8-bit STMPE811 data read message */
-  
+
   msg[1].addr   = priv->config->address; /* 7-bit address */
   msg[1].flags  = I2C_M_READ;            /* Read transaction, beginning with Re-START */
   msg[1].buffer = &regval;               /* Transfer to this address */
@@ -500,7 +500,7 @@ uint16_t stmpe811_getreg16(FAR struct stmpe811_dev_s *priv, uint8_t regaddr)
 {
   /* 16-bit data read sequence:
    *
-   *  Start - I2C_Write_Address - STMPE811_Reg_Address - 
+   *  Start - I2C_Write_Address - STMPE811_Reg_Address -
    *    Repeated_Start - I2C_Read_Address  - STMPE811_Read_Data_1 -
    *      STMPE811_Read_Data_2 - STOP
    */
@@ -519,7 +519,7 @@ uint16_t stmpe811_getreg16(FAR struct stmpe811_dev_s *priv, uint8_t regaddr)
                                           * (no STOP) */
 
   /* Set up the 8-bit STMPE811 data read message */
-  
+
   msg[1].addr   = priv->config->address; /* 7-bit address */
   msg[1].flags  = I2C_M_READ;            /* Read transaction, beginning with Re-START */
   msg[1].buffer = rxbuffer;              /* Transfer to this address */

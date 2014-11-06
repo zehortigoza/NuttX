@@ -72,7 +72,7 @@
  * Description:
  *   Set the default priority of the module to be loaded.  This may be
  *   changed (1) by the actions of the binary format's load() method if
- *   the binary format contains priority informaition, or (2) by the user
+ *   the binary format contains priority information, or (2) by the user
  *   between calls to load_module() and exec_module().
  *
  * Returned Value:
@@ -91,10 +91,10 @@ static int load_default_priority(FAR struct binary_s *bin)
   ret = sched_getparam(0, &param);
   if (ret < 0)
     {
-      bdbg("ERROR: sched_getparam failed: %d\n", errno);
+      bdbg("ERROR: sched_getparam failed: %d\n", get_errno());
       return ERROR;
     }
-  
+
   /* Save that as the priority of child thread */
 
   bin->priority = param.sched_priority;
@@ -120,7 +120,7 @@ static int load_absmodule(FAR struct binary_s *bin)
   FAR struct binfmt_s *binfmt;
   int ret = -ENOENT;
 
-  bdbg("Loading %s\n", bin->filename);
+  bvdbg("Loading %s\n", bin->filename);
 
   /* Disabling pre-emption should be sufficient protection while accessing
    * the list of registered binary format handlers.
@@ -143,6 +143,10 @@ static int load_absmodule(FAR struct binary_s *bin)
           /* Successfully loaded -- break out with ret == 0 */
 
           bvdbg("Successfully loaded module %s\n", bin->filename);
+
+          /* Save the unload method for use by unload_module */
+
+          bin->unload = binfmt->unload;
           dump_module(bin);
           break;
         }
@@ -222,7 +226,7 @@ int load_module(FAR struct binary_s *bin)
 
                   /* Free the allocated fullpath */
 
-                  kfree(fullpath);
+                  kmm_free(fullpath);
 
                   /* Break out of the loop with ret == OK on success */
 
@@ -258,8 +262,8 @@ int load_module(FAR struct binary_s *bin)
 
   if (ret < 0)
     {
-      bdbg("Returning errno %d\n", -ret);
-      errno = -ret;
+      bdbg("ERROR: Returning errno %d\n", -ret);
+      set_errno(-ret);
       return ERROR;
     }
 
@@ -267,4 +271,3 @@ int load_module(FAR struct binary_s *bin)
 }
 
 #endif /* CONFIG_BINFMT_DISABLE */
-

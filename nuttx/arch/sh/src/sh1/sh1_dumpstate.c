@@ -39,6 +39,13 @@
 
 #include <nuttx/config.h>
 
+/* Output debug info -- even if debug is not selected. */
+
+#undef  CONFIG_DEBUG
+#undef  CONFIG_DEBUG_VERBOSE
+#define CONFIG_DEBUG 1
+#define CONFIG_DEBUG_VERBOSE 1
+
 #include <stdint.h>
 #include <debug.h>
 
@@ -47,22 +54,13 @@
 
 #include "up_arch.h"
 #include "up_internal.h"
-#include "os_internal.h"
+#include "sched/sched.h"
 
 #ifdef CONFIG_ARCH_STACKDUMP
 
 /****************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
-
-/* Output debug info if stack dump is selected -- even if 
- * debug is not selected.
- */
-
-#ifdef CONFIG_ARCH_STACKDUMP
-# undef  lldbg
-# define lldbg lowsyslog
-#endif
 
 /****************************************************************************
  * Private Data

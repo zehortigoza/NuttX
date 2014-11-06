@@ -45,7 +45,6 @@
 #include <arch/irq.h>
 
 #include "chip/chip.h"
-#include "os_internal.h"
 #include "up_internal.h"
 
 /****************************************************************************
@@ -209,10 +208,11 @@ void up_maskack_irq(int irq)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_IRQPRIO
 int up_prioritize_irq(int irq, int priority)
 {
   /* To be provided */
 
   return -ENOSYS;
 }
-
+#endif

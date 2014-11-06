@@ -54,8 +54,28 @@
 
 #define MAX_BUFFER  (4096)
 
-#ifdef WIN32
-#  define NAME_MAX FILENAME_MAX
+/* NAME_MAX is typically defined in limits.h */
+
+#if !defined(NAME_MAX)
+
+  /* FILENAME_MAX might be defined in stdio.h */
+
+#  if defined(FILENAME_MAX)
+#    define NAME_MAX FILENAME_MAX
+#  else
+
+  /* MAXNAMELEN might be defined in dirent.h */
+
+#    include <dirent.h>
+#    if defined(MAXNAMLEN)
+#      define NAME_MAX MAXNAMLEN
+#    else
+
+  /* Lets not let a silly think like this stop us... just make something up */
+
+#      define NAME_MAX 256
+#    endif
+#  endif
 #endif
 
 /****************************************************************************
@@ -374,7 +394,7 @@ static void parse_args(int argc, char **argv)
       fprintf(stderr, "  Windows Native : [%s]\n", g_winnative ? "TRUE" : "FALSE");
     }
 
-  /* Check for required paramters */
+  /* Check for required parameters */
 
   if (!g_cc)
     {
@@ -453,7 +473,7 @@ static void do_dependency(const char *file, char separator)
       dotptr  = strrchr(objname, '.');
       if (dotptr)
         {
-          dotptr = '\0';
+          *dotptr = '\0';
         }
 
       snprintf(tmp, NAME_MAX+6, " -MT %s" DELIM "%s%s ",
@@ -495,7 +515,7 @@ static void do_dependency(const char *file, char separator)
   g_command[cmdlen] = '\0';
 
   /* Make a copy of g_altpath. We need to do this because at least the version
-   * of strtok_r above does modifie it.
+   * of strtok_r above does modify it.
    */
 
   alloc = strdup(g_altpath);
@@ -577,6 +597,11 @@ static void do_dependency(const char *file, char separator)
        * compiler, system() will return -1;  Otherwise, the returned value
        * from the compiler is in WEXITSTATUS(ret).
        */
+
+      if (g_debug)
+        {
+          fprintf(stderr, "Executing: %s\n", g_command);
+        }
 
       ret = system(g_command);
 #ifdef WEXITSTATUS
@@ -667,7 +692,7 @@ static char *cywin2windows(const char *str, const char *append, enum slashmode_e
           drive = toupper(*str);
           if (drive < 'A' || drive > 'Z')
             {
-              fprintf(stderr, "ERROR: Drive charager: \"%s\"\n", str);
+              fprintf(stderr, "ERROR: Drive character: \"%s\"\n", str);
               exit(EXIT_FAILURE);
             }
 

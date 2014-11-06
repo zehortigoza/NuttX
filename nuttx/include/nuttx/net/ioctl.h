@@ -160,6 +160,14 @@
 
 #define SIOCSIWPMKSA     _SIOC(0x0041) /* PMKSA cache operation */
 
+/* MDIO/MCD *****************************************************************/
+
+#define SIOCMIINOTIFY    _SIOC(0x0042) /* Receive notificaion via signal on
+                                        * PHY state change */
+#define SIOCGMIIPHY      _SIOC(0x0043) /* Get address of MII PHY in use */
+#define SIOCGMIIREG      _SIOC(0x0044) /* Get a MII register via MDIO */
+#define SIOCSMIIREG      _SIOC(0x0045) /* Set a MII register via MDIO */
+
 /****************************************************************************
  * Type Definitions
  ****************************************************************************/

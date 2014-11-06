@@ -1,7 +1,7 @@
 /****************************************************************************
  * config/sama5d3x-ek/src/sam_nsh.c
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <errno.h>
-#include <debug.h>
+#include <syslog.h>
 
 #ifdef CONFIG_SYSTEM_USBMONITOR
 #  include <apps/usbmonitor.h>
@@ -55,22 +55,6 @@
 /****************************************************************************
  * Pre-Processor Definitions
  ****************************************************************************/
-
-/* Debug ********************************************************************/
-
-#ifdef CONFIG_CPP_HAVE_VARARGS
-#  ifdef CONFIG_DEBUG
-#    define message(...) syslog(__VA_ARGS__)
-#  else
-#    define message(...) printf(__VA_ARGS__)
-#  endif
-#else
-#  ifdef CONFIG_DEBUG
-#    define message syslog
-#  else
-#    define message printf
-#  endif
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -86,8 +70,9 @@
 
 int nsh_archinitialize(void)
 {
-#if defined(HAVE_NAND) || defined(HAVE_AT25) || defined(HAVE_AT24) || \
-    defined(HAVE_HSMCI) || defined(HAVE_USBHOST) || defined(HAVE_USBMONITOR)
+#if defined(HAVE_NAND)  || defined(HAVE_AT25)    || defined(HAVE_AT24)       || \
+    defined(HAVE_HSMCI) || defined(HAVE_USBHOST) || defined(HAVE_USBMONITOR) ||\
+    defined(HAVE_WM8904)
   int ret;
 #endif
 
@@ -97,7 +82,7 @@ int nsh_archinitialize(void)
   ret = sam_nand_automount(NAND_MINOR);
   if (ret < 0)
     {
-      message("ERROR: sam_nand_automount failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: sam_nand_automount failed: %d\n", ret);
       return ret;
     }
 #endif
@@ -108,7 +93,7 @@ int nsh_archinitialize(void)
   ret = sam_at25_automount(AT25_MINOR);
   if (ret < 0)
     {
-      message("ERROR: sam_at25_automount failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: sam_at25_automount failed: %d\n", ret);
       return ret;
     }
 #endif
@@ -119,7 +104,7 @@ int nsh_archinitialize(void)
   ret = sam_at24_automount(AT24_MINOR);
   if (ret < 0)
     {
-      message("ERROR: sam_at24_automount failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: sam_at24_automount failed: %d\n", ret);
       return ret;
     }
 #endif
@@ -131,8 +116,8 @@ int nsh_archinitialize(void)
   ret = sam_hsmci_initialize(HSMCI0_SLOTNO, HSMCI0_MINOR);
   if (ret < 0)
     {
-      message("ERROR: sam_hsmci_initialize(%d,%d) failed: %d\n",
-              HSMCI0_SLOTNO, HSMCI0_MINOR, ret);
+      syslog(LOG_ERR, "ERROR: sam_hsmci_initialize(%d,%d) failed: %d\n",
+             HSMCI0_SLOTNO, HSMCI0_MINOR, ret);
       return ret;
     }
 #endif
@@ -143,8 +128,8 @@ int nsh_archinitialize(void)
   ret = sam_hsmci_initialize(HSMCI1_SLOTNO, HSMCI1_MINOR);
   if (ret < 0)
     {
-      message("ERROR: sam_hsmci_initialize(%d,%d) failed: %d\n",
-              HSMCI1_SLOTNO, HSMCI1_MINOR, ret);
+      syslog(LOG_ERR, "ERROR: sam_hsmci_initialize(%d,%d) failed: %d\n",
+             HSMCI1_SLOTNO, HSMCI1_MINOR, ret);
       return ret;
     }
 #endif
@@ -158,7 +143,7 @@ int nsh_archinitialize(void)
   ret = sam_usbhost_initialize();
   if (ret != OK)
     {
-      message("ERROR: Failed to initialize USB host: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: Failed to initialize USB host: %d\n", ret);
       return ret;
     }
 #endif
@@ -169,7 +154,18 @@ int nsh_archinitialize(void)
   ret = usbmonitor_start(0, NULL);
   if (ret != OK)
     {
-      message("nsh_archinitialize: Start USB monitor: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: Start USB monitor: %d\n", ret);
+    }
+#endif
+
+#ifdef HAVE_WM8904
+  /* Configure WM8904 audio */
+
+  ret = sam_wm8904_initialize(0);
+  if (ret != OK)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize WM8904 audio: %d\n",
+             ret);
     }
 #endif
 

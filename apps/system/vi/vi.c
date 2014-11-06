@@ -41,6 +41,7 @@
 
 #include <sys/stat.h>
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -149,32 +150,32 @@
 
 #ifdef CONFIG_CPP_HAVE_VARARGS
 #  if CONFIG_SYSTEM_VI_DEBUGLEVEL > 0
-#    define vidbg(format, arg...) \
-       syslog(EXTRA_FMT format EXTRA_ARG, ##arg)
+#    define vidbg(format, ...) \
+       syslog(LOG_DEBUG, EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
 #    define vvidbg(format, ap) \
-       vsyslog(format, ap)
+       vsyslog(LOG_DEBUG, format, ap)
 #  else
 #    define vidbg(x...)
 #    define vvidbg(x...)
 #  endif
 
 #  if CONFIG_SYSTEM_VI_DEBUGLEVEL > 1
-#    define vivdbg(format, arg...) \
-       syslog(EXTRA_FMT format EXTRA_ARG, ##arg)
+#    define vivdbg(format, ...) \
+       syslog(LOG_DEBUG, EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
 #  else
 #    define vivdbg(x...)
 #  endif
 #else
 #  if CONFIG_SYSTEM_VI_DEBUGLEVEL > 0
-#    define vidbg  syslog
-#    define vvidbg vsyslog
+#    define vidbg  vi_debug
+#    define vvidbg vi_vdebug
 #  else
 #    define vidbg  (void)
 #    define vvidbg (void)
 #  endif
 
 #  if CONFIG_SYSTEM_VI_DEBUGLEVEL > 1
-#    define vivdbg syslog
+#    define vivdbg vi_debug
 #  else
 #    define vivdbg (void)
 #  endif
@@ -446,6 +447,34 @@ static const char g_fmtnotcmd[]     = "Not an editor command: %s";
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: vi_vdebug and vi_debug
+ *
+ * Description:
+ *   Print a debug message to the syslog
+ *
+ ****************************************************************************/
+
+#if !defined(CONFIG_CPP_HAVE_VARARGS) && CONFIG_SYSTEM_VI_DEBUGLEVEL > 0
+static inline int vi_vdebug(FAR const char *fmt, va_list ap)
+{
+  return vsyslog(LOG_DEBUG, fmt, ap);
+}
+
+static int vi_debug(FAR const char *fmt, ...)
+{
+  va_list ap;
+  int ret;
+
+  /* Let vsyslog do the real work */
+
+  va_start(ap, fmt);
+  ret = vsyslog(LOG_DEBUG, fmt, ap);
+  va_end(ap);
+  return ret;
+}
+#endif
 
 /****************************************************************************
  * Low-level display and data entry functions
@@ -3569,7 +3598,11 @@ static void vi_showusage(FAR struct vi_s *vi, FAR const char *progname,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int vi_main(int argc, char **argv)
+#endif
 {
   FAR struct vi_s *vi;
   int option;

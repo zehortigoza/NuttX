@@ -60,7 +60,7 @@
  * Private Data
  ****************************************************************************/
 
-#if defined(CONFIG_GPIOA_IRQ) && defined(CONFIG_ARCH_IRQBUTTONS)
+#if defined(CONFIG_SAM34_GPIOA_IRQ) && defined(CONFIG_ARCH_IRQBUTTONS)
 static xcpt_t g_irqbutton1;
 static xcpt_t g_irqbutton2;
 #endif
@@ -77,8 +77,9 @@ static xcpt_t g_irqbutton2;
  *
  ****************************************************************************/
 
-#if defined(CONFIG_GPIOA_IRQ) && defined(CONFIG_ARCH_IRQBUTTONS)
-static xcpt_t board_button_irqx(int irq, xcpt_t irqhandler, xcpt_t *store)
+#if defined(CONFIG_SAM34_GPIOA_IRQ) && defined(CONFIG_ARCH_IRQBUTTONS)
+static xcpt_t board_button_irqx(gpio_pinset_t pinset, int irq,
+                                xcpt_t irqhandler, xcpt_t *store)
 {
   xcpt_t oldhandler;
   irqstate_t flags;
@@ -94,11 +95,24 @@ static xcpt_t board_button_irqx(int irq, xcpt_t irqhandler, xcpt_t *store)
   oldhandler = *store;
   *store = irqhandler;
 
-  /* Configure the interrupt */
+  /* Are we attaching or detaching? */
 
-  sam_gpioirq(irq);
-  (void)irq_attach(irq, irqhandler);
-  sam_gpioirqenable(irq);
+  if (irqhandler != NULL)
+    {
+      /* Configure the interrupt */
+
+      sam_gpioirq(pinset);
+      (void)irq_attach(irq, irqhandler);
+      sam_gpioirqenable(irq);
+    }
+  else
+    {
+      /* Detach and disable the interrupt */
+
+      (void)irq_detach(irq);
+      sam_gpioirqdisable(irq);
+    }
+
   irqrestore(flags);
 
   /* Return the old button handler (so that it can be restored) */
@@ -143,8 +157,8 @@ uint8_t board_buttons(void)
 {
   uint8_t retval;
 
-  retval  = sam_gpioread(GPIO_BUTTON1) ? 0 : GPIO_BUTTON1;
-  retval |= sam_gpioread(GPIO_BUTTON2) ? 0 : GPIO_BUTTON2;
+  retval  = sam_gpioread(GPIO_BUTTON1) ? 0 : BUTTON1;
+  retval |= sam_gpioread(GPIO_BUTTON2) ? 0 : BUTTON2;
 
   return retval;
 }
@@ -167,16 +181,18 @@ uint8_t board_buttons(void)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_GPIOA_IRQ) && defined(CONFIG_ARCH_IRQBUTTONS)
+#if defined(CONFIG_SAM34_GPIOA_IRQ) && defined(CONFIG_ARCH_IRQBUTTONS)
 xcpt_t board_button_irq(int id, xcpt_t irqhandler)
 {
   if (id == BUTTON1)
     {
-      return board_button_irqx(IRQ_BUTTON1, irqhandler, &g_irqbutton1);
+      return board_button_irqx(GPIO_BUTTON1, IRQ_BUTTON1,
+                               irqhandler, &g_irqbutton1);
     }
   else if (id == BUTTON2)
     {
-      return board_button_irqx(IRQ_BUTTON2, irqhandler, &g_irqbutton2);
+      return board_button_irqx(GPIO_BUTTON2, IRQ_BUTTON2,
+                               irqhandler, &g_irqbutton2);
     }
   else
     {

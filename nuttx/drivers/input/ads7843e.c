@@ -1,7 +1,7 @@
 /****************************************************************************
  * drivers/input/ads7843e.c
  *
- *   Copyright (C) 2011-2012 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2011-2012, 2014 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            Diego Sanchez <dsanchez@nx-engineering.com>
  *
@@ -59,13 +59,13 @@
 #include <fcntl.h>
 #include <semaphore.h>
 #include <poll.h>
-#include <wdog.h>
 #include <errno.h>
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/kmalloc.h>
 #include <nuttx/arch.h>
+#include <nuttx/wdog.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/wqueue.h>
@@ -251,8 +251,8 @@ static void ads7843e_unlock(FAR struct spi_dev_s *spi)
 #ifdef CONFIG_SPI_OWNBUS
 static inline void ads7843e_configspi(FAR struct spi_dev_s *spi)
 {
-  /* Configure SPI for the ADS7843.  But only if we own the SPI bus.  Otherwise, don't
-   * bother because it might change.
+  /* Configure SPI for the ADS7843.  But only if we own the SPI bus. 
+   * Otherwise, don't bother because it might change.
    */
 
   SPI_SELECT(spi, SPIDEV_TOUCHSCREEN, true);
@@ -282,7 +282,7 @@ static inline void ads7843e_configspi(FAR struct spi_dev_s *spi)
  *   12-bit                                           DDDDDDDDDDDD...
  *   response
  *
- *   The BUSY output is high imedance when /CS is high.  BUSY goes low when
+ *   The BUSY output is high impedance when /CS is high.  BUSY goes low when
  *   /CS goes low (within 200ns).  BUSY goes high on the falling edge of the
  *   8th clock (within 200ns); BUSY goes low again after the falling edge of
  *   first clock of the 12-bit data read, at the leading edge of the MS bit
@@ -311,7 +311,7 @@ static uint16_t ads7843e_sendcmd(FAR struct ads7843e_dev_s *priv, uint8_t cmd)
 
   (void)SPI_SEND(priv->spi, cmd);
 
-  /* Wait a tiny amount to make sure that the aquisition time is complete */
+  /* Wait a tiny amount to make sure that the acquisition time is complete */
 
    up_udelay(3); /* 3 microseconds */
 
@@ -625,7 +625,6 @@ static void ads7843e_worker(FAR void *arg)
 
       if (priv->sample.contact == CONTACT_NONE ||
           priv->sample.contact == CONTACT_UP)
-
         {
           goto ignored;
         }
@@ -807,7 +806,7 @@ static int ads7843e_open(FAR struct file *filep)
   ret = sem_wait(&priv->devsem);
   if (ret < 0)
     {
-      /* This should only happen if the wait was canceled by an signal */
+      /* This should only happen if the wait was cancelled by an signal */
 
       DEBUGASSERT(errno == EINTR);
       return -EINTR;
@@ -924,7 +923,7 @@ static ssize_t ads7843e_read(FAR struct file *filep, FAR char *buffer, size_t le
   ret = sem_wait(&priv->devsem);
   if (ret < 0)
     {
-      /* This should only happen if the wait was canceled by an signal */
+      /* This should only happen if the wait was cancelled by an signal */
 
       idbg("sem_wait: %d\n", errno);
       DEBUGASSERT(errno == EINTR);
@@ -1037,7 +1036,7 @@ static int ads7843e_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   ret = sem_wait(&priv->devsem);
   if (ret < 0)
     {
-      /* This should only happen if the wait was canceled by an signal */
+      /* This should only happen if the wait was cancelled by an signal */
 
       DEBUGASSERT(errno == EINTR);
       return -EINTR;
@@ -1097,7 +1096,7 @@ static int ads7843e_poll(FAR struct file *filep, FAR struct pollfd *fds,
   ret = sem_wait(&priv->devsem);
   if (ret < 0)
     {
-      /* This should only happen if the wait was canceled by an signal */
+      /* This should only happen if the wait was cancelled by an signal */
 
       DEBUGASSERT(errno == EINTR);
       return -EINTR;
@@ -1212,10 +1211,10 @@ int ads7843e_register(FAR struct spi_dev_s *spi,
 #ifndef CONFIG_ADS7843E_MULTIPLE
   priv = &g_ads7843e;
 #else
-  priv = (FAR struct ads7843e_dev_s *)kmalloc(sizeof(struct ads7843e_dev_s));
+  priv = (FAR struct ads7843e_dev_s *)kmm_malloc(sizeof(struct ads7843e_dev_s));
   if (!priv)
     {
-      idbg("kmalloc(%d) failed\n", sizeof(struct ads7843e_dev_s));
+      idbg("kmm_malloc(%d) failed\n", sizeof(struct ads7843e_dev_s));
       return -ENOMEM;
     }
 #endif
@@ -1279,7 +1278,7 @@ int ads7843e_register(FAR struct spi_dev_s *spi,
 
   /* If multiple ADS7843E devices are supported, then we will need to add
    * this new instance to a list of device instances so that it can be
-   * found by the interrupt handler based on the recieved IRQ number.
+   * found by the interrupt handler based on the received IRQ number.
    */
 
 #ifdef CONFIG_ADS7843E_MULTIPLE
@@ -1306,7 +1305,7 @@ int ads7843e_register(FAR struct spi_dev_s *spi,
 errout_with_priv:
   sem_destroy(&priv->devsem);
 #ifdef CONFIG_ADS7843E_MULTIPLE
-  kfree(priv);
+  kmm_free(priv);
 #endif
   return ret;
 }

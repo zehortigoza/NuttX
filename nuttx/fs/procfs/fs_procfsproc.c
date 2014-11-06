@@ -556,14 +556,13 @@ static ssize_t proc_loadavg(FAR struct proc_file_s *procfile,
   uint32_t fracpart;
   size_t linesize;
   size_t copysize;
-  ssize_t ret;
 
   /* Sample the counts for the thread.  clock_cpuload should only fail if
    * the PID is not valid.  This could happen if the thread exited sometime
    * after the procfs entry was opened.
    */
 
-  ret = (ssize_t)clock_cpuload(procfile->pid, &cpuload);
+  (void)clock_cpuload(procfile->pid, &cpuload);
 
   /* On the simulator, you may hit cpuload.total == 0, but probably never on
    * real hardware.
@@ -979,7 +978,7 @@ static int proc_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Allocate a container to hold the task and node selection */
 
-  procfile = (FAR struct proc_file_s *)kzalloc(sizeof(struct proc_file_s));
+  procfile = (FAR struct proc_file_s *)kmm_zalloc(sizeof(struct proc_file_s));
   if (!procfile)
     {
       fdbg("ERROR: Failed to allocate file container\n");
@@ -1012,7 +1011,7 @@ static int proc_close(FAR struct file *filep)
 
   /* Release the file container structure */
 
-  kfree(procfile);
+  kmm_free(procfile);
   filep->f_priv = NULL;
   return OK;
 }
@@ -1116,7 +1115,7 @@ static int proc_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Allocate a new container to hold the task and node selection */
 
-  newfile = (FAR struct proc_file_s *)kmalloc(sizeof(struct proc_file_s));
+  newfile = (FAR struct proc_file_s *)kmm_malloc(sizeof(struct proc_file_s));
   if (!newfile)
     {
       fdbg("ERROR: Failed to allocate file container\n");
@@ -1198,11 +1197,11 @@ static int proc_opendir(FAR const char *relpath, FAR struct fs_dirent_s *dir)
     }
 
   /* Allocate the directory structure.  Note that the index and procentry
-   * pointer are implicitly nullified by kzalloc().  Only the remaining,
+   * pointer are implicitly nullified by kmm_zalloc().  Only the remaining,
    * non-zero entries will need be initialized.
    */
 
-  procdir = (FAR struct proc_dir_s *)kzalloc(sizeof(struct proc_dir_s));
+  procdir = (FAR struct proc_dir_s *)kmm_zalloc(sizeof(struct proc_dir_s));
   if (!procdir)
     {
       fdbg("ERROR: Failed to allocate the directory structure\n");
@@ -1222,7 +1221,7 @@ static int proc_opendir(FAR const char *relpath, FAR struct fs_dirent_s *dir)
       if (!node)
         {
           fdbg("ERROR: Invalid path \"%s\"\n", relpath);
-          kfree(procdir);
+          kmm_free(procdir);
           return -ENOENT;
         }
 
@@ -1231,7 +1230,7 @@ static int proc_opendir(FAR const char *relpath, FAR struct fs_dirent_s *dir)
       if (node->dtype != DTYPE_DIRECTORY)
         {
           fdbg("ERROR: Path \"%s\" is not a directory\n", relpath);
-          kfree(procdir);
+          kmm_free(procdir);
           return -ENOTDIR;
         }
 
@@ -1271,7 +1270,7 @@ static int proc_closedir(FAR struct fs_dirent_s *dir)
 
   if (priv)
     {
-      kfree(priv);
+      kmm_free(priv);
     }
 
   dir->u.procfs = NULL;
@@ -1288,7 +1287,7 @@ static int proc_closedir(FAR struct fs_dirent_s *dir)
 static int proc_readdir(struct fs_dirent_s *dir)
 {
   FAR struct proc_dir_s *procdir;
-  FAR const struct proc_node_s *node;
+  FAR const struct proc_node_s *node = NULL;
   FAR struct tcb_s *tcb;
   unsigned int index;
   irqstate_t flags;

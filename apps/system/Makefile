@@ -37,9 +37,9 @@
 
 # Sub-directories containing system task
 
-SUBDIRS  = cdcacm cle composite flash_eraseall free i2c inifile install
-SUBDIRS += nxplayer poweroff ramtest ramtron readline sdcard stackmonitor
-SUBDIRS += sysinfo usbmonitor usbmsc vi zmodem
+SUBDIRS  = cdcacm cle composite flash_eraseall free i2c hex2bin inifile
+SUBDIRS += install mdio nxplayer poweroff ramtest ramtron readline sdcard
+SUBDIRS += stackmonitor sudoku sysinfo usbmonitor usbmsc vi zmodem
 
 # Create the list of installed runtime modules (INSTALLED_DIRS)
 
@@ -68,6 +68,8 @@ $(foreach SDIR, $(INSTALLED_DIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
 $(foreach SDIR, $(INSTALLED_DIRS), $(eval $(call SDIR_template,$(SDIR),distclean)))
 
 nothing:
+
+install:
 
 context:
 

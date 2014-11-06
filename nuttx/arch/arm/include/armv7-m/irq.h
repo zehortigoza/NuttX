@@ -108,7 +108,7 @@
 
 /* This structure represents the return state from a system call */
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_LIB_SYSCALL
 struct xcpt_syscall_s
 {
   uint32_t excreturn;   /* The EXC_RETURN value */
@@ -140,11 +140,11 @@ struct xcptcontext
   uint32_t saved_primask;
 #endif
   uint32_t saved_xpsr;
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
   uint32_t saved_lr;
 #endif
 
-# ifdef CONFIG_NUTTX_KERNEL
+# ifdef CONFIG_BUILD_PROTECTED
   /* This is the saved address to use when returning from a user-space
    * signal handler.
    */
@@ -154,7 +154,7 @@ struct xcptcontext
 # endif
 #endif
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_LIB_SYSCALL
   /* The following array holds the return address and the exc_return value
    * needed to return from each nested system call.
    */
@@ -302,7 +302,7 @@ static inline void irqrestore(irqstate_t flags)
   __asm__ __volatile__
     (
       "\ttst    %0, #1\n"
-      "\tbne    1f\n"
+      "\tbne.n  1f\n"
       "\tcpsie  i\n"
       "1:\n"
       :

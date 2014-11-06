@@ -530,7 +530,7 @@ static inline int cgi_interpose_output(struct cgi_conn_s *cc)
               return 1;
             }
 
-          /* Figure out the status.  Look for a Status: or Location: header; else if 
+          /* Figure out the status.  Look for a Status: or Location: header; else if
            * there's an HTTP header line, get it from there; else default to 200.
            */
 
@@ -811,7 +811,7 @@ static int cgi_child(int argc, char **argv)
 
           cc->rdfd = pipefd[0];
           close(pipefd[1]);
- 
+
           if (ret < 0)
             {
               nlldbg("STDOUT dup2: %d\n", errno);
@@ -1021,14 +1021,9 @@ int cgi(httpd_conn *hc)
       argv[0] = arg;
       argv[1] = NULL;
 
-#ifndef CONFIG_CUSTOM_STACK
       child = task_create("CGI child", CONFIG_THTTPD_CGI_PRIORITY,
                           CONFIG_THTTPD_CGI_STACKSIZE,
                           (main_t)cgi_child, (FAR char * const *)argv);
-#else
-      child = task_create("CGI child", CONFIG_THTTPD_CGI_PRIORITY,
-                          (main_t)cgi_child, (FAR char * const *)argv);
-#endif
       if (child < 0)
         {
           ndbg("task_create: %d\n", errno);

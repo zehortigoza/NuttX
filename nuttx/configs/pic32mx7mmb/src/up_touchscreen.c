@@ -142,11 +142,11 @@
 /* Delays ***************************************************************************/
 /* All values will be increased by one system timer tick (probably 10MS). */
 
-#define TC_PENUP_POLL_TICKS   (100 / MSEC_PER_TICK) /* IDLE polling rate: 100 MSec */
-#define TC_PENDOWN_POLL_TICKS (60 / MSEC_PER_TICK)  /* Active polling rate: 60 MSec */
-#define TC_DEBOUNCE_TICKS     (30 / MSEC_PER_TICK)  /* Delay before re-sampling: 30 MSec */
-#define TC_SAMPLE_TICKS       (4 / MSEC_PER_TICK)   /* Delay for A/D sampling: 4 MSec */
-#define TC_RESAMPLE_TICKS     TC_SAMPLE_TICKS       
+#define TC_PENUP_POLL_TICKS   MSEC2TICK(100) /* IDLE polling rate: 100 MSec */
+#define TC_PENDOWN_POLL_TICKS MSEC2TICK(60)  /* Active polling rate: 60 MSec */
+#define TC_DEBOUNCE_TICKS     MSEC2TICK(30)  /* Delay before re-sampling: 30 MSec */
+#define TC_SAMPLE_TICKS       MSEC2TICK(4)   /* Delay for A/D sampling: 4 MSec */
+#define TC_RESAMPLE_TICKS     TC_SAMPLE_TICKS
 
 /************************************************************************************
  * Private Types
@@ -493,7 +493,7 @@ static void tc_notify(FAR struct tc_dev_s *priv)
        * is no longer available.
        */
 
-      sem_post(&priv->waitsem); 
+      sem_post(&priv->waitsem);
     }
 
   /* If there are threads waiting on poll() for touchscreen data to become available,
@@ -593,7 +593,7 @@ static int tc_waitsample(FAR struct tc_dev_s *priv,
   while (tc_sample(priv, sample) < 0)
     {
       /* Wait for a change in the touchscreen state */
- 
+
       priv->nwaiters++;
       ret = sem_wait(&priv->waitsem);
       priv->nwaiters--;
@@ -657,14 +657,14 @@ static void tc_worker(FAR void *arg)
         tc_yminus_sample();
 
         /* Allow time for the Y- pend down sampling */
- 
+
         priv->state = TC_YMPENDOWN;
         delay       = TC_SAMPLE_TICKS;
       }
       break;
 
     /* The Y- sampling time has elapsed and the Y- value should be ready
-     * for conversion 
+     * for conversion
      */
 
     case TC_YMPENDOWN:
@@ -684,7 +684,7 @@ static void tc_worker(FAR void *arg)
         else
           {
             /* Allow time for touch inputs to stabilize */
- 
+
             priv->state = TC_DEBOUNCE;
             delay       = TC_DEBOUNCE_TICKS;
           }
@@ -703,7 +703,7 @@ static void tc_worker(FAR void *arg)
         tc_yminus_sample();
 
         /* Allow time for the Y- sampling */
- 
+
         priv->state = TC_YMSAMPLE;
         delay       = TC_SAMPLE_TICKS;
       }
@@ -736,7 +736,7 @@ static void tc_worker(FAR void *arg)
             tc_yplus_sample();
 
             /* Allow time for the Y+ sampling */
- 
+
             priv->state = TC_YPSAMPLE;
             delay       = TC_SAMPLE_TICKS;
           }
@@ -778,7 +778,7 @@ static void tc_worker(FAR void *arg)
             tc_xplus_sample();
 
             /* Allow time for the X+ sampling */
- 
+
             priv->state = TC_XPSAMPLE;
             delay       = TC_SAMPLE_TICKS;
           }
@@ -820,7 +820,7 @@ static void tc_worker(FAR void *arg)
             tc_xminus_sample();
 
             /* Allow time for the X- pend down sampling */
- 
+
             priv->state = TC_XMSAMPLE;
             delay       = TC_SAMPLE_TICKS;
           }
@@ -1386,10 +1386,10 @@ int arch_tcinitialize(int minor)
 #ifndef CONFIG_TOUCHSCREEN_MULTIPLE
   priv = &g_touchscreen;
 #else
-  priv = (FAR struct tc_dev_s *)kmalloc(sizeof(struct tc_dev_s));
+  priv = (FAR struct tc_dev_s *)kmm_malloc(sizeof(struct tc_dev_s));
   if (!priv)
     {
-      idbg("kmalloc(%d) failed\n", sizeof(struct tc_dev_s));
+      idbg("kmm_malloc(%d) failed\n", sizeof(struct tc_dev_s));
       return -ENOMEM;
     }
 #endif
@@ -1431,7 +1431,7 @@ int arch_tcinitialize(int minor)
 errout_with_priv:
   sem_destroy(&priv->devsem);
 #ifdef CONFIG_TOUCHSCREEN_MULTIPLE
-  kfree(priv);
+  kmm_free(priv);
 #endif
   return ret;
 }

@@ -63,7 +63,7 @@
  * following definitions must be provided to specify the size and
  * location of internal(system) SRAM:
  *
- * CONFIG_RAM_END            : End address (+1) of SRAM (F1 family only, the
+ * CONFIG_RAM_END             : End address (+1) of SRAM (F1 family only, the
  *                            : F4 family uses the a priori end of SRAM)
  *
  * The F4 family also contains internal CCM SRAM.  This SRAM is different
@@ -112,7 +112,7 @@
 #  define CONFIG_STM32_CCMEXCLUDE 1
 
    /* Only one memory region can be support (internal SRAM) */
- 
+
 #  if CONFIG_MM_REGIONS > 1
 #    error "CONFIG_MM_REGIONS > 1.  The STM32L15X has only one memory region."
 #  endif
@@ -148,12 +148,12 @@
 #  undef CONFIG_STM32_CCMEXCLUDE
 #  define CONFIG_STM32_CCMEXCLUDE 1
 
-/* Members of teh STM32F30xxx family has a variable amount of SRAM from 24
- * to 40Kb plus 8KB if CCM SRAM.  No external RAM is supported (the F3 family has no
- * FSMC).
+/* Members of the STM32F30xxx family has a variable amount of SRAM from 24
+ * to 40Kb plus 8KB if CCM SRAM.  No external RAM is supported (the F3 family
+ * has no FSMC).
  *
- * As a complication, CCM SRAM cannot be used for DMA.  So, if STM32 DMA is enabled, CCM SRAM
- * should probably be excluded from the heap.
+ * As a complication, CCM SRAM cannot be used for DMA.  So, if STM32 DMA is
+ * enabled, CCM SRAM should probably be excluded from the heap.
  */
 
 #elif defined(CONFIG_STM32_STM32F30XX)
@@ -218,28 +218,32 @@
 #      endif
 #    endif
 
-/* All members of both the STM32F20xxx and STM32F40xxx families have 128Kib
+/* Most members of both the STM32F20xxx and STM32F40xxx families have 128Kib
  * in two banks:
  *
- * 1) 112KiB of System SRAM beginning at address 0x2000:0000
- * 2)  16KiB of System SRAM beginning at address 0x2001:c000
+ *   1) 112KiB of System SRAM beginning at address 0x2000:0000
+ *   2)  16KiB of System SRAM beginning at address 0x2001:c000
+ *
+ * The STM32F401 family is an exception and has only 96Kib total on one bank:
+ *
+ *   3)  96KiB of System SRAM beginning at address 0x2000:0000
  *
  * Members of the STM32F40xxx family have an additional 64Kib of CCM RAM
  * for a total of 192KB.
  *
- * 3)  64Kib of CCM SRAM beginning at address 0x1000:0000
+ *   4)  64Kib of CCM SRAM beginning at address 0x1000:0000
  *
  * The STM32F427/437/429/439 parts have another 64KiB of System SRAM for a total
  * of 256KiB.
  *
- * 3)  64Kib of System SRAM beginning at address 0x2002:0000
+ *   5)  64Kib of System SRAM beginning at address 0x2002:0000
  *
- * As determined by ld.script, g_heapbase lies in the 112KiB memory
+ * As determined by the linker script, g_heapbase lies in the 112KiB memory
  * region and that extends to 0x2001:0000.  But the  first and second memory
  * regions are contiguous and treated as one in this logic that extends to
  * 0x2002:0000 (or 0x2003:0000 for the F427/F437/F429/F439).
  *
- * As a complication, CCM SRAM cannot be used for DMA.  So, if STM32 DMA is enabled, 
+ * As a complication, CCM SRAM cannot be used for DMA.  So, if STM32 DMA is enabled,
  * CCM SRAM should probably be excluded from the heap or the application must take
  * extra care to ensure that DMA buffers are not allocated in CCM SRAM.
  *
@@ -248,16 +252,19 @@
 
 #elif defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F40XX)
 
-   /* The STM32 F2 has no CCM SRAM */
+   /* The STM32 F2 and the STM32 F401/F411 have no CCM SRAM */
 
-#  ifdef CONFIG_STM32_STM32F20XX
+#  if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F401) || \
+      defined(CONFIG_STM32_STM32F411)
 #    undef CONFIG_STM32_CCMEXCLUDE
 #    define CONFIG_STM32_CCMEXCLUDE 1
 #  endif
 
    /* Set the end of system SRAM */
 
-#  if defined(CONFIG_STM32_STM32F427) || defined(CONFIG_STM32_STM32F429)
+#  if defined(CONFIG_STM32_STM32F401)
+#    define SRAM1_END 0x20018000
+#  elif defined(CONFIG_STM32_STM32F427) || defined(CONFIG_STM32_STM32F429)
 #    define SRAM1_END 0x20030000
 #  else
 #    define SRAM1_END 0x20020000
@@ -287,7 +294,7 @@
     *                  CONFIG_STM32_FSMC_SRAM defined
     *                  CONFIG_STM32_CCMEXCLUDE NOT defined
     *
-    * Let's make sure that all definitions are consitent before doing
+    * Let's make sure that all definitions are consistent before doing
     * anything else
     */
 
@@ -347,7 +354,7 @@
 #      undef CONFIG_STM32_CCMEXCLUDE
 #      define CONFIG_STM32_CCMEXCLUDE 1
 #    endif
-   
+
 #  elif !defined(CONFIG_STM32_CCMEXCLUDE)
 
    /* Configuration 2: FSMC SRAM is not used, but CCM SRAM is requested.  DMA
@@ -420,7 +427,7 @@ static inline void up_heap_color(FAR void *start, size_t size)
  * Description:
  *   This function will be called to dynamically set aside the heap region.
  *
- *   For the kernel build (CONFIG_NUTTX_KERNEL=y) with both kernel- and
+ *   For the kernel build (CONFIG_BUILD_PROTECTED=y) with both kernel- and
  *   user-space heaps (CONFIG_MM_KERNEL_HEAP=y), this function provides the
  *   size of the unprotected, user-space heap.
  *
@@ -449,7 +456,7 @@ static inline void up_heap_color(FAR void *start, size_t size)
 
 void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
 {
-#if defined(CONFIG_NUTTX_KERNEL) && defined(CONFIG_MM_KERNEL_HEAP)
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
   /* Get the unaligned size and position of the user-space heap.
    * This heap begins after the user-space .bss section at an offset
    * of CONFIG_MM_KERNEL_HEAPSIZE (subject to alignment).
@@ -503,13 +510,13 @@ void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
  * Name: up_allocate_kheap
  *
  * Description:
- *   For the kernel build (CONFIG_NUTTX_KERNEL=y) with both kernel- and
+ *   For the kernel build (CONFIG_BUILD_PROTECTED=y) with both kernel- and
  *   user-space heaps (CONFIG_MM_KERNEL_HEAP=y), this function allocates
  *   (and protects) the kernel-space heap.
  *
  ****************************************************************************/
 
-#if defined(CONFIG_NUTTX_KERNEL) && defined(CONFIG_MM_KERNEL_HEAP)
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 void up_allocate_kheap(FAR void **heap_start, size_t *heap_size)
 {
   /* Get the unaligned size and position of the user-space heap.
@@ -556,7 +563,7 @@ void up_allocate_kheap(FAR void **heap_start, size_t *heap_size)
 void up_addregion(void)
 {
 #ifndef CONFIG_STM32_CCMEXCLUDE
-#if defined(CONFIG_NUTTX_KERNEL) && defined(CONFIG_MM_KERNEL_HEAP)
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 
   /* Allow user-mode access to the STM32F20xxx/STM32F40xxx CCM SRAM heap */
 
@@ -574,7 +581,7 @@ void up_addregion(void)
 #endif
 
 #ifdef CONFIG_STM32_FSMC_SRAM
-#if defined(CONFIG_NUTTX_KERNEL) && defined(CONFIG_MM_KERNEL_HEAP)
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 
   /* Allow user-mode access to the FSMC SRAM user heap memory */
 

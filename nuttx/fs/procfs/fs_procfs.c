@@ -78,9 +78,23 @@
 extern const struct procfs_operations proc_operations;
 extern const struct procfs_operations cpuload_operations;
 extern const struct procfs_operations uptime_operations;
+
+/* This is not good.  These are implemented in drivers/mtd.  Having to
+ * deal with them here is not a good coupling.
+ */
+
 extern const struct procfs_operations mtd_procfsoperations;
 extern const struct procfs_operations part_procfsoperations;
 extern const struct procfs_operations smartfs_procfsoperations;
+
+/* And even worse, this one is specific to the STM32.  The solution to
+ * this nasty couple would be to replace this hard-coded, ROM-able
+ * operations table with a RAM-base registration table.
+ */
+
+#if defined(CONFIG_STM32_CCM_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CCM)
+extern const struct procfs_operations ccm_procfsoperations;
+#endif
 
 /****************************************************************************
  * Private Types
@@ -113,6 +127,10 @@ static const struct procfs_entry_s g_procfsentries[] =
 
 #if !defined(CONFIG_FS_PROCFS_EXCLUDE_UPTIME)
   { "uptime",           &uptime_operations },
+#endif
+
+#if defined(CONFIG_STM32_CCM_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CCM)
+  { "ccm",             &ccm_procfsoperations },
 #endif
 };
 
@@ -206,16 +224,13 @@ const struct mountpt_operations procfs_operations =
 
 struct procfs_level0_s
 {
-  uint8_t level;                     /* Directory level.  Currently 0 or 1 */
+  struct procfs_dir_priv_s base;    /* Base struct for ProcFS dir */
+
+  /* Our private data */
+
   uint8_t lastlen;                   /* length of last reported static dir */
-  uint16_t index;                    /* Index to the next directory entry */
-  uint16_t nentries;                 /* Number of directory entries */
   pid_t pid[CONFIG_MAX_TASKS];       /* Snapshot of all active task IDs */
   FAR const char *lastread;          /* Pointer to last static dir read */
-
- /* Pointer to procfs handler entry */
-
-  FAR const struct procfs_entry_s *procfsentry;
 };
 
 /* Level 1 is an internal virtual directory (such as /proc/fs) which
@@ -225,17 +240,14 @@ struct procfs_level0_s
 
 struct procfs_level1_s
 {
-  uint8_t level;                     /* Directory level.  Currently 0 or 1 */
+  struct procfs_dir_priv_s base;    /* Base struct for ProcFS dir */
+
+  /* Our private data */
+
   uint8_t lastlen;                   /* length of last reported static dir */
   uint8_t subdirlen;                 /* Length of the subdir search */
-  uint16_t index;                    /* Index to the next directory entry */
-  uint16_t nentries;                 /* Number of directory entries */
   uint16_t firstindex;               /* Index of 1st entry matching this subdir */
   FAR const char *lastread;          /* Pointer to last static dir read */
-
-  /* Pointer to procfs handler entry */
-
-  FAR const struct procfs_entry_s *procfsentry;
 };
 
 /****************************************************************************
@@ -257,11 +269,11 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
 
   /* Add the PID to the list */
 
-  index = dir->nentries;
+  index = dir->base.nentries;
   DEBUGASSERT(index < CONFIG_MAX_TASKS);
 
   dir->pid[index] = tcb->pid;
-  dir->nentries = index + 1;
+  dir->base.nentries = index + 1;
 }
 #endif
 
@@ -319,7 +331,7 @@ static int procfs_close(FAR struct file *filep)
 
   /* Release the file attributes structure */
 
-  kfree(attr);
+  kmm_free(attr);
   filep->f_priv = NULL;
   return OK;
 }
@@ -417,7 +429,7 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
        */
 
       level0 = (FAR struct procfs_level0_s *)
-         kzalloc(sizeof(struct procfs_level0_s));
+         kmm_zalloc(sizeof(struct procfs_level0_s));
 
       if (!level0)
         {
@@ -437,15 +449,15 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
       sched_foreach(procfs_enum, level0);
       irqrestore(flags);
 #else
-      level0->index = 0;
-      level0->nentries = 0;
+      level0->base.index = 0;
+      level0->base.nentries = 0;
 #endif
 
       /* Initialze lastread entries */
 
       level0->lastread = "";
       level0->lastlen = 0;
-      level0->procfsentry = NULL;
+      level0->base.procfsentry = NULL;
 
       priv = (FAR void *)level0;
     }
@@ -496,7 +508,7 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
                */
 
               level1 = (FAR struct procfs_level1_s *)
-                 kzalloc(sizeof(struct procfs_level1_s));
+                 kmm_zalloc(sizeof(struct procfs_level1_s));
 
               if (!level1)
                 {
@@ -504,13 +516,13 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
                   return -ENOMEM;
                 }
 
-              level1->level = 1;
-              level1->index = x;
+              level1->base.level = 1;
+              level1->base.index = x;
               level1->firstindex = x;
               level1->subdirlen = len;
               level1->lastread = "";
               level1->lastlen = 0;
-              level1->procfsentry = NULL;
+              level1->base.procfsentry = NULL;
 
               priv = (FAR void *)level1;
               break;
@@ -539,7 +551,7 @@ static int procfs_closedir(FAR struct inode *mountpt,
 
   if (priv)
     {
-      kfree(priv);
+      kmm_free(priv);
     }
 
   dir->u.procfs = NULL;
@@ -558,7 +570,7 @@ static int procfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
   FAR struct procfs_dir_priv_s *priv;
   FAR struct procfs_level0_s *level0;
   FAR struct tcb_s *tcb;
-  FAR const char *name;
+  FAR const char *name = NULL;
   unsigned int index;
   irqstate_t flags;
   pid_t pid;
@@ -695,7 +707,7 @@ static int procfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
            * standard f_pos instead of our own private index.
            */
 
-          level0->index = index + 1;
+          level0->base.index = index + 1;
           ret = OK;
         }
 #endif /* CONFIG_FS_PROCFS_EXCLUDE_PROCESS */
@@ -713,17 +725,25 @@ static int procfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
        * subdirectory are listed in order in the procfs_entry array.
        */
 
-      if (strncmp(g_procfsentries[level1->index].pathpattern,
+      if (strncmp(g_procfsentries[level1->base.index].pathpattern,
               g_procfsentries[level1->firstindex].pathpattern,
               level1->subdirlen) == 0)
         {
           /* This entry matches.  Report the subdir entry */
 
-          name = &g_procfsentries[level1->index].pathpattern[
+          name = &g_procfsentries[level1->base.index].pathpattern[
                     level1->subdirlen + 1];
           level1->lastlen = strcspn(name, "/");
           level1->lastread = name;
           strncpy(dir->fd_dir.d_name, name, level1->lastlen);
+
+          /* Some of the search entries contain '**' wildcards.  When we
+           * report the entry name, we must remove this wildcard search
+           * specifier.
+           */
+
+          while (dir->fd_dir.d_name[level1->lastlen - 1] == '*')
+            level1->lastlen--;
           dir->fd_dir.d_name[level1->lastlen] = '\0';
 
           if (name[level1->lastlen] == '/')
@@ -735,7 +755,7 @@ static int procfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
               dir->fd_dir.d_type = DTYPE_FILE;
             }
 
-          level1->index++;
+          level1->base.index++;
           ret = OK;
         }
       else

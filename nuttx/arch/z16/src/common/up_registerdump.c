@@ -39,27 +39,30 @@
 
 #include <nuttx/config.h>
 
+/* Output debug info if stack dump is selected -- even if
+ * debug is not selected.
+ */
+
+#ifdef CONFIG_ARCH_STACKDUMP
+#  undef  CONFIG_DEBUG
+#  undef  CONFIG_DEBUG_VERBOSE
+#  define CONFIG_DEBUG 1
+#  define CONFIG_DEBUG_VERBOSE 1
+#endif
+
 #include <stdint.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 
-#include "os_internal.h"
 #include "up_internal.h"
 
-/****************************************************************************
- * Definitions
- ****************************************************************************/
-
-/* Output debug info if stack dump is selected -- even if 
- * debug is not selected.
- */
-
 #ifdef CONFIG_ARCH_STACKDUMP
-# undef  lldbg
-# define lldbg lowsyslog
-#endif
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
 
 /****************************************************************************
  * Private Data
@@ -73,7 +76,6 @@
  * Name: up_registerdump
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_STACKDUMP
 static void up_registerdump(void)
 {
   FAR uint32_t *regs32 = (FAR uint32_t*)current_regs;
@@ -87,4 +89,5 @@ static void up_registerdump(void)
   lldbg("FP :%08x SP :%08x FLG:%04x\n"
         regs32[REG_R14/2], regs32[REG_R15/2], current_regs[REG_FLAGS]);
 }
-#endif
+
+#endif /* CONFIG_ARCH_STACKDUMP */

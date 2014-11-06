@@ -46,7 +46,7 @@
 
 #include <nuttx/wqueue.h>
 #include <nuttx/nx/nxtk.h>
-#include <nuttx/nx/nxconsole.h>
+#include <nuttx/nx/nxterm.h>
 
 #include "cwindoweventhandler.hxx"
 #include "cwidgetstyle.hxx"
@@ -103,7 +103,7 @@ namespace NxWM
      * @param e The event data.
      */
 
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
     void handleMouseEvent(void);
 #endif
 

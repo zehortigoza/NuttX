@@ -139,7 +139,7 @@ static int rd_close(FAR struct inode *inode)
 /****************************************************************************
  * Name: rd_read
  *
- * Description:  Read the specified numer of sectors
+ * Description:  Read the specified number of sectors
  *
  ****************************************************************************/
 
@@ -241,7 +241,7 @@ static int rd_geometry(FAR struct inode *inode, struct geometry *geometry)
             geometry->geo_writeenabled ? "true" : "false");
       fvdbg("nsectors: %d sectorsize: %d\n",
             geometry->geo_nsectors, geometry->geo_sectorsize);
- 
+
       return OK;
     }
 
@@ -313,7 +313,7 @@ int romdisk_register(int minor, uint8_t *buffer, uint32_t nsectors,
 
   /* Allocate a ramdisk device structure */
 
-  dev = (struct rd_struct_s *)kmalloc(sizeof(struct rd_struct_s));
+  dev = (struct rd_struct_s *)kmm_malloc(sizeof(struct rd_struct_s));
   if (dev)
     {
       /* Initialize the ramdisk device structure */
@@ -329,13 +329,13 @@ int romdisk_register(int minor, uint8_t *buffer, uint32_t nsectors,
 
       snprintf(devname, 16, "/dev/ram%d", minor);
 
-      /* Inode private data is a reference to the ramdisk device stgructure */
+      /* Inode private data is a reference to the ramdisk device structure */
 
       ret = register_blockdriver(devname, &g_bops, 0, dev);
       if (ret < 0)
         {
           fdbg("register_blockdriver failed: %d\n", -ret);
-          kfree(dev);
+          kmm_free(dev);
         }
     }
 

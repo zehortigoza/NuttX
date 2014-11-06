@@ -37,7 +37,7 @@
 
 # Sub-directories containing interpreter runtime
 
-SUBDIRS = pcode ficl
+SUBDIRS = pcode prun ficl
 
 # Create the list of installed runtime modules (INSTALLED_DIRS)
 
@@ -66,6 +66,8 @@ $(foreach SDIR, $(INSTALLED_DIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
 $(foreach SDIR, $(INSTALLED_DIRS), $(eval $(call SDIR_template,$(SDIR),distclean)))
 
 nothing:
+
+install:
 
 context:
 

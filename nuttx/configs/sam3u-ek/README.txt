@@ -98,8 +98,7 @@ IDEs
 ^^^^
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
+  effort will be required to create the project.
 
   Makefile Build
   --------------
@@ -125,7 +124,7 @@ IDEs
   Startup files will probably cause you some headaches.  The NuttX startup file
   is arch/arm/src/sam34/sam_vectors.S.  You may need to build NuttX
   one time from the Cygwin command line in order to obtain the pre-built
-  startup object needed by RIDE.
+  startup object needed by an IDE.
 
 NuttX EABI "buildroot" Toolchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -336,10 +335,6 @@ SAM3U-EK-specific Configuration Options
 
        CONFIG_RAM_START=0x20000000
 
-    CONFIG_ARCH_IRQPRIO - The SAM3U supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
-
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
 
@@ -381,15 +376,15 @@ SAM3U-EK-specific Configuration Options
     CONFIG_SAM34_PWM           - Pulse Width Modulation Controller
     CONFIG_SAM34_ADC12B        - 12-bit ADC Controller
     CONFIG_SAM34_ADC           - 10-bit ADC Controller
-    CONFIG_SAM34_DMAC          - DMA Controller
+    CONFIG_SAM34_DMAC0         - DMA Controller
     CONFIG_SAM34_UDPHS         - USB Device High Speed
 
   Some subsystems can be configured to operate in different ways. The drivers
   need to know how to configure the subsystem.
 
-    CONFIG_GPIOA_IRQ
-    CONFIG_GPIOB_IRQ
-    CONFIG_GPIOC_IRQ
+    CONFIG_SAM34_GPIOA_IRQ
+    CONFIG_SAM34_GPIOB_IRQ
+    CONFIG_SAM34_GPIOC_IRQ
     CONFIG_USART0_ISUART
     CONFIG_USART1_ISUART
     CONFIG_USART2_ISUART
@@ -617,11 +612,11 @@ Configurations
             CONFIG_ADS7843E_THRESHY=39
 
           System Type -> Peripherals:
-            CONFIG_SAM34_SPI0=y                : Enable support for SPI
+            CONFIG_SAM34_SPI0=y               : Enable support for SPI
 
           System Type:
-            CONFIG_GPIO_IRQ=y                 : GPIO interrupt support
-            CONFIG_GPIOA_IRQ=y                : Enable GPIO interrupts from port A
+            CONFIG_SAM34_GPIO_IRQ=y           : GPIO interrupt support
+            CONFIG_SAM34_GPIOA_IRQ=y          : Enable GPIO interrupts from port A
 
           RTOS Features:
             CONFIG_DISABLE_SIGNALS=n          : Signals are required
@@ -646,25 +641,25 @@ Configurations
 
        System Type->ATSAM3/4 Peripheral Support
          CONFIG_SAM34_HSMCI=y                 : Enable HSMCI support
-         CONFIG_SAM34_DMAC=y                  : DMAC support is needed by HSMCI
+         CONFIG_SAM34_DMAC0=y                 : DMAC support is needed by HSMCI
 
        System Type
          CONFIG_SAM34_GPIO_IRQ=y              : PIO interrupts needed
          CONFIG_SAM34_GPIOA_IRQ=y             : Card detect pin is on PIOA
 
        Device Drivers -> MMC/SD Driver Support
-         CONFIG_MMCSD=y                        : Enable MMC/SD support
-         CONFIG_MMSCD_NSLOTS=1                 : One slot per driver instance
-         CONFIG_MMCSD_HAVECARDDETECT=y         : Supports card-detect PIOs
-         CONFIG_MMCSD_SDIO=y                   : SDIO-based MMC/SD support
-         CONFIG_SDIO_DMA=y                     : Use SDIO DMA
-         CONFIG_SDIO_BLOCKSETUP=y              : Needs to know block sizes
+         CONFIG_MMCSD=y                       : Enable MMC/SD support
+         CONFIG_MMSCD_NSLOTS=1                : One slot per driver instance
+         CONFIG_MMCSD_HAVECARDDETECT=y        : Supports card-detect PIOs
+         CONFIG_MMCSD_SDIO=y                  : SDIO-based MMC/SD support
+         CONFIG_SDIO_DMA=y                    : Use SDIO DMA
+         CONFIG_SDIO_BLOCKSETUP=y             : Needs to know block sizes
 
        Library Routines
-         CONFIG_SCHED_WORKQUEUE=y              : Driver needs work queue support
+         CONFIG_SCHED_WORKQUEUE=y             : Driver needs work queue support
 
        Application Configuration -> NSH Library
-         CONFIG_NSH_ARCHINIT=y                 : NSH board-initialization
+         CONFIG_NSH_ARCHINIT=y                : NSH board-initialization
 
     STATUS:
       2013-6-28: The touchscreen is functional.

@@ -33,8 +33,8 @@
  *
  ****************************************************************************/
 
-#ifndef __EXAMPLES_UIP_INTERNAL_H
-#define __EXAMPLES_UIP_INTERNAL_H
+#ifndef __EXAMPLES_UDP_INTERNAL_H
+#define __EXAMPLES_UDP_INTERNAL_H
 
 /****************************************************************************
  * Included Files
@@ -45,6 +45,8 @@
 # include <debug.h>
 #endif
 
+#include <arpa/inet.h>
+
 /****************************************************************************
  * Definitions
  ****************************************************************************/
@@ -54,25 +56,6 @@
 
 #  define HTONS(a)       htons(a)
 #  define HTONL(a)       htonl(a)
-
-   /* Used printf for debug output */
-
-#  define message(...)   printf(__VA_ARGS__)
-
-   /* Have SO_LINGER */
-
-#else
-
-   /* If debug is enabled, use the synchronous lowsyslog so that the
-    * program output does not get disassociated in the debug output.
-    */
-
-#  ifdef CONFIG_DEBUG
-#    define message(...) lowsyslog(__VA_ARGS__)
-#  else
-#    define message(...) printf(__VA_ARGS__)
-#  endif
-
 #endif
 
 #define PORTNO     5471
@@ -87,4 +70,4 @@
 extern void send_client(void);
 extern void recv_server(void);
 
-#endif /* __EXAMPLES_UIP_INTERNAL_H */
+#endif /* __EXAMPLES_UDP_INTERNAL_H */

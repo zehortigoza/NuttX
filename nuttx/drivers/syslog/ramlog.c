@@ -42,6 +42,7 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -56,7 +57,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/arch.h>
-#include <nuttx/ramlog.h>
+#include <nuttx/syslog/ramlog.h>
 
 #include <arch/irq.h>
 
@@ -136,14 +137,14 @@ static const struct file_operations g_ramlogfops =
  */
 
 #if defined(CONFIG_RAMLOG_CONSOLE) || defined(CONFIG_RAMLOG_SYSLOG)
-static char g_sysbuffer[CONFIG_RAMLOG_CONSOLE_BUFSIZE];
+static char g_sysbuffer[CONFIG_RAMLOG_BUFSIZE];
 
 /* This is the device structure for the console or syslogging function.  It
  * must be statically initialized because the RAMLOG syslog_putc function
  * could be called before the driver initialization logic executes.
  */
 
-static struct ramlog_dev_s g_sysdev = 
+static struct ramlog_dev_s g_sysdev =
 {
 #ifndef CONFIG_RAMLOG_NONBLOCKING
   0,                             /* rl_nwaiters */
@@ -154,7 +155,7 @@ static struct ramlog_dev_s g_sysdev =
 #ifndef CONFIG_RAMLOG_NONBLOCKING
   SEM_INITIALIZER(0),            /* rl_waitsem */
 #endif
-  CONFIG_RAMLOG_CONSOLE_BUFSIZE, /* rl_bufsize */
+  CONFIG_RAMLOG_BUFSIZE,         /* rl_bufsize */
   g_sysbuffer                    /* rl_buffer */
 };
 #endif
@@ -338,7 +339,7 @@ static ssize_t ramlog_read(FAR struct file *filep, FAR char *buffer, size_t len)
            * mutual exclusion semaphore?
            */
 
-          if (ret < 0) 
+          if (ret < 0)
             {
               /* No.. One of the two sem_wait's failed. */
 
@@ -584,7 +585,7 @@ int ramlog_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
         {
           ndx = 0;
         }
-  
+
       if (ndx != priv->rl_tail)
        {
          eventset |= POLLOUT;
@@ -638,7 +639,6 @@ errout:
  *
  * Description:
  *   Create the RAM logging device and register it at the specified path.
- *   Mostly likely this path will be /dev/console
  *
  ****************************************************************************/
 
@@ -654,7 +654,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
 
   /* Allocate a RAM logging device structure */
 
-  priv = (struct ramlog_dev_s *)kzalloc(sizeof(struct ramlog_dev_s));
+  priv = (struct ramlog_dev_s *)kmm_zalloc(sizeof(struct ramlog_dev_s));
   if (priv)
     {
       /* Initialize the non-zero values in the RAM logging device structure */
@@ -671,7 +671,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
       ret = register_driver(devpath, &g_ramlogfops, 0666, priv);
       if (ret < 0)
         {
-          kfree(priv);
+          kmm_free(priv);
         }
     }
 
@@ -683,8 +683,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
  * Name: ramlog_consoleinit
  *
  * Description:
- *   Create the RAM logging device and register it at the specified path.
- *   Mostly likely this path will be /dev/console
+ *   Use a pre-allocated RAM logging device and register it at /dev/console
  *
  ****************************************************************************/
 
@@ -703,8 +702,8 @@ int ramlog_consoleinit(void)
  * Name: ramlog_sysloginit
  *
  * Description:
- *   Create the RAM logging device and register it at the specified path.
- *   Mostly likely this path will be CONFIG_RAMLOG_SYSLOG
+ *   Use a pre-allocated RAM logging device and register it at the path
+ *   specified by CONFIG_RAMLOG_SYSLOG
  *
  *   If CONFIG_RAMLOG_CONSOLE is also defined, then this functionality is
  *   performed when ramlog_consoleinit() is called.
@@ -726,10 +725,10 @@ int ramlog_sysloginit(void)
  * Description:
  *   This is the low-level system logging interface.  The debugging/syslogging
  *   interfaces are syslog() and lowsyslog().  The difference is that
- *   the syslog() internface writes to fd=1 (stdout) whereas lowsyslog() uses
- *   a lower level interface that works from interrupt handlers.  This
- *   function is a a low-level interface used to implement lowsyslog()
- *   when CONFIG_RAMLOG_SYSLOG=y and CONFIG_SYSLOG=y
+ *   the syslog() internface writes to syslog device (usually fd=1, stdout)
+ *   whereas lowsyslog() uses a lower level interface that works from
+ *   interrupt handlers.  This function is a a low-level interface used to
+ *   implement lowsyslog() when CONFIG_RAMLOG_SYSLOG=y and CONFIG_SYSLOG=y
  *
  ****************************************************************************/
 
@@ -737,10 +736,10 @@ int ramlog_sysloginit(void)
 int syslog_putc(int ch)
 {
   FAR struct ramlog_dev_s *priv = &g_sysdev;
-#ifdef CONFIG_RAMLOG_CRLF
   int ret;
 
-  /* Ignore carriage returns */
+#ifdef CONFIG_RAMLOG_CRLF
+  /* Ignore carriage returns.  But return success. */
 
   if (ch == '\r')
     {
@@ -756,13 +755,28 @@ int syslog_putc(int ch)
         {
           /* The buffer is full and nothing was saved. */
 
-          return ch;
+          goto errout;
         }
     }
 #endif
 
-  (void)ramlog_addchar(priv, ch);
-  return ch;
+  /* Add the character to the RAMLOG */
+
+  ret = ramlog_addchar(priv, ch);
+  if (ret >= 0)
+    {
+      /* Return the character added on success */
+
+      return ch;
+    }
+
+  /* On a failure, we need to return EOF and set the errno so that
+   * work like all other putc-like functions.
+   */
+
+errout:
+  set_errno(-ret);
+  return EOF;
 }
 #endif
 

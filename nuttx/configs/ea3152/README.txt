@@ -92,7 +92,7 @@ GNU Toolchain Options
   NOTE 2: The devkitARM toolchain includes a version of MSYS make.  Make sure that
   the paths to Cygwin's /bin and /usr/bin directories appear BEFORE the devkitARM
   path or will get the wrong version of make.
- 
+
   Generic arm-none-eabi GNU Toolchain
   -----------------------------------
   There are a number of toolchain projects providing support for ARMv4/v5
@@ -114,8 +114,7 @@ IDEs
 ^^^^
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
+  effort will be required to create the project
 
   Makefile Build
   --------------
@@ -139,9 +138,9 @@ IDEs
      on the command line.
 
   Startup files will probably cause you some headaches.  The NuttX startup file
-  is arch/arm/src/lpc31xx/lpc31_vectors.S.  With RIDE, I have to build NuttX
+  is arch/arm/src/lpc31xx/lpc31_vectors.S.  You may have to build NuttX
   one time from the Cygwin command line in order to obtain the pre-built
-  startup object needed by RIDE.
+  startup object needed by an IDE.
 
 NuttX buildroot Toolchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -220,7 +219,7 @@ Image Format
   - mklpc.sh                      # Make the bootloader binary (nuttx.lpc)
 
   NOTES:
-  
+
     1. setenv.sh just sets up pathes to the toolchain and also to
        configs/ea3152/tools where mklpc.sh resides. Use of setenv.sh is optional.
        If you don't use setenv.sh, then just set your PATH variable appropriately or
@@ -266,7 +265,7 @@ Using OpenOCD and GDB
   I used to start the OpenOCD daemon on my system called oocd.sh.  That
   script would probably require some modifications to work in another
   environment:
-  
+
     - possibly the value of OPENOCD_PATH
     - If you are working under Linux you will need to change any
       occurances of `cygpath -w blablabla` to just blablabla
@@ -340,8 +339,6 @@ ARM/EA3152-specific Configuration Options
 
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
-
-    CONFIG_ARCH_IRQPRIO - The LPC315x supports interrupt prioritization
 
     CONFIG_ARCH_INTERRUPTSTACK - This architecture supports an interrupt
        stack. If defined, this symbol is the size of the interrupt

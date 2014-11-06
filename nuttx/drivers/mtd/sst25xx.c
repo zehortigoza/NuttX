@@ -11,7 +11,7 @@
  *
  *   Copied from / based on m25px.c and sst25.c drivers written by
  *   Gregory Nutt <gnutt@nuttx.org>
- *   
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -65,8 +65,8 @@
  ************************************************************************************/
 /* Configuration ********************************************************************/
 /* Per the data sheet, SST25 parts can be driven with either SPI mode 0 (CPOL=0 and
- * CPHA=0) or mode 3 (CPOL=1 and CPHA=1).  So you may need to specify 
- * CONFIG_SST25XX_SPIMODE to select the best mode for your device.  If 
+ * CPHA=0) or mode 3 (CPOL=1 and CPHA=1).  So you may need to specify
+ * CONFIG_SST25XX_SPIMODE to select the best mode for your device.  If
  * CONFIG_SST25XX_SPIMODE is not defined, mode 0 will be used.
  */
 
@@ -81,7 +81,7 @@
 #endif
 
 /* Various manufacturers may have produced the parts.  0xBF is the manufacturer ID
- * for the SST serial FLASH.  
+ * for the SST serial FLASH.
  */
 
 #ifndef CONFIG_SST25XX_MANUFACTURER
@@ -952,11 +952,11 @@ FAR struct mtd_dev_s *sst25xx_initialize(FAR struct spi_dev_s *dev)
    * to be extended to handle multiple FLASH parts on the same SPI bus.
    */
 
-  priv = (FAR struct sst25xx_dev_s *)kzalloc(sizeof(struct sst25xx_dev_s));
+  priv = (FAR struct sst25xx_dev_s *)kmm_zalloc(sizeof(struct sst25xx_dev_s));
   if (priv)
     {
       /* Initialize the allocated structure. (unsupported methods were
-       * nullified by kzalloc).
+       * nullified by kmm_zalloc).
        */
 
       priv->mtd.erase  = sst25xx_erase;
@@ -982,7 +982,7 @@ FAR struct mtd_dev_s *sst25xx_initialize(FAR struct spi_dev_s *dev)
           /* Unrecognized! Discard all of that work we just did and return NULL */
 
           fdbg("Unrecognized\n");
-          kfree(priv);
+          kmm_free(priv);
           priv = NULL;
         }
       else

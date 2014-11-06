@@ -162,7 +162,7 @@ if [ -z "${appdir}" ]; then
   fi
 
   # Check for an unversioned apps/ directory
- 
+
   if [ -d "${TOPDIR}/../apps" ]; then
     appdir="../apps"
 
@@ -171,7 +171,7 @@ if [ -z "${appdir}" ]; then
 
     if [ -d "${TOPDIR}/../apps-${CONFIG_VERSION_STRING}" ]; then
       appdir="../apps-${CONFIG_VERSION_STRING}"
-    fi 
+    fi
   fi
 fi
 
@@ -205,7 +205,11 @@ install -m 644 "${src_config}" "${dest_config}" || \
 # file
 
 if [ "X${defappdir}" = "Xy" ]; then
-  sed -i -e "/^CONFIG_APPS_DIR/d" "${dest_config}"
+  # In-place edit can mess up permissions on Windows
+  # sed -i -e "/^CONFIG_APPS_DIR/d" "${dest_config}"
+  sed -e "/^CONFIG_APPS_DIR/d" "${dest_config}" > "${dest_config}-temp"
+  mv "${dest_config}-temp" "${dest_config}"
+
   echo "" >> "${dest_config}"
   echo "# Application configuration" >> "${dest_config}"
   echo "" >> "${dest_config}"
@@ -214,4 +218,4 @@ if [ "X${defappdir}" = "Xy" ]; then
   else
     echo "CONFIG_APPS_DIR=\"$posappdir\"" >> "${dest_config}"
   fi
-fi 
+fi

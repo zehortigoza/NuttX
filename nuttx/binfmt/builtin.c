@@ -72,6 +72,7 @@ static struct binfmt_s g_builtin_binfmt =
 {
   NULL,               /* next */
   builtin_loadbinary, /* load */
+  NULL,               /* unload */
 };
 
 /****************************************************************************
@@ -101,7 +102,7 @@ static int builtin_loadbinary(struct binary_s *binp)
   fd = open(binp->filename, O_RDONLY);
   if (fd < 0)
     {
-      int errval = errno;
+      int errval = get_errno();
       bdbg("ERROR: Failed to open binary %s: %d\n", binp->filename, errval);
       return -errval;
     }
@@ -113,7 +114,7 @@ static int builtin_loadbinary(struct binary_s *binp)
   ret = ioctl(fd, FIOC_FILENAME, (unsigned long)((uintptr_t)&filename));
   if (ret < 0)
     {
-      int errval = errno;
+      int errval = get_errno();
       bdbg("ERROR: FIOC_FILENAME ioctl failed: %d\n", errval);
       return -errval;
     }
@@ -125,10 +126,10 @@ static int builtin_loadbinary(struct binary_s *binp)
   index = builtin_isavail(filename);
   if (index < 0)
     {
-      int errval = errno;
+      int errval = get_errno();
       bdbg("ERROR: %s is not a builtin application\n", filename);
       return -errval;
-      
+
     }
 
   /* Return the load information.  NOTE: that there is no way to configure
@@ -150,9 +151,9 @@ static int builtin_loadbinary(struct binary_s *binp)
  * Name: builtin_initialize
  *
  * Description:
- *   Builtin support is built unconditionally.  However, it order to
+ *   Builtin support is built unconditionally.  However, in order to
  *   use this binary format, this function must be called during system
- *   format in order to register the builtin binary format.
+ *   initialzie in order to register the builtin binary format.
  *
  * Returned Value:
  *   This is a NuttX internal function so it follows the convention that

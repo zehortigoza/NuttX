@@ -50,7 +50,6 @@
 #include "nvic.h"
 #include "ram_vectors.h"
 #include "up_arch.h"
-#include "os_internal.h"
 #include "up_internal.h"
 
 #include "lpc43_irq.h"
@@ -142,7 +141,7 @@ static void lpc43_dumpnvic(const char *msg, int irq)
  *       lpc43_dbgmonitor, lpc43_pendsv, lpc43_reserved
  *
  * Description:
- *   Handlers for various execptions.  None are handled and all are fatal
+ *   Handlers for various exceptions.  None are handled and all are fatal
  *   error conditions.  The only advantage these provided over the default
  *   unexpected interrupt handler is that they provide a diagnostic output.
  *
@@ -452,14 +451,6 @@ void up_disable_irq(int irq)
           putreg32(regval, regaddr);
         }
     }
-#ifdef CONFIG_GPIO_IRQ
-  else if (irq >= LPC43_VALID_FIRST0L)
-    {
-      /* Maybe it is a (derived) GPIO IRQ */
-
-      lpc43_gpioint_disable(irq);
-    }
-#endif
 
   lpc43_dumpnvic("disable", irq);
 }
@@ -497,14 +488,6 @@ void up_enable_irq(int irq)
           putreg32(regval, regaddr);
         }
     }
-#ifdef CONFIG_GPIO_IRQ
-  else if (irq >= LPC43_VALID_FIRST0L)
-    {
-      /* Maybe it is a (derived) GPIO IRQ */
-
-      lpc43_gpioint_enable(irq);
-    }
-#endif
 
   lpc43_dumpnvic("enable", irq);
 }
@@ -519,9 +502,7 @@ void up_enable_irq(int irq)
 
 void up_ack_irq(int irq)
 {
-#if 0 /* Does not appear to be necessary in most cases */
   lpc43_clrpend(irq);
-#endif
 }
 
 /****************************************************************************

@@ -210,13 +210,8 @@ extern const uint32_t g_idle_topstack;
 /* Address of the saved user stack pointer */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
-#if defined(CONFIG_ARCH_CORTEXM0) || defined(CONFIG_ARCH_CORTEXM3) || \
-    defined(CONFIG_ARCH_CORTEXM4)
 extern uint32_t g_intstackalloc; /* Allocated stack base */
 extern uint32_t g_intstackbase;  /* Initial top of interrupt stack */
-#  else
-extern uint32_t g_intstackbase;
-#  endif
 #endif
 
 /* These 'addresses' of these values are setup by the linker script.  They are
@@ -248,12 +243,12 @@ extern uint32_t _ebss;            /* End+1 of .bss */
  *
  * will create a function named foo that will execute from RAM.
  */
- 
+
 #ifdef CONFIG_ARCH_RAMFUNCS
 
 #  define __ramfunc__ __attribute__ ((section(".ramfunc"),long_call))
 
-/* Functions decleared in the .ramfunc section will be packaged together
+/* Functions declared in the .ramfunc section will be packaged together
  * by the linker script and stored in FLASH.  During boot-up, the start
  * logic must include logic to copy the RAM functions from their storage
  * location in FLASH to their correct destination in SRAM.  The following
@@ -263,7 +258,15 @@ extern uint32_t _ebss;            /* End+1 of .bss */
 
 extern const uint32_t _framfuncs; /* Copy source address in FLASH */
 extern uint32_t _sramfuncs;       /* Copy destination start address in RAM */
-extern uint32_t _eramfuncs;       /* Copy destination start address in RAM */
+extern uint32_t _eramfuncs;       /* Copy destination end address in RAM */
+
+#else /* CONFIG_ARCH_RAMFUNCS */
+
+/* Otherwise, a null definition is provided so that condition compilation is
+ * not necessary in code that may operate with or without RAM functions.
+ */
+
+#  define __ramfunc__
 
 #endif /* CONFIG_ARCH_RAMFUNCS */
 #endif /* __ASSEMBLY__ */
@@ -410,7 +413,7 @@ void up_restorefpu(const uint32_t *regs);
 
 /* System timer *************************************************************/
 
-void up_timerinit(void);
+void up_timer_initialize(void);
 int  up_timerisr(int irq, uint32_t *regs);
 
 /* Low level serial output **************************************************/
@@ -428,12 +431,16 @@ void up_lowputs(const char *str);
 }
 #endif
 
-#if CONFIG_NFILE_DESCRIPTORS > 0
-void up_earlyserialinit(void);
+#ifdef USE_SERIALDRIVER
 void up_serialinit(void);
 #else
-# define up_earlyserialinit()
-# define up_serialinit()
+#  define up_serialinit()
+#endif
+
+#ifdef USE_EARLYSERIALINIT
+void up_earlyserialinit(void);
+#else
+#  define up_earlyserialinit()
 #endif
 
 /* Defined in drivers/lowconsole.c */
@@ -448,6 +455,14 @@ void lowconsole_init(void);
 
 #ifdef CONFIG_ARCH_DMA
 void weak_function up_dmainitialize(void);
+#endif
+
+/* Cache control ************************************************************/
+
+#ifdef CONFIG_ARCH_L2CACHE
+void up_l2ccinitialize(void);
+#else
+#  define up_l2ccinitialize()
 #endif
 
 /* Memory management ********************************************************/
@@ -476,10 +491,10 @@ void board_led_off(int led);
 
 /* Networking ***************************************************************/
 
-/* Defined in board/up_network.c for board-specific ethernet implementations,
- * or chip/xyx_ethernet.c for chip-specific ethernet implementations, or
+/* Defined in board/up_network.c for board-specific Ethernet implementations,
+ * or chip/xyx_ethernet.c for chip-specific Ethernet implementations, or
  * common/up_etherstub.c for a cornercase where the network is enabled yet
- * there is no ethernet driver to be initialized.
+ * there is no Ethernet driver to be initialized.
  */
 
 #ifdef CONFIG_NET

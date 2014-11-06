@@ -592,7 +592,7 @@ Configurations
 
     3. Since networking is enabled, you will see some boot-up delays when
        the network connection is established.  These delays can be quite
-       large is no network is attached (A production design to bring up the
+       large if no network is attached (A production design to bring up the
        network asynchronously to avoid these start up delays).
 
     4. This configuration uses the default USART1 serial console.  That
@@ -630,7 +630,7 @@ Configurations
        with a STM32F103VCT6, it would have to be modified as follows:
 
       System Type -> STM32 Configuration Options
-         CONFIG_ARCH_CHIP_STM32F103VCT6=y
+         CONFIG_ARCH_CHIP_STM32F103VC=y
          CONFIG_ARCH_CHIP_STM32F107VC=n
 
     2. This configuration uses the default USART1 serial console.  That
@@ -656,7 +656,7 @@ Configurations
        of the board.  The LCD requires FSMC support.
 
           System Type -> STM32 Chip Selection:
-            CONFIG_ARCH_CHIP_STM32F103VCT6=y      : Select STM32F103VCT6
+            CONFIG_ARCH_CHIP_STM32F103VC=y      : Select STM32F103VCT6
 
           System Type -> Peripherals:
             CONFIG_STM32_FSMC=y                   : Enable FSMC LCD interface
@@ -696,7 +696,7 @@ Configurations
             CONFIG_EXAMPLES_NXLINES_CIRCLECOLOR=0xf7bb
             CONFIG_EXAMPLES_NXLINES_BPP=16
 
-       STATUS: Now working; reads 0x8999 as device ID.  This may perhaps
+       STATUS: Not working; reads 0x8999 as device ID.  This may perhaps
                be due to incorrect jumper settings
 
     6. This configuration has been used for verifying the touchscreen on
@@ -706,7 +706,7 @@ Configurations
        is not very meaningful with no LCD).
 
           System Type -> STM32 Chip Selection:
-           CONFIG_ARCH_CHIP_STM32F103VCT6=y    : Select STM32F103VCT6
+           CONFIG_ARCH_CHIP_STM32F103VC=y    : Select STM32F103VCT6
 
        With the following modifications, you can include the touchscreen
        test program at apps/examples/touchscreen as an NSH built-in

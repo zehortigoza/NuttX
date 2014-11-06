@@ -401,6 +401,9 @@ static const struct uart_ops_s g_uartops =
   NULL,                 /* receive */
   usbser_rxint,         /* rxinit */
   NULL,                 /* rxavailable */
+#ifdef CONFIG_SERIAL_IFLOWCONTROL
+  NULL,                 /* rxflowcontrol */
+#endif
   NULL,                 /* send */
   usbser_txint,         /* txinit */
   NULL,                 /* txready */
@@ -1345,9 +1348,9 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
 
   /* Pre-allocate all endpoints... the endpoints will not be functional
    * until the SET CONFIGURATION request is processed in usbclass_setconfig.
-   * This is done here because there may be calls to kmalloc and the SET
+   * This is done here because there may be calls to kmm_malloc and the SET
    * CONFIGURATION processing probably occurrs within interrupt handling
-   * logic where kmalloc calls will fail.
+   * logic where kmm_malloc calls will fail.
    */
 
   /* Pre-allocate the IN interrupt endpoint */
@@ -1904,6 +1907,7 @@ static void usbclass_disconnect(FAR struct usbdevclass_driver_s *driver,
 
   priv->serdev.xmit.head = 0;
   priv->serdev.xmit.tail = 0;
+  priv->rxhead = 0;
   irqrestore(flags);
 
   /* Perform the soft connect function so that we will we can be
@@ -2280,7 +2284,7 @@ int usbdev_serialinitialize(int minor)
 
   /* Allocate the structures needed */
 
-  alloc = (FAR struct pl2303_alloc_s*)kmalloc(sizeof(struct pl2303_alloc_s));
+  alloc = (FAR struct pl2303_alloc_s*)kmm_malloc(sizeof(struct pl2303_alloc_s));
   if (!alloc)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALLOCDEVSTRUCT), 0);
@@ -2364,6 +2368,6 @@ int usbdev_serialinitialize(int minor)
 errout_with_class:
   usbdev_unregister(&drvr->drvr);
 errout_with_alloc:
-  kfree(alloc);
+  kmm_free(alloc);
   return ret;
 }

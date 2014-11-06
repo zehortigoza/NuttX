@@ -49,6 +49,7 @@
 #  include <sys/stat.h>
 #endif
 
+#include <nuttx/version.h>
 #include <apps/nsh.h>
 
 #include "nsh.h"
@@ -195,7 +196,7 @@ static int nsh_parse_command(FAR struct nsh_vtbl_s *vtbl, FAR char *cmdline);
 
 static const char g_token_separator[] = " \t\n";
 #ifndef NSH_DISABLE_SEMICOLON
-static const char g_line_separator[]  = "\";\n";
+static const char g_line_separator[]  = "\"#;\n";
 #endif
 #ifdef CONFIG_NSH_ARGCAT
 static const char g_arg_separator[]   = "`$";
@@ -483,7 +484,7 @@ static int nsh_execute(FAR struct nsh_vtbl_s *vtbl,
    *               indicates that the application task was spawned successfully
    *               but returned failure exit status.
    *
-   * Note the priority if not effected by nice-ness.
+   * Note the priority is not effected by nice-ness.
    */
 
 #ifdef CONFIG_NSH_FILE_APPS
@@ -873,7 +874,7 @@ static FAR char *nsh_cmdparm(FAR struct nsh_vtbl_s *vtbl, FAR char *cmdline,
   /* Create a unique file name using the task ID */
 
   tmpfile = NULL;
-  ret = asprintf(&tmpfile, "%s/TMP%d.dat", CONFIG_NSH_TMPDIR, getpid());
+  ret = asprintf(&tmpfile, "%s/TMP%d.dat", CONFIG_LIBC_TMPDIR, getpid());
   if (ret < 0 || !tmpfile)
     {
       nsh_output(vtbl, g_fmtcmdoutofmemory, "``");
@@ -1202,7 +1203,7 @@ static FAR char *nsh_argexpand(FAR struct nsh_vtbl_s *vtbl, FAR char *cmdline,
 
       *rptr = '\0';
 
-      /* Then execute the command to get the paramter value */
+      /* Then execute the command to get the parameter value */
 
       argument = nsh_cmdparm(vtbl, cmdline + 1, allocation);
     }
@@ -2190,22 +2191,23 @@ int nsh_parse(FAR struct nsh_vtbl_s *vtbl, FAR char *cmdline)
       np->np_loffs = (uint16_t)(working - cmdline);
 #endif
       /* A command may be terminated with a newline character, the end of the
-       * line, or a semicolon.  NOTE that the set of delimiting characters
-       * includes the quotation mark.  We need to handle quotation marks here
-       * because a semicolon or newline character within a quoted string must
-       * be ignored.
+       * line, a semicolon, or a '#' character.  NOTE that the set of
+       * delimiting characters includes the quotation mark.  We need to
+       * handle quotation marks here because any other delimiter within a
+       * quoted string must be treated as normal text.
        */
 
       len = strcspn(working, g_line_separator);
       ptr = working + len;
 
       /* Check for the last command on the line.  This means that the none
-       * of the delimiting characters was found or that the newline character
-       * was found.  Anything after the newline character is ignored (there
-       * should not be anything.
+       * of the delimiting characters was found or that the newline or '#'
+       * character was found.  Anything after the newline or '#' character
+       * is ignored (there should not be anything after a newline, of
+       * course).
        */
 
-      if (*ptr == '\0' || *ptr == '\n')
+      if (*ptr == '\0' || *ptr == '\n' || *ptr == '#')
         {
           /* Parse the last command on the line */
 

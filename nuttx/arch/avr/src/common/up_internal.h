@@ -73,6 +73,14 @@
 # define CONFIG_ARCH_INTERRUPTSTACK 0
 #endif
 
+/* This is the value used to mark the stack for subsequent stack monitoring
+ * logic.
+ */
+
+#define STACK_COLOR    's'
+#define INTSTACK_COLOR 's'
+#define HEAP_COLOR     'h'
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -174,7 +182,7 @@ void lowconsole_init(void);
 
 /* Defined in chip/xxx_timerisr.c */
 
-extern void up_timerinit(void);
+extern void up_timer_initialize(void);
 
 /* Defined in configs/<board-name>/src/up_leds.c */
 

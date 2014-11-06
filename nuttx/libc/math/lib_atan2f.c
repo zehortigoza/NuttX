@@ -10,11 +10,11 @@
  * a compatibile, MIT-style license:
  *
  * Copyright (C) 2009-2011 Nick Johnson <nickbjohnson4224 at gmail.com>
- * 
+ *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -37,45 +37,31 @@
 
 float atan2f(float y, float x)
 {
-  if (y == 0.0)
+  if (x > 0)
     {
-      if (x >= 0.0)
+      return atanf(y / x);
+    }
+  else if (y >= 0 && x < 0)
+    {
+      return atanf(y / x) + M_PI;
+    }
+  else if (y < 0)
+    {
+      if (x == 0)
         {
-          return 0.0;
+          return -M_PI_2;
         }
-      else
+      else /* Can only be x < 0 */
         {
-          return M_PI;
+          return atanf(y / x) - M_PI;
         }
     }
-  else if (y > 0.0)
+  else if (y > 0 && x == 0)
     {
-      if (x == 0.0)
-        {
-          return M_PI_2;
-        }
-      else if (x > 0.0)
-        {
-          return atanf(y / x);
-        }
-      else
-        {
-          return M_PI - atanf(y / x);
-        }
+      return M_PI_2;
     }
-  else
+  else /* if (y == 0 && x == 0) Undefined but returns normally 0 */
     {
-      if (x == 0.0)
-        {
-          return M_PI + M_PI_2;
-        }
-      else if (x > 0.0)
-        {
-          return 2 * M_PI - atanf(y / x);
-        }
-      else
-        {
-          return M_PI + atanf(y / x);
-        }
+      return 0;
     }
 }

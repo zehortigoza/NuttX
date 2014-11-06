@@ -107,7 +107,7 @@ pthread_addr_t i2schar_transmitter(pthread_addr_t arg)
   if (fd < 0)
     {
       int errcode = errno;
-      message("i2schar_transmitter: ERROR: failed to open %s: %d\n",
+      printf("i2schar_transmitter: ERROR: failed to open %s: %d\n",
               g_i2schar.devpath, errcode);
       pthread_exit(NULL);
     }
@@ -117,14 +117,14 @@ pthread_addr_t i2schar_transmitter(pthread_addr_t arg)
   for (i = 0, crap = 0; i < CONFIG_EXAMPLES_I2SCHAR_TXBUFFERS; i++)
     {
       /* Allocate an audio buffer of the configured size */
- 
+
       desc.numbytes   = CONFIG_EXAMPLES_I2SCHAR_BUFSIZE;
       desc.u.ppBuffer = &apb;
 
       ret = apb_alloc(&desc);
       if (ret < 0)
         {
-           message("i2schar_transmitter: ERROR: failed to allocate buffer %d: %d\n",
+           printf("i2schar_transmitter: ERROR: failed to allocate buffer %d: %d\n",
                    i+1, ret);
            close(fd);
            pthread_exit(NULL);
@@ -147,7 +147,7 @@ pthread_addr_t i2schar_transmitter(pthread_addr_t arg)
         {
           /* Flush any output before writing */
 
-          msgflush();
+          fflush(stdout);
 
           /* Write the buffer to the I2S character driver */
 
@@ -157,7 +157,7 @@ pthread_addr_t i2schar_transmitter(pthread_addr_t arg)
               int errcode = errno;
               if (errcode != EINTR)
                 {
-                  message("i2schar_transmitter: ERROR: write failed: %d\n",
+                  printf("i2schar_transmitter: ERROR: write failed: %d\n",
                           errcode);
                   close(fd);
                   pthread_exit(NULL);
@@ -165,14 +165,14 @@ pthread_addr_t i2schar_transmitter(pthread_addr_t arg)
             }
           else if (nwritten != bufsize)
             {
-              message("i2schar_transmitter: ERROR: partial write: %d\n",
+              printf("i2schar_transmitter: ERROR: partial write: %d\n",
                       nwritten);
               close(fd);
               pthread_exit(NULL);
             }
           else
             {
-              message("i2schar_transmitter: Send buffer %d\n", i+1);
+              printf("i2schar_transmitter: Send buffer %d\n", i+1);
             }
         }
       while (nwritten != bufsize);

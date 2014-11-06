@@ -93,8 +93,8 @@
 /* Debug ********************************************************************/
 
 #ifdef CONFIG_DEBUG_LCD
-#  define lcddbg(format, arg...)   dbg(format, ##arg)
-#  define lcdvdbg(format, arg...)  vdbg(format, ##arg)
+#  define lcddbg(format, ...)   dbg(format, ##__VA_ARGS__)
+#  define lcdvdbg(format, ...)  vdbg(format, ##__VA_ARGS__)
 #else
 #  define lcddbg(x...)
 #  define lcdvdbg(x...)
@@ -120,7 +120,7 @@ FAR struct lcd_dev_s *up_nxdrvinit(unsigned int devno)
   /* Configure the OLED GPIOs. This initial configuration is RESET low,
    * putting the OLED into reset state.
    */
- 
+
   (void)stm32_configgpio(GPIO_OLED_RESET);
 
   /* Wait a bit then release the OLED from the reset state */

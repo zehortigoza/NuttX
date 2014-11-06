@@ -43,7 +43,7 @@ include $(APPDIR)/Make.defs
 # Telnet daemon
 
 ASRCS		=
-CSRCS		= 
+CSRCS		=
 
 ifeq ($(CONFIG_NET_UDP),y)
 CSRCS		+= discover.c
@@ -69,7 +69,7 @@ ROOTDEPPATH	= --dep-path .
 
 # Common build
 
-VPATH		= 
+VPATH		=
 
 all: .built
 .PHONY: context depend clean distclean
@@ -83,6 +83,8 @@ $(COBJS): %$(OBJEXT): %.c
 .built: $(OBJS)
 	$(call ARCHIVE, $(BIN), $(OBJS))
 	$(Q) touch .built
+
+install:
 
 context:
 

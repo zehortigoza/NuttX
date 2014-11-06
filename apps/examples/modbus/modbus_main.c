@@ -33,7 +33,7 @@
  *
  ****************************************************************************
  * Leveraged from:
- * 
+ *
  *   FreeModbus Libary: Linux Demo Application
  *   Copyright (C) 2006 Christian Walter <wolti@sil.at>
  *
@@ -149,7 +149,7 @@ static const uint8_t g_slaveid[] = { 0xaa, 0xbb, 0xcc };
  * Name: modbus_initialize
  *
  * Description:
- *   Called from the ModBus polling thread in order to initialized the 
+ *   Called from the ModBus polling thread in order to initialized the
  *   FreeModBus interface.
  *
  ****************************************************************************/
@@ -197,7 +197,7 @@ static inline int modbus_initialize(void)
               "ERROR: eMBInit failed: %d\n", mberr);
       goto errout_with_mutex;
     }
- 
+
   /* Set the slave ID
    *
    * 0x34        = Slave ID
@@ -274,7 +274,7 @@ static void *modbus_pollthread(void *pvarg)
   do
     {
       /* Poll */
- 
+
       mberr = eMBPoll();
       if (mberr != MB_ENOERR)
         {
@@ -359,7 +359,11 @@ static void modbus_showusage(FAR const char *progname, int exitcode)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int modbus_main(int argc, char *argv[])
+#endif
 {
   int option;
   int ret;

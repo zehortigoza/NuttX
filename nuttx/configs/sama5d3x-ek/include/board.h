@@ -1,7 +1,7 @@
 /************************************************************************************
  * configs/sama5d3x-ek/include/board.h
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,9 +41,10 @@
  ************************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/irq.h>
 
 /************************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ************************************************************************************/
 
 /* Clocking *************************************************************************/
@@ -51,7 +52,43 @@
  * definitions will configure operational clocking.
  */
 
-#if 1 /* #if !defined(CONFIG_SAMA5_OHCI) || defined(CONFIG_SAMA5_EHCI) */
+/* On-board crystal frequencies */
+
+#define BOARD_MAINOSC_FREQUENCY    (12000000)  /* MAINOSC: 12MHz crystal on-board */
+#define BOARD_SLOWCLK_FREQUENCY    (32768)     /* Slow Clock: 32.768KHz */
+
+#if defined(CONFIG_SAMA5_BOOT_SDRAM)
+/* When booting from SDRAM, NuttX is loaded in SDRAM by an intermediate bootloader.
+ * That bootloader had to have already configured the PLL and SDRAM for proper
+ * operation.
+ *
+ * In this case, we don not reconfigure the clocking.  Rather, we need to query
+ * the register settings to determine the clock frequencies.  We can only assume that
+ * the Main clock source in the on-board 12MHz crystal.
+ */
+
+#  include <arch/board/board_sdram.h>
+
+#elif defined(CONFIG_SAMA5D3xEK_384MHZ)
+/* OHCI Only.  This is an alternative slower configuration that will produce a 48MHz
+ * USB clock with the required accuracy using only PLLA.  When PPLA is used to clock
+ * OHCI, an additional requirement is the PLLACK be a multiple of 48MHz.  This setup
+ * results in a CPU clock of 384MHz.
+ *
+ * This case is only interesting for experimentation.
+ */
+
+#  include <arch/board/board_384mhz.h>
+
+#elif defined(CONFIG_SAMA5D3xEK_528MHZ)
+/* This is the configuration results in a CPU clock of 528MHz.
+ *
+ * In this configuration, UPLL is the source of the UHPHS clock (if enabled).
+ */
+
+#  include <arch/board/board_528mhz.h>
+
+#else /* #elif defined(CONFIG_SAMA5D3xEK_396MHZ) */
 /* This is the configuration provided in the Atmel example code.  This setup results
  * in a CPU clock of 396MHz.
  *
@@ -59,15 +96,6 @@
  */
 
 #  include <arch/board/board_396mhz.h>
-
-#else
-/* OHCI Only.  This is an alternative slower configuration that will produce a 48MHz
- * USB clock with the required accuracy using only PLLA.  When PPLA is used to clock
- * OHCI, an additional requirement is the PLLACK be a multiple of 48MHz.  This setup
- * results in a CPU clock of 384MHz.
- */
-
-#  include <arch/board/board_384mhz.h>
 
 #endif
 
@@ -110,18 +138,24 @@
 /* LED index values for use with sam_setled() */
 
 #define BOARD_BLUE        0
-#define BOARD_RED         1
-#define BOARD_NLEDS       2
+#ifdef CONFIG_SAMA5D3xEK_NOREDLED
+#  define BOARD_NLEDS     1
+#else
+#  define BOARD_RED       1
+#  define BOARD_NLEDS     2
+#endif
 
 /* LED bits for use with sam_setleds() */
 
 #define BOARD_BLUE_BIT    (1 << BOARD_BLUE)
-#define BOARD_RED_BIT     (1 << BOARD_RED)
+#ifndef CONFIG_SAMA5D3xEK_NOREDLED
+#  define BOARD_RED_BIT   (1 << BOARD_RED)
+#endif
 
 /* These LEDs are not used by the board port unless CONFIG_ARCH_LEDS is
  * defined.  In that case, the usage by the board port is defined in
  * include/board.h and src/sam_leds.c. The LEDs are used to encode OS-related
- * events as follows:
+ * events as follows when the red LED (PE24) is available:
  *
  *      SYMBOL            Val    Meaning                     LED state
  *                                                         Blue     Red
@@ -136,9 +170,13 @@
 #define LED_PANIC         3  /* The system has crashed     OFF      Blinking */
 #undef  LED_IDLE             /* MCU is is sleep mode         Not used        */
 
-/* Thus if the blue LED is statically on, NuttX has successfully booted and
- * is, apparently, running normmally.  If the red is flashing at
- * approximately 2Hz, then a fatal error has been detected and the system
+/* If CONFIG_SAMA5D3xEK_NOREDLED=y, then the red LED is not used by the
+ * system.  The only difference from the above is that it is the blue, not
+ * the red LED that blinks in the event of an PANIC.
+ *
+ * Thus if the blue LED is statically on, NuttX has successfully booted and
+ * is, apparently, running normally.  If the red (or blue) LED is flashing
+ * at approximately 2Hz, then a fatal error has been detected and the system
  * has halted.
  */
 
@@ -151,7 +189,7 @@
  *   3. One User momentary Push Button
  *   4. One Disable CS Push Button
  *
- * Only the momentary push button is controllable by software (labeled
+ * Only the momentary push button is controllable by software (labelled
  * "PB_USER1" on the board):
  *
  *   - PE27.  Pressing the switch connect PE27 to grounded.  Therefore, PE27
@@ -327,26 +365,12 @@ extern "C" {
  *
  * Description:
  *   All SAMA5 architectures must provide the following entry point.  This entry point
- *   is called early in the intitialization -- after all memory has been configured
+ *   is called early in the initialization -- after all memory has been configured
  *   and mapped but before any devices have been initialized.
  *
  ************************************************************************************/
 
 void sam_boardinitialize(void);
-
-/************************************************************************************
- * Name: sam_phyirq
- *
- * Description:
- *   This function may be called to register an interrupt handler that will be
- *   called when an interrupt is received from a PHY.
- *
- ************************************************************************************/
-
-#if defined(CONFIG_NET) && (defined(CONFIG_SAMA5_EMAC) || defined(CONFIG_SAMA5_GMAC)) && \
-    defined(CONFIG_SAMA5_PIOE_IRQ)
-xcpt_t sam_phyirq(int intf, xcpt_t irqhandler);
-#endif
 
 /************************************************************************************
  * Name:  sam_ledinit, sam_setled, and sam_setleds

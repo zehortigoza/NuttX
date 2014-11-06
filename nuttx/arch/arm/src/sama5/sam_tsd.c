@@ -57,12 +57,12 @@
 #include <semaphore.h>
 #include <fcntl.h>
 #include <poll.h>
-#include <wdog.h>
 #include <errno.h>
 #include <assert.h>
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/clock.h>
 #include <nuttx/input/touchscreen.h>
@@ -89,7 +89,7 @@
 
 /* Poll the pen position while the pen is down at this rate (50MS): */
 
-#define TSD_WDOG_DELAY      ((50 + (MSEC_PER_TICK-1))/ MSEC_PER_TICK)
+#define TSD_WDOG_DELAY      MSEC2TICK(50)
 
 /* This is a value for the threshold that guantees a big difference on the
  * first pendown (but can't overflow).
@@ -434,7 +434,7 @@ errout:
  * Input Parameters
  *   priv - The touchscreen private data structure
  *   tsav - The new (shifted) value of the TSAV field of the ADC TSMR regsiter.
- * 
+ *
  * Returned Value:
  *   None
  *
@@ -495,7 +495,7 @@ static void sam_tsd_setaverage(struct sam_tsd_s *priv, uint32_t tsav)
  *
  * Input Parameters
  *   arg - The touchscreen private data structure cast to (void *)
- * 
+ *
  * Returned Value:
  *   None
  *

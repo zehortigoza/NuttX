@@ -115,8 +115,7 @@ IDEs
 ^^^^
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
-  effort will be required to create the project (There is a simple RIDE project
-  in the RIDE subdirectory).
+  effort will be required to create the project.
 
   Makefile Build
   --------------
@@ -140,9 +139,9 @@ IDEs
      on the command line.
 
   Startup files will probably cause you some headaches.  The NuttX startup file
-  is arch/arm/src/lpc31xx/lpc31_vectors.S.  With RIDE, I have to build NuttX
+  is arch/arm/src/lpc31xx/lpc31_vectors.S.  You may have to build NuttX
   one time from the Cygwin command line in order to obtain the pre-built
-  startup object needed by RIDE.
+  startup object needed by an IDE.
 
 NuttX buildroot Toolchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -534,8 +533,6 @@ ARM/EA3131-specific Configuration Options
 
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
-
-    CONFIG_ARCH_IRQPRIO - The LPC313x supports interrupt prioritization
 
     CONFIG_ARCH_INTERRUPTSTACK - This architecture supports an interrupt
        stack. If defined, this symbol is the size of the interrupt

@@ -211,7 +211,7 @@ Modifying the ROMFS Image
 
 The contents of the /etc directory are retained in the file
 apps/nshlib/nsh_romfsimg.h (OR, if CONFIG_NSH_ARCHROMFS
-is defined, include/arch/board/rcs.template).  In order to modify
+is defined, include/arch/board/rcS.template).  In order to modify
 the start-up behavior, there are three things to study:
 
 1. Configuration Options.
@@ -483,8 +483,8 @@ o ifconfig [nic_name [<ip-address>|dhcp]] [dr|gw|gateway <dr-address>] [netmask 
     eth0    HWaddr 00:18:11:80:10:06
             IPaddr:10.0.0.2 DRaddr:10.0.0.1 Mask:255.255.255.0
 
-  if uIP statistics are enabled (CONFIG_NET_STATISTICS), then
-  this command will also show the detailed state of uIP.
+  if networking statistics are enabled (CONFIG_NET_STATISTICS), then
+  this command will also show the detailed state of transfers by protocol.
 
 o ifdown <nic-name>
 
@@ -695,7 +695,7 @@ o mkrd [-m <minor>] [-s <sector-size>] <nsectors>
 o mount [-t <fstype> <block-device> <dir-path>]
 
   The mount command performs one of two different operations.  If no
-  paramters are provided on the command line after the mount command,
+  parameters are provided on the command line after the mount command,
   then the 'mount' command will enumerate all of the current
   mountpoints on the console.
 
@@ -979,7 +979,7 @@ Command Dependencies on Configuration Settings
   mount      !CONFIG_DISABLE_MOUNTPOINT && CONFIG_NFILE_DESCRIPTORS > 0 && CONFIG_FS_READABLE (see note 3)
   mv         (((!CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_WRITABLE) || !CONFIG_DISABLE_PSEUDOFS_OPERATIONS) && CONFIG_NFILE_DESCRIPTORS > 0) (see note 4)
   nfsmount   !CONFIG_DISABLE_MOUNTPOINT && CONFIG_NFILE_DESCRIPTORS > 0 && CONFIG_NET && CONFIG_NFS
-  ping       CONFIG_NET && CONFIG_NET_ICMP && CONFIG_NET_ICMP_PING  && !CONFIG_DISABLE_CLOCK && !CONFIG_DISABLE_SIGNALS
+  ping       CONFIG_NET && CONFIG_NET_ICMP && CONFIG_NET_ICMP_PING && !CONFIG_DISABLE_SIGNALS
   ps         --
   put        CONFIG_NET && CONFIG_NET_UDP && CONFIG_NFILE_DESCRIPTORS > 0 && CONFIG_NET_BUFSIZE >= 558 (see note 1,2)
   pwd        !CONFIG_DISABLE_ENVIRON && CONFIG_NFILE_DESCRIPTORS > 0
@@ -1183,14 +1183,27 @@ NSH-Specific Configuration Settings
         If CONFIG_NSH_USBCONSOLE is set to 'y', then CONFIG_NSH_USBCONDEV
         must also be set to select the USB device used to support
         the NSH console.   This should be set to the quoted name of a
-        readable/write-able USB driver such as:
-        CONFIG_NSH_USBCONDEV="/dev/ttyACM0".
+        read-/write-able USB driver.  Default: "/dev/ttyACM0".
 
       If there are more than one USB devices, then a USB device
       minor number may also need to be provided:
 
       CONFIG_NSH_USBDEV_MINOR
         The minor device number of the USB device.  Default: 0
+
+      CONFIG_NSH_USBKBD
+        Normally NSH uses the same device for stdin, stdout, and stderr.  By
+        default, that device is /dev/console.  If this option is selected,
+        then NSH will use a USB HID keyboard for stdin.  In this case, the
+        keyboard is connected directly to the target (via a USB host
+        interface) and the data from the keyboard will drive NSH.  NSH
+        output (stdout and stderr) will still go to /dev/console.
+
+      CONFIG_NSH_USBKBD_DEVNAME
+        If NSH_USBKBD is set to 'y', then NSH_USBKBD_DEVNAME must also be
+        set to select the USB keyboard device used to support the NSH
+        console input.   This should be set to the quoted name of a read-
+        able keyboard driver. Default: "/dev/kbda".
 
       CONFIG_NSH_USBDEV_TRACE
         If USB tracing is enabled (CONFIG_USBDEV_TRACE), then NSH can
@@ -1211,21 +1224,27 @@ NSH-Specific Configuration Settings
       CONFIG_NSH_USBDEV_TRACEINTERRUPTS
         Show interrupt-related events.
 
-  * CONFIG_NSH_CONDEV
-      If CONFIG_NSH_CONSOLE is set to 'y', then CONFIG_NSH_CONDEV
-      may also be set to select the serial device used to support
-      the NSH console.   This should be set to the quoted name of a
-      readable/write-able character driver such as:
-      CONFIG_NSH_CONDEV="/dev/ttyS1". This is useful, for example,
-      to separate the NSH command line from the system console when
-      the system console is used to provide debug output.  Default:
-      stdin and stdout (probably "/dev/console")
+  * CONFIG_NSH_ALTCONDEV and CONFIG_NSH_CONDEV
+      If CONFIG_NSH_CONSOLE is set to 'y', then CONFIG_NSH_ALTCONDEV may also
+      be selected to enable use of an alternate character device to support
+      the NSH console.  If CONFIG_NSH_ALTCONDEV is selected, then
+      CONFIG_NSH_CONDEV holds the quoted name of a readable/write-able
+      character driver such as: CONFIG_NSH_CONDEV="/dev/ttyS1".  This is
+      useful, for example, to separate the NSH command line from the system
+      console when the system console is used to provide debug output.
+      Default:  stdin and stdout (probably "/dev/console")
 
-      NOTE: When any other device other than /dev/console is used
-      for a user interface, (1) linefeeds (\n) will not be expanded to
-      carriage return / linefeeds (\r\n).  You will need to set
-      your terminal program to account for this.  And (2) input is
-      not automatically echoed so you will have to turn local echo on.
+      NOTE 1: When any other device other than /dev/console is used for a
+      user interface, (1) linefeeds (\n) will not be expanded to carriage
+      return / linefeeds (\r\n).  You will need to configure your terminal
+      program to account for this.  And (2) input is not automatically
+      echoed so you will have to turn local echo on.
+
+      NOTE 2:  This option forces the console of all sessions to use
+      NSH_CONDEV.  Hence, this option only makes sense for a system that
+      supports only a single session.  This option is, in particular,
+      incompatible with Telnet sessions because each Telnet session must
+      use a different console device.
 
   * CONFIG_NSH_TELNET
       If CONFIG_NSH_TELNET is set to 'y', then a TELENET

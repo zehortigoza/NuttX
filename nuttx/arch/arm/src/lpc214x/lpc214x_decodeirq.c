@@ -47,13 +47,12 @@
 
 #include "chip.h"
 #include "up_arch.h"
-#include "os_internal.h"
 #include "up_internal.h"
 
 #include "lpc214x_vic.h"
 
 /********************************************************************************
- * Definitions
+ * Pre-processor Definitions
  ********************************************************************************/
 
 /********************************************************************************
@@ -112,7 +111,7 @@ static void lpc214x_decodeirq( uint32_t *regs)
 #endif
 {
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
-  lowsyslog("Unexpected IRQ\n");
+  lowsyslog(LOG_ERR, "Unexpected IRQ\n");
   current_regs = regs;
   PANIC();
 #else

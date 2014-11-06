@@ -94,7 +94,7 @@ static void nxhello_position(NXWINDOW hwnd, FAR const struct nxgl_size_s *size,
                           FAR const struct nxgl_point_s *pos,
                           FAR const struct nxgl_rect_s *bounds,
                           FAR void *arg);
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
 static void nxhello_mousein(NXWINDOW hwnd, FAR const struct nxgl_point_s *pos,
                          uint8_t buttons, FAR void *arg);
 #endif
@@ -120,7 +120,7 @@ const struct nx_callback_s g_nxhellocb =
 {
   nxhello_redraw,   /* redraw */
   nxhello_position  /* position */
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
   , nxhello_mousein /* mousein */
 #endif
 #ifdef CONFIG_NX_KBD
@@ -182,12 +182,12 @@ static void nxhello_position(NXWINDOW hwnd, FAR const struct nxgl_size_s *size,
  * Name: nxhello_mousein
  ****************************************************************************/
 
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
 static void nxhello_mousein(NXWINDOW hwnd, FAR const struct nxgl_point_s *pos,
                          uint8_t buttons, FAR void *arg)
 {
-  message("nxhello_mousein: hwnd=%p pos=(%d,%d) button=%02x\n",
-          hwnd,  pos->x, pos->y, buttons);
+  printf("nxhello_mousein: hwnd=%p pos=(%d,%d) button=%02x\n",
+         hwnd,  pos->x, pos->y, buttons);
 }
 #endif
 
@@ -205,7 +205,7 @@ static void nxhello_kbdin(NXWINDOW hwnd, uint8_t nch, FAR const uint8_t *ch,
     * expected.
     */
 
-   message("nxhello_kbdin: Unexpected keyboard callback\n");
+   printf("nxhello_kbdin: Unexpected keyboard callback\n");
 }
 #endif
 
@@ -371,7 +371,7 @@ void nxhello_hello(NXWINDOW hwnd)
    */
 
   nxhello_center(&pos, fontset);
-  message("nxhello_hello: Position (%d,%d)\n", pos.x, pos.y);
+  printf("nxhello_hello: Position (%d,%d)\n", pos.x, pos.y);
 
   /* Now we can say "hello" in the center of the display. */
 
@@ -420,7 +420,7 @@ void nxhello_hello(NXWINDOW hwnd)
           ret = nx_bitmap((NXWINDOW)hwnd, &dest, src, &pos, fstride);
           if (ret < 0)
             {
-              message("nxhello_write: nx_bitmapwindow failed: %d\n", errno);
+              printf("nxhello_write: nx_bitmapwindow failed: %d\n", errno);
             }
 
            /* Skip to the right the width of the font */

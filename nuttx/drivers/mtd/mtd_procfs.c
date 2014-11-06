@@ -156,7 +156,7 @@ static int mtd_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Allocate a context structure */
 
-  attr = (FAR struct mtd_file_s *)kzalloc(sizeof(struct mtd_file_s));
+  attr = (FAR struct mtd_file_s *)kmm_zalloc(sizeof(struct mtd_file_s));
   if (!attr)
     {
       fdbg("ERROR: Failed to allocate file attributes\n");
@@ -186,7 +186,7 @@ static int mtd_close(FAR struct file *filep)
 
   /* Release the file attributes structure */
 
-  kfree(attr);
+  kmm_free(attr);
   filep->f_priv = NULL;
   return OK;
 }
@@ -276,7 +276,7 @@ static int mtd_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Allocate a new container to hold the task and attribute selection */
 
-  newattr = (FAR struct mtd_file_s *)kzalloc(sizeof(struct mtd_file_s));
+  newattr = (FAR struct mtd_file_s *)kmm_zalloc(sizeof(struct mtd_file_s));
   if (!newattr)
     {
       fdbg("ERROR: Failed to allocate file attributes\n");
@@ -320,13 +320,14 @@ static int mtd_stat(const char *relpath, struct stat *buf)
  *
  * Description:
  *   Registers MTD device with the procfs file system.  This assigns a unique
- *   MTD number and associates the given device name, then  add adds it to 
+ *   MTD number and associates the given device name, then  add adds it to
  *   the list of registered devices.
  *
  * In an embedded system, this all is really unnecessary, but is provided
  * in the procfs system simply for information purposes (if desired).
  *
  ****************************************************************************/
+
 int mtd_register(FAR struct mtd_dev_s *mtd, FAR const char *name)
 {
   FAR struct mtd_dev_s *plast;
@@ -359,6 +360,8 @@ int mtd_register(FAR struct mtd_dev_s *mtd, FAR const char *name)
 
       plast->pnext = mtd;
     }
+
+  return OK;
 }
 
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */

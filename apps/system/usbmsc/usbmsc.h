@@ -89,32 +89,6 @@
 #  undef CONFIG_SYSTEM_USBMSC_DEVPATH3
 #endif
 
-#if defined(CONFIG_NSH_BUILTIN_APPS) && defined(CONFIG_SCHED_WAITPID)
-#  ifndef CONFIG_SYSTEM_USBMSC_DAEMON_STACKSIZE
-#    define CONFIG_SYSTEM_USBMSC_DAEMON_STACKSIZE 2048
-#  endif
-#endif
-
-/* Debug ********************************************************************/
-
-#ifdef CONFIG_CPP_HAVE_VARARGS
-#  ifdef CONFIG_DEBUG
-#    define message(...) lowsyslog(__VA_ARGS__)
-#    define msgflush()
-#  else
-#    define message(...) printf(__VA_ARGS__)
-#    define msgflush() fflush(stdout)
-#  endif
-#else
-#  ifdef CONFIG_DEBUG
-#    define message lowsyslog
-#    define msgflush()
-#  else
-#    define message printf
-#    define msgflush() fflush(stdout)
-#  endif
-#endif
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/

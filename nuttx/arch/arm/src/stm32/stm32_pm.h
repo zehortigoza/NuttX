@@ -62,7 +62,8 @@
  #ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
-extern "C" {
+extern "C"
+{
 #else
 #define EXTERN extern
 #endif
@@ -75,7 +76,7 @@ extern "C" {
  * Name: stm32_pmstop
  *
  * Description:
- *   Enter STOP mode. 
+ *   Enter STOP mode.
  *
  * Input Parameters:
  *   lpds - true: To further reduce power consumption in Stop mode, put the
@@ -84,13 +85,13 @@ extern "C" {
  *
  * Returned Value:
  *   Zero means that the STOP was successfully entered and the system has
- *   been re-awakened.  The internal volatage regulator is back to its
+ *   been re-awakened.  The internal voltage regulator is back to its
  *   original state.  Otherwise, STOP mode did not occur and a negated
  *   errno value is returned to indicate the cause of the failure.
  *
  ****************************************************************************/
 
-EXTERN int stm32_pmstop(bool lpds);
+int stm32_pmstop(bool lpds);
 
 /****************************************************************************
  * Name: stm32_pmstandby
@@ -109,29 +110,29 @@ EXTERN int stm32_pmstop(bool lpds);
  *
  ****************************************************************************/
 
-EXTERN int stm32_pmstandby(void);
+int stm32_pmstandby(void);
 
 /****************************************************************************
  * Name: stm32_pmsleep
  *
  * Description:
- *   Enter SLEEP mode. 
+ *   Enter SLEEP mode.
  *
  * Input Parameters:
  *   sleeponexit - true:  SLEEPONEXIT bit is set when the WFI instruction is
- *                        executed, the MCU enters Sleep mode as soon as it 
+ *                        executed, the MCU enters Sleep mode as soon as it
  *                        exits the lowest priority ISR.
  *               - false: SLEEPONEXIT bit is cleared, the MCU enters Sleep mode
  *                        as soon as WFI or WFE instruction is executed.
  * Returned Value:
  *   Zero means that the STOP was successfully entered and the system has
- *   been re-awakened.  The internal volatage regulator is back to its
+ *   been re-awakened.  The internal voltage regulator is back to its
  *   original state.  Otherwise, STOP mode did not occur and a negated
  *   errno value is returned to indicate the cause of the failure.
  *
  ****************************************************************************/
 
-EXTERN void stm32_pmsleep(bool sleeponexit);
+void stm32_pmsleep(bool sleeponexit);
 
 #undef EXTERN
 #ifdef __cplusplus

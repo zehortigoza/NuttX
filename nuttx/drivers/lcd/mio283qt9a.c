@@ -36,7 +36,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  **************************************************************************************/
- 
+
 /**************************************************************************************
  * Included Files
  **************************************************************************************/
@@ -113,7 +113,7 @@
 /* Display/Color Properties ***********************************************************/
 /* Display Resolution */
 
-#if defined(CONFIG_LCD_LANDSCAPE) || defined(CONFIG_LCD_RLANDSCAPE) 
+#if defined(CONFIG_LCD_LANDSCAPE) || defined(CONFIG_LCD_RLANDSCAPE)
 #  define MIO283QT9A_XRES       320
 #  define MIO283QT9A_YRES       240
 #else
@@ -280,22 +280,36 @@ static uint16_t mio283qt9a_readreg(FAR struct mio283qt9a_lcd_s *lcd, uint8_t reg
 {
   /* Set the index register to the register address and read the register contents. */
 
-  lcd->index(lcd, regaddr);  
+  lcd->index(lcd, regaddr);
   return lcd->read(lcd);
 }
 #endif
 
 /**************************************************************************************
- * Name:  mio283qt9a_gramselect
+ * Name:  mio283qt9a_gramselect_write
  *
  * Description:
- *   Setup to read or write multiple pixels to the GRAM memory
+ *   Setup to write multiple pixels to the GRAM memory
  *
  **************************************************************************************/
 
-static inline void mio283qt9a_gramselect(FAR struct mio283qt9a_lcd_s *lcd)
+static inline void mio283qt9a_gramselect_write(FAR struct mio283qt9a_lcd_s *lcd)
 {
   lcd->index(lcd, 0x2c);
+}
+
+/**************************************************************************************
+ * Name:  mio283qt9a_gramselect_read
+ *
+ * Description:
+ *   Setup to read multiple pixels to the GRAM memory
+ *
+ **************************************************************************************/
+
+static inline void mio283qt9a_gramselect_read(FAR struct mio283qt9a_lcd_s *lcd)
+{
+  lcd->index(lcd, 0x2e);
+  lcd->readgram(lcd);
 }
 
 /**************************************************************************************
@@ -342,7 +356,7 @@ static inline void mio283qt9a_readsetup(FAR struct mio283qt9a_lcd_s *lcd,
  *   Read one correctly aligned pixel from the GRAM memory.  Possibly shifting the
  *   data and possibly swapping red and green components.
  *
- *   - ILI932x: Unknown -- assuming colors are in the color order 
+ *   - ILI932x: Unknown -- assuming colors are in the color order
  *
  **************************************************************************************/
 
@@ -352,7 +366,7 @@ static inline uint16_t mio283qt9a_gramread(FAR struct mio283qt9a_lcd_s *lcd,
 {
   /* Read the value (GRAM register already selected) */
 
-  return lcd->read(lcd);
+  return lcd->readgram(lcd);
 }
 #endif
 
@@ -397,14 +411,14 @@ static void mio283qt9a_dumprun(FAR const char *msg, FAR uint16_t *run, size_t np
   int i;
   int j;
 
-  syslog("\n%s:\n", msg);
+  syslog(LOG_INFO, "\n%s:\n", msg);
   for (i = 0; i < npixels; i += 16)
     {
       up_putc(' ');
-      syslog(" ");
+      syslog(LOG_INFO, " ");
       for (j = 0; j < 16; j++)
         {
-          syslog(" %04x", *run++);
+          syslog(LOG_INFO, " %04x", *run++);
         }
 
       up_putc('\n');
@@ -433,7 +447,7 @@ static int mio283qt9a_putrun(fb_coord_t row, fb_coord_t col, FAR const uint8_t *
   FAR struct mio283qt9a_lcd_s *lcd = priv->lcd;
   FAR const uint16_t *src = (FAR const uint16_t*)buffer;
   int i;
- 
+
   /* Buffer must be provided and aligned to a 16-bit address boundary */
 
   //lcdvdbg("row: %d col: %d npixels: %d\n", row, col, npixels);
@@ -446,7 +460,7 @@ static int mio283qt9a_putrun(fb_coord_t row, fb_coord_t col, FAR const uint8_t *
   /* Write the run to GRAM. */
 
   mio283qt9a_setarea(lcd, col, row, col + npixels - 1, row);
-  mio283qt9a_gramselect(lcd);
+  mio283qt9a_gramselect_write(lcd);
 
   for (i = 0; i < npixels; i++)
     {
@@ -481,12 +495,12 @@ static int mio283qt9a_getrun(fb_coord_t row, fb_coord_t col, FAR uint8_t *buffer
   FAR struct mio283qt9a_dev_s *priv = &g_lcddev;
   FAR struct mio283qt9a_lcd_s *lcd = priv->lcd;
   FAR uint16_t *dest = (FAR uint16_t*)buffer;
-  uint16_t accum;
+  uint16_t accum, test;
   int i;
- 
+
   /* Buffer must be provided and aligned to a 16-bit address boundary */
 
-  lcdvdbg("row: %d col: %d npixels: %d\n", row, col, npixels);
+  lcdvdbg("mio283qt9a_getrun row: %d col: %d npixels: %d\n", row, col, npixels);
   DEBUGASSERT(buffer && ((uintptr_t)buffer & 1) == 0);
 
   /* Read the run from GRAM. */
@@ -498,7 +512,7 @@ static int mio283qt9a_getrun(fb_coord_t row, fb_coord_t col, FAR uint8_t *buffer
   /* Red the run fram GRAM. */
 
   mio283qt9a_setarea(lcd, col, row, col + npixels - 1, row);
-  mio283qt9a_gramselect(lcd);
+  mio283qt9a_gramselect_read(lcd);
 
   /* Prime the pump for unaligned read data */
 
@@ -506,7 +520,9 @@ static int mio283qt9a_getrun(fb_coord_t row, fb_coord_t col, FAR uint8_t *buffer
 
   for (i = 0; i < npixels; i++)
     {
-      *dest++ = mio283qt9a_gramread(lcd, &accum);
+        test= mio283qt9a_gramread(lcd, &accum);
+       // lcddbg("read 0x%04x\n", test); 
+      *dest++ = test;
     }
 
   /* De-select the LCD */
@@ -814,7 +830,7 @@ static inline int mio283qt9a_hwinitialize(FAR struct mio283qt9a_dev_s *priv)
  /*************************************************************************************
  * Public Functions
  **************************************************************************************/
- 
+
 /**************************************************************************************
  * Name:  mio283qt9a_lcdinitialize
  *
@@ -891,7 +907,7 @@ void mio283qt9a_clear(FAR struct lcd_dev_s *dev, uint16_t color)
 
   /* Prepare to write GRAM data */
 
-  mio283qt9a_gramselect(lcd);
+  mio283qt9a_gramselect_write(lcd);
 
   /* Copy color into all of GRAM.  Orientation does not matter in this case. */
 

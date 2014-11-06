@@ -61,16 +61,15 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/wdog.h>
 #include <nuttx/i2c.h>
 
 #include <arch/irq.h>
 #include <arch/board/board.h>
 
-#include "wdog.h"
 #include "chip.h"
 #include "up_arch.h"
 #include "up_internal.h"
-#include "os_internal.h"
 
 #include "lpc23xx_pinsel.h"
 #include "lpc23xx_scb.h"
@@ -289,11 +288,11 @@ static int i2c_start (struct lpc23xx_i2cdev_s *priv)
   wd_cancel(priv->timeout);
   sem_post(&priv->mutex);
 
-  if( priv-> state == 0x18 || priv->state == 0x28)
+  if (priv-> state == 0x18 || priv->state == 0x28)
     {
       ret=priv->wrcnt;
     }
-  else if( priv-> state == 0x50 || priv->state == 0x58)
+  else if (priv-> state == 0x50 || priv->state == 0x58)
     {
       ret=priv->rdcnt;
     }
@@ -377,7 +376,7 @@ static int i2c_interrupt (int irq, FAR void *context)
   /* Reference UM10360 19.10.5 */
 
   uint32_t state = getreg32(priv->base + I2C_STAT_OFFSET);
-  putreg32(I2C_CONCLR_SIC, priv->base + 2C_CONCLR_OFFSET);
+  putreg32(I2C_CONCLR_SIC, priv->base + I2C_CONCLR_OFFSET);
 
   priv->state = state;
   state &= 0xf8;
@@ -404,7 +403,7 @@ static int i2c_interrupt (int irq, FAR void *context)
 
       case 0x28:
         priv->wrcnt++;
-        if(priv->wrcnt<priv->msg.length)
+        if (priv->wrcnt<priv->msg.length)
           {
             putreg32(priv->msg.buffer[priv->wrcnt],priv->base+I2C_DAT_OFFSET);
           }

@@ -1,7 +1,7 @@
 /****************************************************************************
  * NxWidgets/nxwm/include/nxwmconfig.hxx
  *
- *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2012, 2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -57,7 +57,7 @@
  * CONFIG_HAVE_CXX        : C++ support is required
  * CONFIG_NX              : NX must enabled
  * CONFIG_NX_MULTIUSER=y  : NX must be configured in multiuse mode
- * CONFIG_NXCONSOLE=y     : For NxConsole support
+ * CONFIG_NXTERM=y     : For NxTerm support
  * CONFIG_SCHED_ONEXIT    : Support for on_exit()
  *
  * General settings:
@@ -85,12 +85,12 @@
 #endif
 
 /**
- * NxConsole support is (probably) required if CONFIG_NXWM_NXCONSOLE is
+ * NxTerm support is (probably) required if CONFIG_NXWM_NXTERM is
  * selected
  */
 
-#if defined(CONFIG_NXWM_NXCONSOLE) && !defined(CONFIG_NXCONSOLE)
-#  warning "NxConsole support may be needed (CONFIG_NXCONSOLE)"
+#if defined(CONFIG_NXWM_NXTERM) && !defined(CONFIG_NXTERM)
+#  warning "NxTerm support may be needed (CONFIG_NXTERM)"
 #endif
 
 /**
@@ -188,7 +188,8 @@
  * CONFIG_NXWM_TASKBAR_RIGHT - Task bar is on the right side of the display
  *
  * CONFIG_NXWM_TASKBAR_WIDTH - Task bar thickness (either vertical or
- *   horizontal).  Default: 25 + 2*spacing
+ *   horizontal).  Default: 25 + 2*spacing unless large icons are selected. 
+ *   Then the default is 50 + 2*spacing.
  */
 
 /**
@@ -226,7 +227,7 @@
 
 // Taskbar ICON scaling
 
-#ifdef CONFIG_NXWM_TASKBAR_ICONSCALE
+#if defined(CONFIG_NXWM_TASKBAR_ICONSCALE)
 #  ifndef CONFIG_NXWM_TASKBAR_ICONWIDTH
 #    error Scaling requires CONFIG_NXWM_TASKBAR_ICONWIDTH
 #    define CONFIG_NXWM_TASKBAR_ICONWIDTH  50
@@ -235,11 +236,16 @@
 #    error Scaling requires CONFIG_NXWM_TASKBAR_ICONHEIGHT
 #    define CONFIG_NXWM_TASKBAR_ICONHEIGHT 42
 #  endif
+#elif defined(CONFIG_NXWM_LARGE_ICONS)
+#  undef CONFIG_NXWM_TASKBAR_ICONWIDTH
+#  define CONFIG_NXWM_TASKBAR_ICONWIDTH  50
+#  undef CONFIG_NXWM_TASKBAR_ICONHEIGHT
+#  define CONFIG_NXWM_TASKBAR_ICONHEIGHT 42
 #else
 #  undef CONFIG_NXWM_TASKBAR_ICONWIDTH
-#  define CONFIG_NXWM_TASKBAR_ICONWIDTH  25 // Used below
+#  define CONFIG_NXWM_TASKBAR_ICONWIDTH  25
 #  undef CONFIG_NXWM_TASKBAR_ICONHEIGHT
-#  define CONFIG_NXWM_TASKBAR_ICONHEIGHT 21 // Used below (NOT)
+#  define CONFIG_NXWM_TASKBAR_ICONHEIGHT 21
 #endif
 
 /**
@@ -260,12 +266,20 @@
 /* Tool Bar Configuration ***************************************************/
 /**
  * CONFIG_NXWM_TOOLBAR_HEIGHT.  The height of the tool bar in each
- *   application window. At present, all icons are 21 pixels in height and,
- *   hence require a task bar of at least that size.
+ *   application window. At present, all icons are 21 or 42 pixels in height
+ *   (depending on the setting of CONFIG_NXWM_LARGE_ICONS) and, hence require
+ *   a task bar of at least that size.
  */
 
 #ifndef CONFIG_NXWM_TOOLBAR_HEIGHT
-#    define CONFIG_NXWM_TOOLBAR_HEIGHT (21+2*CONFIG_NXWM_TASKBAR_HSPACING)
+#    define CONFIG_NXWM_TOOLBAR_HEIGHT \
+       (CONFIG_NXWM_TASKBAR_ICONHEIGHT + 2*CONFIG_NXWM_TASKBAR_HSPACING)
+#endif
+
+/* CONFIG_NXWM_TOOLBAR_FONTID overrides the default NxWM font selection */
+
+#ifndef CONFIG_NXWM_TOOLBAR_FONTID
+#  define CONFIG_NXWM_TOOLBAR_FONTID  CONFIG_NXWM_DEFAULT_FONTID
 #endif
 
 /* Background Image **********************************************************/
@@ -313,7 +327,7 @@
  */
 
 #ifndef CONFIG_NXWM_STARTWINDOW_ICON
-#  define CONFIG_NXWM_STARTWINDOW_ICON NxWM::g_playBitmap24x24
+#  define CONFIG_NXWM_STARTWINDOW_ICON NxWM::g_playBitmap
 #endif
 
 /**
@@ -349,58 +363,58 @@
 #  define CONFIG_NXWM_STARTWINDOW_STACKSIZE  2048
 #endif
 
-/* NxConsole Window *********************************************************/
+/* NxTerm Window *********************************************************/
 /**
- * NxConsole Window Configuration
+ * NxTerm Window Configuration
  *
- * CONFIG_NXWM_NXCONSOLE_PRIO - Priority of the NxConsole task.  Default:
+ * CONFIG_NXWM_NXTERM_PRIO - Priority of the NxTerm task.  Default:
  *   SCHED_PRIORITY_DEFAULT.  NOTE:  This priority should be less than
  *   CONFIG_NXWIDGETS_SERVERPRIO or else there may be data overrun errors.
  *   Such errors would most likely appear as duplicated rows of data on the
  *   display.
- * CONFIG_NXWM_NXCONSOLE_STACKSIZE - The stack size to use when starting the
- *   NxConsole task.  Default: 2048 bytes.
- * CONFIG_NXWM_NXCONSOLE_WCOLOR - The color of the NxConsole window background.
+ * CONFIG_NXWM_NXTERM_STACKSIZE - The stack size to use when starting the
+ *   NxTerm task.  Default: 2048 bytes.
+ * CONFIG_NXWM_NXTERM_WCOLOR - The color of the NxTerm window background.
  *   Default:  MKRGB(192,192,192)
- * CONFIG_NXWM_NXCONSOLE_FONTCOLOR - The color of the fonts to use in the
- *   NxConsole window.  Default: MKRGB(0,0,0)
- * CONFIG_NXWM_NXCONSOLE_FONTID - The ID of the font to use in the NxConsole
+ * CONFIG_NXWM_NXTERM_FONTCOLOR - The color of the fonts to use in the
+ *   NxTerm window.  Default: MKRGB(0,0,0)
+ * CONFIG_NXWM_NXTERM_FONTID - The ID of the font to use in the NxTerm
  *   window.  Default: CONFIG_NXWM_DEFAULT_FONTID
- * CONFIG_NXWM_NXCONSOLE_ICON - The glyph to use as the NxConsole icon
+ * CONFIG_NXWM_NXTERM_ICON - The glyph to use as the NxTerm icon
  */
 
-#ifdef CONFIG_NXWM_NXCONSOLE
-#  ifndef CONFIG_NXWM_NXCONSOLE_PRIO
-#    define CONFIG_NXWM_NXCONSOLE_PRIO  SCHED_PRIORITY_DEFAULT
+#ifdef CONFIG_NXWM_NXTERM
+#  ifndef CONFIG_NXWM_NXTERM_PRIO
+#    define CONFIG_NXWM_NXTERM_PRIO  SCHED_PRIORITY_DEFAULT
 #  endif
 
-#  if CONFIG_NXWIDGETS_SERVERPRIO <= CONFIG_NXWM_NXCONSOLE_PRIO
-#    warning "CONFIG_NXWIDGETS_SERVERPRIO <= CONFIG_NXWM_NXCONSOLE_PRIO"
+#  if CONFIG_NXWIDGETS_SERVERPRIO <= CONFIG_NXWM_NXTERM_PRIO
+#    warning "CONFIG_NXWIDGETS_SERVERPRIO <= CONFIG_NXWM_NXTERM_PRIO"
 #    warning" -- This can result in data overrun errors"
 #  endif
 
-#  ifndef CONFIG_NXWM_NXCONSOLE_STACKSIZE
-#    define CONFIG_NXWM_NXCONSOLE_STACKSIZE  2048
+#  ifndef CONFIG_NXWM_NXTERM_STACKSIZE
+#    define CONFIG_NXWM_NXTERM_STACKSIZE  2048
 #  endif
 
-#  ifndef CONFIG_NXWM_NXCONSOLE_WCOLOR
-#    define CONFIG_NXWM_NXCONSOLE_WCOLOR  CONFIG_NXWM_DEFAULT_BACKGROUNDCOLOR
+#  ifndef CONFIG_NXWM_NXTERM_WCOLOR
+#    define CONFIG_NXWM_NXTERM_WCOLOR  CONFIG_NXWM_DEFAULT_BACKGROUNDCOLOR
 #  endif
 
-#  ifndef CONFIG_NXWM_NXCONSOLE_FONTCOLOR
-#    define CONFIG_NXWM_NXCONSOLE_FONTCOLOR  CONFIG_NXWM_DEFAULT_FONTCOLOR
+#  ifndef CONFIG_NXWM_NXTERM_FONTCOLOR
+#    define CONFIG_NXWM_NXTERM_FONTCOLOR  CONFIG_NXWM_DEFAULT_FONTCOLOR
 #  endif
 
-#  ifndef CONFIG_NXWM_NXCONSOLE_FONTID
-#    define CONFIG_NXWM_NXCONSOLE_FONTID  CONFIG_NXWM_DEFAULT_FONTID
+#  ifndef CONFIG_NXWM_NXTERM_FONTID
+#    define CONFIG_NXWM_NXTERM_FONTID  CONFIG_NXWM_DEFAULT_FONTID
 #  endif
 
   /**
-   * The NxConsole window glyph
+   * The NxTerm window glyph
    */
 
-#  ifndef CONFIG_NXWM_NXCONSOLE_ICON
-#    define CONFIG_NXWM_NXCONSOLE_ICON NxWM::g_cmdBitmap
+#  ifndef CONFIG_NXWM_NXTERM_ICON
+#    define CONFIG_NXWM_NXTERM_ICON NxWM::g_cmdBitmap
 #  endif
 #endif
 
@@ -415,7 +429,7 @@
  * CONFIG_NXWM_TOUCHSCREEN_SIGNO - The realtime signal used to wake up the
  *   touchscreen listener thread.  Default: 5
  * CONFIG_NXWM_TOUCHSCREEN_LISTENERPRIO - Priority of the touchscreen listener
- *   thread.  Default: SCHED_PRIORITY_DEFAULT
+ *   thread.  Default: (SCHED_PRIORITY_DEFAULT + 20)
  * CONFIG_NXWM_TOUCHSCREEN_LISTENERSTACK - Touchscreen listener thread stack
  *   size.  Default 1024
  */
@@ -433,7 +447,11 @@
 #endif
 
 #ifndef CONFIG_NXWM_TOUCHSCREEN_LISTENERPRIO
-#  define CONFIG_NXWM_TOUCHSCREEN_LISTENERPRIO SCHED_PRIORITY_DEFAULT
+#  define CONFIG_NXWM_TOUCHSCREEN_LISTENERPRIO (SCHED_PRIORITY_DEFAULT + 20)
+#endif
+
+#if CONFIG_NXWM_TOUCHSCREEN_LISTENERPRIO <= CONFIG_NXWM_CALIBRATION_LISTENERPRIO
+#  warning You should have CONFIG_NXWM_TOUCHSCREEN_LISTENERPRIO > CONFIG_NXWM_CALIBRATION_LISTENERPRIO
 #endif
 
 #ifndef CONFIG_NXWM_TOUCHSCREEN_LISTENERSTACK
@@ -451,7 +469,7 @@
  * CONFIG_NXWM_KEYBOARD_BUFSIZE - The size of the keyboard read data buffer.
  *   Default: 16
  * CONFIG_NXWM_KEYBOARD_LISTENERPRIO - Priority of the touchscreen listener
- *   thread.  Default: SCHED_PRIORITY_DEFAULT
+ *   thread.  Default: (SCHED_PRIORITY_DEFAULT + 20)
  * CONFIG_NXWM_KEYBOARD_LISTENERSTACK - Keyboard listener thread stack
  *   size.  Default 1024
  */
@@ -469,7 +487,7 @@
 #endif
 
 #ifndef CONFIG_NXWM_KEYBOARD_LISTENERPRIO
-#  define CONFIG_NXWM_KEYBOARD_LISTENERPRIO SCHED_PRIORITY_DEFAULT
+#  define CONFIG_NXWM_KEYBOARD_LISTENERPRIO (SCHED_PRIORITY_DEFAULT + 20)
 #endif
 
 #ifndef CONFIG_NXWM_KEYBOARD_LISTENERSTACK
@@ -614,8 +632,36 @@
  *   Default: CONFIG_NXWM_DEFAULT_FONTID
  */
 
+#ifndef CONFIG_NXWM_MEDIAPLAYER_PREFERRED_DEVICE
+#  define CONFIG_NXWM_MEDIAPLAYER_PREFERRED_DEVICE "pcm0"
+#endif
+
+#ifndef CONFIG_NXWM_MEDIAPLAYER_MEDIAPATH
+#  define CONFIG_NXWM_MEDIAPLAYER_MEDIAPATH "/mnt/sdcard"
+#endif
+
 #ifndef CONFIG_NXWM_MEDIAPLAYER_BACKGROUNDCOLOR
 #  define CONFIG_NXWM_MEDIAPLAYER_BACKGROUNDCOLOR CONFIG_NXWM_DEFAULT_BACKGROUNDCOLOR
+#endif
+
+#ifndef CONFIG_NXWM_MEDIAPLAYER_XSPACING
+#  define CONFIG_NXWM_MEDIAPLAYER_XSPACING 12
+#endif
+
+#ifndef CONFIG_NXWM_MEDIAPLAYER_YSPACING
+#  define CONFIG_NXWM_MEDIAPLAYER_YSPACING 8
+#endif
+
+#ifndef CONFIG_NXWM_MEDIAPLAYER_VOLUMESTEP
+#  define CONFIG_NXWM_MEDIAPLAYER_VOLUMESTEP 5
+#endif
+
+#ifndef CONFIG_NXWM_MEDIAPLAYER_MINVOLUMEHEIGHT
+#  define CONFIG_NXWM_MEDIAPLAYER_MINVOLUMEHEIGHT 6
+#endif
+
+#ifndef CONFIG_NXWM_MEDIAPLAYER_VOLUMECOLOR
+#  define CONFIG_NXWM_MEDIAPLAYER_VOLUMECOLOR MKRGB(63,90,192)
 #endif
 
 #ifndef CONFIG_NXWM_MEDIAPLAYER_ICON

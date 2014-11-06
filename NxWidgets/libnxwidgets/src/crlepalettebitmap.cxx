@@ -73,8 +73,8 @@
 
 #include <nuttx/config.h>
 
-#include <stdint.h>
-#include <stdbool.h>
+#include <cstdint>
+#include <cstdbool>
 #include <cstring>
 
 #include <nuttx/nx/nxglib.h>
@@ -304,7 +304,7 @@ bool CRlePaletteBitmap::skipPixels(nxgl_coord_t npixels)
 
   return true;
 }
- 
+
 /** Seek to the beginning of the next row
  *
  * @return False if this was the last row of the image

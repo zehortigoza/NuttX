@@ -43,7 +43,10 @@
 #include <string.h>
 #include <net/route.h>
 
-#include <apps/netutils/uiplib.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include <apps/netutils/netlib.h>
 
 #include "nsh.h"
 #include "nsh_console.h"
@@ -108,7 +111,7 @@ int cmd_addroute(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
 
   /* We need to have a socket (any socket) in order to perform the ioctl */
 
-  sockfd = socket(PF_INET, UIPLIB_SOCK_IOCTL, 0);
+  sockfd = socket(PF_INET, NETLIB_SOCK_IOCTL, 0);
   if (sockfd < 0)
     {
       nsh_output(vtbl, g_fmtcmdfailed, argv[0], "socket", NSH_ERRNO);
@@ -236,7 +239,7 @@ int cmd_delroute(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
 
   /* We need to have a socket (any socket) in order to perform the ioctl */
 
-  sockfd = socket(PF_INET, UIPLIB_SOCK_IOCTL, 0);
+  sockfd = socket(PF_INET, NETLIB_SOCK_IOCTL, 0);
   if (sockfd < 0)
     {
       nsh_output(vtbl, g_fmtcmdfailed, argv[0], "socket", NSH_ERRNO);
@@ -318,11 +321,14 @@ errout:
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_NSH_DISABLE_DELROUTE) && !defined(CONFIG_NUTTX_KERNEL)
+#if !defined(CONFIG_NSH_DISABLE_DELROUTE) && \
+    !defined(CONFIG_BUILD_PROTECTED) && \
+    !defined(CONFIG_BUILD_KERNEL)
+
 /* Perhaps... someday.  This would current depend on using the internal
- * OS interface net_foreachroute and internal OS data structrues defined
+ * OS interface net_foreachroute and internal OS data structures defined
  * in nuttx/net/net_route.h
  */
-#endif /* !CONFIG_NSH_DISABLE_DELROUTE && !CONFIG_NUTTX_KERNEL */
+#endif /* !CONFIG_NSH_DISABLE_DELROUTE && !CONFIG_BUILD_PROTECTED && !CONFIG_BUILD_KERNEL */
 
 #endif /* CONFIG_NET && CONFIG_NET_ROUTE */

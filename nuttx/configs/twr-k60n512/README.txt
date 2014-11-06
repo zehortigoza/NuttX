@@ -26,7 +26,7 @@ Contents
   o NuttX EABI "buildroot" Toolchain
   o NuttX OABI "buildroot" Toolchain
   o NXFLAT Toolchain
-  
+
 Kinetis TWR-K60N512 Features:
 =============================
 
@@ -356,7 +356,7 @@ IDEs
 
   NuttX is built using command-line make.  It can be used with an IDE, but some
   effort will be required to create the project.
-  
+
   Makefile Build
   --------------
   Under Eclipse, it is pretty easy to set up an "empty makefile project" and
@@ -453,7 +453,7 @@ NXFLAT Toolchain
   tools -- just the NXFLAT tools.  The buildroot with the NXFLAT tools can
   be downloaded from the NuttX SourceForge download site
   (https://sourceforge.net/projects/nuttx/files/).
- 
+
   This GNU toolchain builds and executes in the Linux or Cygwin environment.
 
   1. You must have already configured Nuttx in <some-dir>/nuttx.
@@ -525,10 +525,6 @@ TWR-K60N512-specific Configuration Options
     CONFIG_RAM_START - The start address of installed DRAM
 
        CONFIG_RAM_START=0x20000000
-
-    CONFIG_ARCH_IRQPRIO - The Kinetis K60 supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
 
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
@@ -643,7 +639,7 @@ TWR-K60N512-specific Configuration Options
         buffer is determined by CONFIG_NET_BUFSIZE.  Default: 2
     CONFIG_ENET_USEMII - Use MII mode.  Default: RMII mode.
     CONFIG_ENET_PHYADDR - PHY address
- 
+
 Configurations
 ==============
 

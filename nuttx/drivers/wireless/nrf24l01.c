@@ -82,7 +82,7 @@
 #endif
 
 #ifdef CONFIG_WL_NRF24L01_CHECK_PARAMS
-#  define CHECK_ARGS(cond) do { if (!(cond)) return -EINVAL; } while(0)
+#  define CHECK_ARGS(cond) do { if (!(cond)) return -EINVAL; } while (0)
 #else
 #  define CHECK_ARGS(cond)
 #endif
@@ -1198,9 +1198,9 @@ static int nrf24l01_unregister(FAR struct nrf24l01_dev_s *dev)
 
   /* Free memory */
 #ifdef CONFIG_WL_NRF24L01_RXSUPPORT
-  kfree(dev->rx_fifo);
+  kmm_free(dev->rx_fifo);
 #endif
-  kfree(dev);
+  kmm_free(dev);
 
   return OK;
 }
@@ -1220,7 +1220,7 @@ int nrf24l01_register(FAR struct spi_dev_s *spi, FAR struct nrf24l01_config_s *c
 
   ASSERT((spi != NULL) & (cfg != NULL));
 
-  if ((dev = kmalloc(sizeof(struct nrf24l01_dev_s))) == NULL)
+  if ((dev = kmm_malloc(sizeof(struct nrf24l01_dev_s))) == NULL)
     {
       return -ENOMEM;
     }
@@ -1242,9 +1242,9 @@ int nrf24l01_register(FAR struct spi_dev_s *spi, FAR struct nrf24l01_config_s *c
   sem_init(&(dev->sem_tx), 0, 0);
 
 #ifdef CONFIG_WL_NRF24L01_RXSUPPORT
-  if ((rx_fifo = kmalloc(CONFIG_WL_NRF24L01_RXFIFO_LEN)) == NULL)
+  if ((rx_fifo = kmm_malloc(CONFIG_WL_NRF24L01_RXFIFO_LEN)) == NULL)
     {
-      kfree(dev);
+      kmm_free(dev);
       return -ENOMEM;
     }
 
@@ -1719,7 +1719,7 @@ ssize_t nrf24l01_recv(struct nrf24l01_dev_s *dev, uint8_t *buffer,
 static void binarycvt(char *deststr, const uint8_t *srcbin, size_t srclen)
 {
   int i = 0;
-  while(i < srclen)
+  while (i < srclen)
     {
       sprintf(deststr + i*2, "%02x", srcbin[i]);
       ++i;
@@ -1733,39 +1733,59 @@ void nrf24l01_dumpregs(struct nrf24l01_dev_s *dev)
   uint8_t addr[NRF24L01_MAX_ADDR_LEN];
   char addrstr[NRF24L01_MAX_ADDR_LEN * 2 +1];
 
-  syslog("CONFIG:    %02x\n", nrf24l01_readregbyte(dev, NRF24L01_CONFIG));
-  syslog("EN_AA:     %02x\n", nrf24l01_readregbyte(dev, NRF24L01_EN_AA));
-  syslog("EN_RXADDR: %02x\n", nrf24l01_readregbyte(dev, NRF24L01_EN_RXADDR));
-  syslog("SETUP_AW:  %02x\n", nrf24l01_readregbyte(dev, NRF24L01_SETUP_AW));
+  syslog(LOG_INFO, "CONFIG:    %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_CONFIG));
+  syslog(LOG_INFO, "EN_AA:     %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_EN_AA));
+  syslog(LOG_INFO, "EN_RXADDR: %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_EN_RXADDR));
+  syslog(LOG_INFO, "SETUP_AW:  %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_SETUP_AW));
 
-  syslog("SETUP_RETR:%02x\n", nrf24l01_readregbyte(dev, NRF24L01_SETUP_RETR));
-  syslog("RF_CH:     %02x\n", nrf24l01_readregbyte(dev, NRF24L01_RF_CH));
-  syslog("RF_SETUP:  %02x\n", nrf24l01_readregbyte(dev, NRF24L01_RF_SETUP));
-  syslog("STATUS:    %02x\n", nrf24l01_readregbyte(dev, NRF24L01_STATUS));
-  syslog("OBS_TX:    %02x\n", nrf24l01_readregbyte(dev, NRF24L01_OBSERVE_TX));
+  syslog(LOG_INFO, "SETUP_RETR:%02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_SETUP_RETR));
+  syslog(LOG_INFO, "RF_CH:     %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_RF_CH));
+  syslog(LOG_INFO, "RF_SETUP:  %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_RF_SETUP));
+  syslog(LOG_INFO, "STATUS:    %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_STATUS));
+  syslog(LOG_INFO, "OBS_TX:    %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_OBSERVE_TX));
 
   nrf24l01_readreg(dev, NRF24L01_TX_ADDR, addr, dev->addrlen);
   binarycvt(addrstr, addr, dev->addrlen);
-  syslog("TX_ADDR:   %s\n", addrstr);
+  syslog(LOG_INFO, "TX_ADDR:   %s\n", addrstr);
 
-  syslog("CD:        %02x\n", nrf24l01_readregbyte(dev, NRF24L01_CD));
-  syslog("RX_PW_P0:  %02x\n", nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P0));
-  syslog("RX_PW_P1:  %02x\n", nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P1));
-  syslog("RX_PW_P2:  %02x\n", nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P2));
-  syslog("RX_PW_P3:  %02x\n", nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P3));
-  syslog("RX_PW_P4:  %02x\n", nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P4));
-  syslog("RX_PW_P5:  %02x\n", nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P5));
+  syslog(LOG_INFO, "CD:        %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_CD));
+  syslog(LOG_INFO, "RX_PW_P0:  %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P0));
+  syslog(LOG_INFO, "RX_PW_P1:  %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P1));
+  syslog(LOG_INFO, "RX_PW_P2:  %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P2));
+  syslog(LOG_INFO, "RX_PW_P3:  %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P3));
+  syslog(LOG_INFO, "RX_PW_P4:  %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P4));
+  syslog(LOG_INFO, "RX_PW_P5:  %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_RX_PW_P5));
 
-  syslog("FIFO_STAT: %02x\n", nrf24l01_readregbyte(dev, NRF24L01_FIFO_STATUS));
-  syslog("DYNPD:     %02x\n", nrf24l01_readregbyte(dev, NRF24L01_DYNPD));
-  syslog("FEATURE:   %02x\n", nrf24l01_readregbyte(dev, NRF24L01_FEATURE));
+  syslog(LOG_INFO, "FIFO_STAT: %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_FIFO_STATUS));
+  syslog(LOG_INFO, "DYNPD:     %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_DYNPD));
+  syslog(LOG_INFO, "FEATURE:   %02x\n",
+         nrf24l01_readregbyte(dev, NRF24L01_FEATURE));
 }
 
 #ifdef CONFIG_WL_NRF24L01_RXSUPPORT
 void nrf24l01_dumprxfifo(struct nrf24l01_dev_s *dev)
 {
-  syslog("bytes count: %d\n", dev->fifo_len);
-  syslog("next read:   %d,  next write: %d\n", dev->nxt_read, dev-> nxt_write);
+  syslog(LOG_INFO, "bytes count: %d\n", dev->fifo_len);
+  syslog(LOG_INFO, "next read:   %d,  next write: %d\n",
+         dev->nxt_read, dev-> nxt_write);
 }
 #endif
 

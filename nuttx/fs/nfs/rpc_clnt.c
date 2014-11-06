@@ -179,7 +179,7 @@ static int rpcclnt_send(FAR struct rpcclnt *rpc, int procid, int prog,
     {
       /* psock_sendto failed */
 
-      error = errno;
+      error = get_errno();
       fdbg("ERROR: psock_sendto failed: %d\n", error);
     }
 
@@ -206,7 +206,7 @@ static int rpcclnt_receive(FAR struct rpcclnt *rpc, FAR struct sockaddr *aname,
   nbytes = psock_recvfrom(rpc->rc_so, reply, resplen, 0, aname, &fromlen);
   if (nbytes < 0)
     {
-      error = errno;
+      error = get_errno();
       fdbg("ERROR: psock_recvfrom failed: %d\n", error);
     }
 
@@ -233,7 +233,7 @@ static int rpcclnt_reply(FAR struct rpcclnt *rpc, int procid, int prog,
     {
       fdbg("ERROR: rpcclnt_receive returned: %d\n", error);
 
-      /* If we failed because of a timeout, then try sending the CALL 
+      /* If we failed because of a timeout, then try sending the CALL
        * message again.
        */
 
@@ -299,7 +299,7 @@ static uint32_t rpcclnt_newxid(void)
  * Name: rpcclnt_fmtheader
  *
  * Description:
- *   Format the common part of the call header 
+ *   Format the common part of the call header
  *
  ****************************************************************************/
 
@@ -396,7 +396,7 @@ int rpcclnt_connect(struct rpcclnt *rpc)
 
   /* Create an instance of the socket state structure */
 
-  so = (struct socket *)kzalloc(sizeof(struct socket));
+  so = (struct socket *)kmm_zalloc(sizeof(struct socket));
   if (!so)
     {
       fdbg("ERROR: Failed to allocate socket structure\n");
@@ -406,7 +406,7 @@ int rpcclnt_connect(struct rpcclnt *rpc)
   error = psock_socket(saddr->sa_family, rpc->rc_sotype, IPPROTO_UDP, so);
   if (error < 0)
     {
-      errval = errno;
+      errval = get_errno();
       fdbg("ERROR: psock_socket failed: %d", errval);
       return error;
     }
@@ -425,7 +425,7 @@ int rpcclnt_connect(struct rpcclnt *rpc)
                           (const void *)&tv, sizeof(tv));
   if (error < 0)
     {
-      errval = errno;
+      errval = get_errno();
       fdbg("ERROR: psock_setsockopt failed: %d\n", errval);
       goto bad;
     }
@@ -447,7 +447,7 @@ int rpcclnt_connect(struct rpcclnt *rpc)
       error = psock_bind(rpc->rc_so, (struct sockaddr *)&sin, sizeof(sin));
       if (error < 0)
         {
-          errval = errno;
+          errval = get_errno();
           fdbg("ERROR: psock_bind failed: %d\n", errval);
         }
     }
@@ -467,7 +467,7 @@ int rpcclnt_connect(struct rpcclnt *rpc)
   error = psock_connect(rpc->rc_so, saddr, sizeof(*saddr));
   if (error < 0)
     {
-      errval = errno;
+      errval = get_errno();
       fdbg("ERROR: psock_connect to PMAP port failed: %d", errval);
       goto bad;
     }
@@ -496,7 +496,7 @@ int rpcclnt_connect(struct rpcclnt *rpc)
   error = psock_connect(rpc->rc_so, saddr, sizeof(*saddr));
   if (error < 0)
     {
-      errval = errno;
+      errval = get_errno();
       fdbg("ERROR: psock_connect MOUNTD port failed: %d\n", errval);
       goto bad;
     }
@@ -533,7 +533,7 @@ int rpcclnt_connect(struct rpcclnt *rpc)
   error = psock_connect(rpc->rc_so, saddr, sizeof(*saddr));
   if (error < 0)
     {
-      errval = errno;
+      errval = get_errno();
       fdbg("ERROR: psock_connect PMAP port failed: %d\n", errval);
       goto bad;
     }
@@ -624,7 +624,7 @@ int rpcclnt_umount(struct rpcclnt *rpc)
   ret = psock_connect(rpc->rc_so, saddr, sizeof(*saddr));
   if (ret < 0)
     {
-      error = errno;
+      error = get_errno();
       fdbg("ERROR: psock_connect failed [port=%d]: %d\n",
             ntohs(sa->sin_port), error);
       goto bad;
@@ -649,7 +649,7 @@ int rpcclnt_umount(struct rpcclnt *rpc)
   ret = psock_connect(rpc->rc_so, saddr, sizeof(*saddr));
   if (ret < 0)
     {
-      error = errno;
+      error = get_errno();
       fdbg("ERROR: psock_connect failed [port=%d]: %d\n",
             ntohs(sa->sin_port), error);
       goto bad;
@@ -728,7 +728,7 @@ int rpcclnt_request(FAR struct rpcclnt *rpc, int procnum, int prog,
 
       rpc_statistics(rpcrequests);
       rpc->rc_timeout = false;
-  
+
       /* Send the RPC CALL message */
 
       error = rpcclnt_send(rpc, procnum, prog, request, reqlen);

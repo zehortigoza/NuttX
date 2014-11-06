@@ -234,7 +234,7 @@ const uint32_t g_idle_topstack = (uint32_t)&_ebss + CONFIG_IDLETHREAD_STACKSIZE;
  * Description:
  *   This function will be called to dynamically set aside the heap region.
  *
- *   For the kernel build (CONFIG_NUTTX_KERNEL=y) with both kernel- and
+ *   For the kernel build (CONFIG_BUILD_PROTECTED=y) with both kernel- and
  *   user-space heaps (CONFIG_MM_KERNEL_HEAP=y), this function provides the
  *   size of the unprotected, user-space heap.
  *
@@ -266,7 +266,7 @@ void up_addregion(void)
 {
 #if CONFIG_MM_REGIONS > 1
  /* Add the next SRAM region (which should exist) */
- 
+
  kmm_addregion((FAR void*)MM_REGION2_BASE, MM_REGION2_SIZE);
 
 #ifdef MM_REGION3_BASE
@@ -274,12 +274,12 @@ void up_addregion(void)
 
 #if CONFIG_MM_REGIONS > 2
  /* Add the third SRAM region (which may not exist) */
- 
+
  kmm_addregion((FAR void*)MM_REGION3_BASE, MM_REGION3_SIZE);
 
 #if CONFIG_MM_REGIONS > 3 && defined(MM_DMAHEAP_BASE)
  /* Add the DMA region (which may not be available) */
- 
+
  kmm_addregion((FAR void*)MM_DMAHEAP_BASE, MM_DMAHEAP_SIZE);
 
 #endif /* CONFIG_MM_REGIONS > 3 && defined(MM_DMAHEAP_BASE) */
@@ -288,7 +288,7 @@ void up_addregion(void)
 
 #if CONFIG_MM_REGIONS > 2 && defined(MM_DMAHEAP_BASE)
  /* Add the DMA region (which may not be available) */
- 
+
  kmm_addregion((FAR void*)MM_DMAHEAP_BASE, MM_DMAHEAP_SIZE);
 
 #endif /* CONFIG_MM_REGIONS > 3 && defined(MM_DMAHEAP_BASE) */

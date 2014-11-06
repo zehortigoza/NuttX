@@ -56,7 +56,6 @@
 
 #include "up_arch.h"
 #include "up_internal.h"
-#include "os_internal.h"
 
 #include "kinetis_config.h"
 #include "chip.h"
@@ -280,6 +279,9 @@ static const struct uart_ops_s g_uart_ops =
   .receive        = up_receive,
   .rxint          = up_rxint,
   .rxavailable    = up_rxavailable,
+#ifdef CONFIG_SERIAL_IFLOWCONTROL
+  .rxflowcontrol  = NULL,
+#endif
   .send           = up_send,
   .txint          = up_txint,
   .txready        = up_txready,
@@ -620,12 +622,15 @@ static int up_setup(struct uart_dev_s *dev)
 
   up_restoreuartint(priv, 0);
 
+#ifdef CONFIG_ARCH_IRQPRIO
   /* Set up the interrupt priority */
 
   up_prioritize_irq(priv->irqs, priv->irqprio);
 #ifdef CONFIG_DEBUG
   up_prioritize_irq(priv->irqe, priv->irqprio);
 #endif
+#endif
+
   return OK;
 }
 
@@ -707,7 +712,7 @@ static int up_attach(struct uart_dev_s *dev)
 static void up_detach(struct uart_dev_s *dev)
 {
   struct up_dev_s *priv = (struct up_dev_s*)dev->priv;
-  
+
   /* Disable interrupts */
 
   up_restoreuartint(priv, 0);

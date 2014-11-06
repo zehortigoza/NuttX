@@ -1,9 +1,9 @@
 /************************************************************************************************
- * arch/arm/src/sam34/chip/sam3u_uart.h
+ * arch/arm/src/sama5/chip/sam3u_uart.h
  * Universal Asynchronous Receiver Transmitter (UART) and Universal Synchronous Asynchronous
- * Receiver Transmitter (USART) definitions for the SAM3U, SAM3X, SAM3A and SAM4S
+ * Receiver Transmitter (USART) definitions for the SAMA5D3
  *
- *   Copyright (C) 2009, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,8 @@
  *
  ************************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_SAM34_CHIP_SAM3U_UART_H
-#define __ARCH_ARM_SRC_SAM34_CHIP_SAM3U_UART_H
+#ifndef __ARCH_ARM_SRC_SAMA5_CHIP_SAM_UART_H
+#define __ARCH_ARM_SRC_SAMA5_CHIP_SAM_UART_H
 
 /************************************************************************************************
  * Included Files
@@ -187,6 +187,26 @@
 #define SAM_USART3_WPMR              (SAM_USART3_VBASE+SAM_UART_WPMR_OFFSET)
 #define SAM_USART3_WPSR              (SAM_USART3_VBASE+SAM_UART_WPSR_OFFSET)
 
+#ifdef CONFIG_SAMA5_HAVE_USART4
+#  define SAM_USART4_CR              (SAM_USART4_VBASE+SAM_UART_CR_OFFSET)
+#  define SAM_USART4_MR              (SAM_USART4_VBASE+SAM_UART_MR_OFFSET)
+#  define SAM_USART4_IER             (SAM_USART4_VBASE+SAM_UART_IER_OFFSET)
+#  define SAM_USART4_IDR             (SAM_USART4_VBASE+SAM_UART_IDR_OFFSET)
+#  define SAM_USART4_IMR             (SAM_USART4_VBASE+SAM_UART_IMR_OFFSET)
+#  define SAM_USART4_SR              (SAM_USART4_VBASE+SAM_UART_SR_OFFSET)
+#  define SAM_USART4_RHR             (SAM_USART4_VBASE+SAM_UART_RHR_OFFSET)
+#  define SAM_USART4_THR             (SAM_USART4_VBASE+SAM_UART_THR_OFFSET)
+#  define SAM_USART4_BRGR            (SAM_USART4_VBASE+SAM_UART_BRGR_OFFSET)
+#  define SAM_USART4_RTOR            (SAM_USART4_VBASE+SAM_UART_RTOR_OFFSET)
+#  define SAM_USART4_TTGR            (SAM_USART4_VBASE+SAM_UART_TTGR_OFFSET)
+#  define SAM_USART4_FIDI            (SAM_USART4_VBASE+SAM_UART_FIDI_OFFSET)
+#  define SAM_USART4_NER             (SAM_USART4_VBASE+SAM_UART_NER_OFFSET)
+#  define SAM_USART4_IFR             (SAM_USART4_VBASE+SAM_UART_IFR_OFFSET)
+#  define SAM_USART4_MAN             (SAM_USART4_VBASE+SAM_UART_MAN_OFFSET)
+#  define SAM_USART4_WPMR            (SAM_USART4_VBASE+SAM_UART_WPMR_OFFSET)
+#  define SAM_USART4_WPSR            (SAM_USART4_VBASE+SAM_UART_WPSR_OFFSET)
+#endif
+
 /* UART register bit definitions ****************************************************************/
 
 /* UART Control Register */
@@ -200,7 +220,7 @@
 #define UART_CR_RSTSTA               (1 << 8)  /* Bit 8:  Reset Status Bits (Common) */
 #define UART_CR_STTBRK               (1 << 9)  /* Bit 9:  Start Break (USART UART mode only) */
 #define UART_CR_STPBRK               (1 << 10) /* Bit 10: Stop Break (USART UART mode only) */
-#define UART_CR_STTTO                (1 << 11) /* Bit 11: Start Time-out (USART oUART mode nly) */
+#define UART_CR_STTTO                (1 << 11) /* Bit 11: Start Time-out (USART UART mode only) */
 #define UART_CR_SENDA                (1 << 12) /* Bit 12: Send Address (USART UART mode only) */
 #define UART_CR_RSTIT                (1 << 13) /* Bit 13: Reset Iterations (USART UART mode only) */
 #define UART_CR_RSTNACK              (1 << 14) /* Bit 14: Reset Non Acknowledge (USART UART mode only) */
@@ -407,4 +427,4 @@
  * Public Functions
  ************************************************************************************************/
 
-#endif /* __ARCH_ARM_SRC_SAM34_CHIP_SAM3U_UART_H */
+#endif /* __ARCH_ARM_SRC_SAMA5_CHIP_SAM_UART_H */

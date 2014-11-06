@@ -109,7 +109,7 @@ int elf_loadctors(FAR struct elf_loadinfo_s *loadinfo)
 
   /* Find the index to the section named ".ctors."  NOTE:  On old ABI system,
    * .ctors is the name of the section containing the list of constructors;
-   * On newer systems, the similar section is called .init_array.  It is 
+   * On newer systems, the similar section is called .init_array.  It is
    * expected that the linker script will force the section name to be ".ctors"
    * in either case.
    */
@@ -163,7 +163,7 @@ int elf_loadctors(FAR struct elf_loadinfo_s *loadinfo)
         {
           /* Allocate memory to hold a copy of the .ctor section */
 
-          loadinfo->ctoralloc = (binfmt_ctor_t*)kumalloc(ctorsize);
+          loadinfo->ctoralloc = (binfmt_ctor_t*)kumm_malloc(ctorsize);
           if (!loadinfo->ctoralloc)
             {
               bdbg("Failed to allocate memory for .ctors\n");
@@ -192,9 +192,10 @@ int elf_loadctors(FAR struct elf_loadinfo_s *loadinfo)
               FAR uintptr_t *ptr = (uintptr_t *)((FAR void *)(&loadinfo->ctors)[i]);
 
               bvdbg("ctor %d: %08lx + %08lx = %08lx\n",
-                    i, *ptr, loadinfo->elfalloc, *ptr + loadinfo->elfalloc);
+                    i, *ptr, (unsigned long)loadinfo->textalloc,
+                    (unsigned long)(*ptr + loadinfo->textalloc));
 
-              *ptr += loadinfo->elfalloc;
+              *ptr += loadinfo->textalloc;
             }
         }
       else
@@ -204,7 +205,7 @@ int elf_loadctors(FAR struct elf_loadinfo_s *loadinfo)
            * loaded into memory.  Since the .ctors lie in allocated memory, they
            * will be relocated via the normal mechanism.
            */
- 
+
           loadinfo->ctors = (binfmt_ctor_t*)shdr->sh_addr;
         }
     }

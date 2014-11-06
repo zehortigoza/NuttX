@@ -100,10 +100,16 @@
 
 /* Status register bit definitions */
 
-#define AT25_SR_WIP            (1 << 0)    /* Bit 0: Write in progress bit */
-#define AT25_SR_WEL            (1 << 1)    /* Bit 1: Write enable latch bit */
-#define AT25_SR_EPE            (1 << 5)    /* Bit 5: Erase/program error */
-#define AT25_SR_UNPROT         0x00        /* Global unprotect command */
+#define AT25_SR_BUSY       (1 << 0)    /* Bit 0: Ready/Busy Status */
+#define AT25_SR_WEL        (1 << 1)    /* Bit 1: Write enable latch bit */
+#define AT25_SR_SWP_SHIFT  (2)         /* Bits 2-3: Software protection */
+#define AT25_SR_SWP_MASK   (3 << AT25_SR_SWP_SHIFT)
+#define AT25_SR_WPP        (1 << 4)    /* Bit 4: Write Protect (/WP) Pin Status */
+#define AT25_SR_EPE        (1 << 5)    /* Bit 5: Erase/program error */
+                                       /* Bit 6: Reserved */
+#define AT25_SR_SPRL       (1 << 7)    /* Bit 7: Sector Protection Registers Locked */
+
+#define AT25_SR_UNPROT 0x00    /* Global unprotect command */
 
 #define AT25_DUMMY     0xa5
 
@@ -218,7 +224,7 @@ static inline int at25_readid(struct at25_dev_s *priv)
   (void)SPI_SEND(priv->dev, AT25_RDID);
   manufacturer = SPI_SEND(priv->dev, AT25_DUMMY);
   memory       = SPI_SEND(priv->dev, AT25_DUMMY);
-  
+
   /* Deselect the FLASH and unlock the bus */
 
   SPI_SELECT(priv->dev, SPIDEV_FLASH, false);
@@ -260,7 +266,7 @@ static void at25_waitwritecomplete(struct at25_dev_s *priv)
   /* Send "Read Status Register (RDSR)" command */
 
   (void)SPI_SEND(priv->dev, AT25_RDSR);
-  
+
   /* Loop as long as the memory is busy with a write cycle */
 
   do
@@ -269,7 +275,7 @@ static void at25_waitwritecomplete(struct at25_dev_s *priv)
 
       status = SPI_SEND(priv->dev, AT25_DUMMY);
     }
-  while ((status & AT25_SR_WIP) != 0);
+  while ((status & AT25_SR_BUSY) != 0);
 
   /* Deselect the FLASH */
 
@@ -302,21 +308,21 @@ static void at25_waitwritecomplete(struct at25_dev_s *priv)
        * other peripherals to access the SPI bus.
        */
 
-      if ((status & AT25_SR_WIP) != 0)
+      if ((status & AT25_SR_BUSY) != 0)
         {
           at25_unlock(priv->dev);
           usleep(10000);
           at25_lock(priv->dev);
         }
     }
-  while ((status & AT25_SR_WIP) != 0);
+  while ((status & AT25_SR_BUSY) != 0);
 #endif
 
   if (status & AT25_SR_EPE)
     {
-      fdbg("Write error, status: 0x%02x\n", status);
+      fdbg("ERROR: Write error, status: 0x%02x\n", status);
     }
-  
+
   fvdbg("Complete, status: 0x%02x\n", status);
 }
 
@@ -434,7 +440,7 @@ static inline void at25_pagewrite(struct at25_dev_s *priv, FAR const uint8_t *bu
   /* Enable the write access to the FLASH */
 
   at25_writeenable(priv);
-  
+
   /* Select this FLASH part */
 
   SPI_SELECT(priv->dev, SPIDEV_FLASH, true);
@@ -452,7 +458,7 @@ static inline void at25_pagewrite(struct at25_dev_s *priv, FAR const uint8_t *bu
   /* Then write the specified number of bytes */
 
   SPI_SNDBLOCK(priv->dev, buffer, 256);
-  
+
   /* Deselect the FLASH: Chip Select high */
 
   SPI_SELECT(priv->dev, SPIDEV_FLASH, false);
@@ -629,7 +635,7 @@ static int at25_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
             at25_unlock(priv->dev);
         }
         break;
- 
+
       case MTDIOC_XIPBASE:
       default:
         ret = -ENOTTY; /* Bad command */
@@ -668,11 +674,11 @@ FAR struct mtd_dev_s *at25_initialize(FAR struct spi_dev_s *dev)
    * to be extended to handle multiple FLASH parts on the same SPI bus.
    */
 
-  priv = (FAR struct at25_dev_s *)kzalloc(sizeof(struct at25_dev_s));
+  priv = (FAR struct at25_dev_s *)kmm_zalloc(sizeof(struct at25_dev_s));
   if (priv)
     {
       /* Initialize the allocated structure (unsupported methods were
-       * nullified by kzalloc).
+       * nullified by kmm_zalloc).
        */
 
       priv->mtd.erase  = at25_erase;
@@ -693,8 +699,8 @@ FAR struct mtd_dev_s *at25_initialize(FAR struct spi_dev_s *dev)
         {
           /* Unrecognized! Discard all of that work we just did and return NULL */
 
-          fdbg("Unrecognized\n");
-          kfree(priv);
+          fdbg("ERROR: Unrecognized\n");
+          kmm_free(priv);
           priv = NULL;
         }
       else

@@ -1,7 +1,7 @@
 /************************************************************************************
  * configs/sama5d3x-ek/src/sama5d3x-ek.h
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,7 @@
 #define HAVE_USBMONITOR 1
 #define HAVE_NETWORK    1
 #define HAVE_CAMERA     1
+#define HAVE_WM8904     1
 
 /* HSMCI */
 /* Can't support MMC/SD if the card interface(s) are not enable */
@@ -97,7 +98,7 @@
  * asked to mount the NAND part
  */
 
-#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5_NAND_AUTOMOUNT)
+#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5D3XEK_NAND_BLOCKMOUNT)
 #  undef HAVE_NAND
 #endif
 
@@ -108,27 +109,27 @@
 #endif
 
 /* If we are going to mount the NAND, then they user must also have told
- * us what to do with it by setting one of CONFIG_SAMA5_NAND_FTL or
- * CONFIG_SAMA5_NAND_NXFFS.
+ * us what to do with it by setting one of CONFIG_SAMA5D3xEK_NAND_FTL or
+ * CONFIG_SAMA5D3xEK_NAND_NXFFS.
  */
 
 #ifndef CONFIG_MTD
-#  undef CONFIG_SAMA5_NAND_NXFFS
-#  undef CONFIG_SAMA5_NAND_FTL
+#  undef CONFIG_SAMA5D3xEK_NAND_NXFFS
+#  undef CONFIG_SAMA5D3xEK_NAND_FTL
 #endif
 
 #if !defined(CONFIG_FS_NXFFS) || !defined(CONFIG_NXFFS_NAND)
-#  undef CONFIG_SAMA5_NAND_NXFFS
+#  undef CONFIG_SAMA5D3xEK_NAND_NXFFS
 #endif
 
-#if !defined(CONFIG_SAMA5_NAND_FTL) && !defined(CONFIG_SAMA5_NAND_NXFFS)
+#if !defined(CONFIG_SAMA5D3xEK_NAND_FTL) && !defined(CONFIG_SAMA5D3xEK_NAND_NXFFS)
 #  undef HAVE_NAND
 #endif
 
-#if defined(CONFIG_SAMA5_NAND_FTL) && defined(CONFIG_SAMA5_NAND_NXFFS)
-#  warning Both CONFIG_SAMA5_NAND_FTL and CONFIG_SAMA5_NAND_NXFFS are set
-#  warning Ignoring CONFIG_SAMA5_NAND_NXFFS
-#  undef CONFIG_SAMA5_NAND_NXFFS
+#if defined(CONFIG_SAMA5D3xEK_NAND_FTL) && defined(CONFIG_SAMA5D3xEK_NAND_NXFFS)
+#  warning Both CONFIG_SAMA5D3xEK_NAND_FTL and CONFIG_SAMA5D3xEK_NAND_NXFFS are set
+#  warning Ignoring CONFIG_SAMA5D3xEK_NAND_NXFFS
+#  undef CONFIG_SAMA5D3xEK_NAND_NXFFS
 #endif
 
 /* AT25 Serial FLASH */
@@ -142,7 +143,7 @@
  * asked to mount the AT25 part
  */
 
-#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5_AT25_AUTOMOUNT)
+#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5D3xEK_AT25_BLOCKMOUNT)
 #  undef HAVE_AT25
 #endif
 
@@ -151,17 +152,17 @@
  */
 
 #ifndef CONFIG_FS_NXFFS
-#  undef CONFIG_SAMA5_AT25_NXFFS
+#  undef CONFIG_SAMA5D3xEK_AT25_NXFFS
 #endif
 
-#if !defined(CONFIG_SAMA5_AT25_FTL) && !defined(CONFIG_SAMA5_AT25_NXFFS)
+#if !defined(CONFIG_SAMA5D3xEK_AT25_FTL) && !defined(CONFIG_SAMA5D3xEK_AT25_NXFFS)
 #  undef HAVE_AT25
 #endif
 
-#if defined(CONFIG_SAMA5_AT25_FTL) && defined(CONFIG_SAMA5_AT25_NXFFS)
-#  warning Both CONFIG_SAMA5_AT25_FTL and CONFIG_SAMA5_AT25_NXFFS are set
-#  warning Ignoring CONFIG_SAMA5_AT25_NXFFS
-#  undef CONFIG_SAMA5_AT25_NXFFS
+#if defined(CONFIG_SAMA5D3xEK_AT25_FTL) && defined(CONFIG_SAMA5D3xEK_AT25_NXFFS)
+#  warning Both CONFIG_SAMA5D3xEK_AT25_FTL and CONFIG_SAMA5D3xEK_AT25_NXFFS are set
+#  warning Ignoring CONFIG_SAMA5D3xEK_AT25_NXFFS
+#  undef CONFIG_SAMA5D3xEK_AT25_NXFFS
 #endif
 
 /* AT24 Serial EEPROM
@@ -192,7 +193,7 @@
  * asked to mount the AT25 part
  */
 
-#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5_AT24_AUTOMOUNT)
+#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_SAMA5D3xEK_AT24_BLOCKMOUNT)
 #  undef HAVE_AT24
 #endif
 
@@ -201,17 +202,17 @@
  */
 
 #ifndef CONFIG_FS_NXFFS
-#  undef CONFIG_SAMA5_AT24_NXFFS
+#  undef CONFIG_SAMA5D3xEK_AT24_NXFFS
 #endif
 
-#if !defined(CONFIG_SAMA5_AT24_FTL) && !defined(CONFIG_SAMA5_AT24_NXFFS)
+#if !defined(CONFIG_SAMA5D3xEK_AT24_FTL) && !defined(CONFIG_SAMA5D3xEK_AT24_NXFFS)
 #  undef HAVE_AT24
 #endif
 
-#if defined(CONFIG_SAMA5_AT24_FTL) && defined(CONFIG_SAMA5_AT24_NXFFS)
-#  warning Both CONFIG_SAMA5_AT24_FTL and CONFIG_SAMA5_AT24_NXFFS are set
-#  warning Ignoring CONFIG_SAMA5_AT24_NXFFS
-#  undef CONFIG_SAMA5_AT24_NXFFS
+#if defined(CONFIG_SAMA5D3xEK_AT24_FTL) && defined(CONFIG_SAMA5D3xEK_AT24_NXFFS)
+#  warning Both CONFIG_SAMA5D3xEK_AT24_FTL and CONFIG_SAMA5D3xEK_AT24_NXFFS are set
+#  warning Ignoring CONFIG_SAMA5D3xEK_AT24_NXFFS
+#  undef CONFIG_SAMA5D3xEK_AT24_NXFFS
 #endif
 
 /* Assign minor device numbers.  For example, if we also use MINOR number 0
@@ -238,7 +239,7 @@
 #  define AT24_MINOR  _AT24_MINOR
 #endif
 
-/* MMC/SD minor numbers:  The NSH device minor extended is extened to support
+/* MMC/SD minor numbers:  The NSH device minor extended is extended to support
  * two devices.  If CONFIG_NSH_MMCSDMINOR is zero, these will be:  /dev/mmcsd0
  * and /dev/mmcsd1.
  */
@@ -314,15 +315,55 @@
 
 /* Networking */
 
-#if !defined(CONFIG_NET) || (!defined(CONFIG_SAMA5_EMAC) && !defined(CONFIG_SAMA5_GMAC))
+#if !defined(CONFIG_NET) || (!defined(CONFIG_SAMA5_EMACA) && !defined(CONFIG_SAMA5_GMAC))
 #  undef HAVE_NETWORK
+#endif
+
+/* Audio */
+/* PCM/WM8904 driver */
+
+#ifndef CONFIG_AUDIO_WM8904
+#  undef HAVE_WM8904
+#endif
+
+#ifdef HAVE_WM8904
+#  ifndef CONFIG_SAMA5_TWI0
+#    warning CONFIG_SAMA5_TWI0 is required for audio support
+#    undef HAVE_WM8904
+#  endif
+
+#  ifndef CONFIG_SAMA5_SSC0
+#    warning CONFIG_SAMA5_SSC0 is required for audio support
+#    undef HAVE_WM8904
+#  endif
+
+#  if !defined(CONFIG_SAMA5_PIOD_IRQ)
+#    warning CONFIG_SAMA5_PIOD_IRQ is required for audio support
+#    undef HAVE_HSMCI
+#  endif
+
+#  ifndef CONFIG_AUDIO_FORMAT_PCM
+#    warning CONFIG_AUDIO_FORMAT_PCM is required for audio support
+#    undef HAVE_WM8904
+#  endif
+
+#  ifndef CONFIG_SAMA5D3xEK_WM8904_I2CFREQUENCY
+#    warning Defaulting to maximum WM8904 I2C frequency
+#    define CONFIG_SAMA5D3xEK_WM8904_I2CFREQUENCY 400000
+#  endif
+
+#  if CONFIG_SAMA5D3xEK_WM8904_I2CFREQUENCY > 400000
+#    warning WM8904 I2C frequency cannot exceed 400KHz
+#    undef CONFIG_SAMA5D3xEK_WM8904_I2CFREQUENCY
+#    define CONFIG_SAMA5D3xEK_WM8904_I2CFREQUENCY 400000
+#  endif
 #endif
 
 /* Camera */
 
 #define OV2640_BUS 1
 
-#ifndef CONFIG_SAMA5_OV2640_DEMO
+#ifndef CONFIG_SAMA5D3xEK_OV2640_DEMO
 #  undef HAVE_CAMERA
 #endif
 
@@ -349,12 +390,19 @@
  *   that it is illuminated when power is applied even if PE24 is not
  *   configured as an output.  If PE24 is configured as an output, then the
  *   LCD is illuminated by a high output.
+ *
+ *     N.B. PE24 Drives the RED Led on the CM (SODIMM200), but unfortunately
+ *     it is also connected to ISI_RST on the MB (Main Board) and controlling
+ *     it will reset a Camera connected to the ISI
  */
 
 #define PIO_BLUE     (PIO_OUTPUT | PIO_CFG_PULLUP | PIO_OUTPUT_SET | \
                       PIO_PORT_PIOE | PIO_PIN25)
-#define PIO_RED      (PIO_OUTPUT | PIO_CFG_PULLUP | PIO_OUTPUT_CLEAR | \
+
+#ifndef CONFIG_SAMA5D3xEK_NOREDLED
+#  define PIO_RED    (PIO_OUTPUT | PIO_CFG_PULLUP | PIO_OUTPUT_CLEAR | \
                       PIO_PORT_PIOE | PIO_PIN24)
+#endif
 
 /* Buttons **************************************************************************/
 /* There are five push button switches on the SAMA5D3X-EK base board:
@@ -368,7 +416,7 @@
  * Only the momentary push button is controllable by software (labeled
  * "PB_USER1" on the board):
  *
- *   - PE27.  Pressing the switch connect PE27 to grounded.  Therefore, PE27
+ *   - PE27.  Pressing the switch connects PE27 to ground.  Therefore, PE27
  *     must be pulled high internally.  When the button is pressed the SAMA5
  *     will sense "0" is on PE27.
  */
@@ -497,33 +545,34 @@
 
 /* Ethernet */
 
-#ifdef CONFIG_SAMA4_EMAC
- /* ETH1: Ethernet 10/100 (EMAC) Port
-  *
-  * The main board contains a MICREL PHY device (KSZ8051) operating at 10/100 Mbps.
-  * The board supports MII and RMII interface modes.
-  *
-  * The two independent PHY devices embedded on CM and MB boards are connected to
-  * independent RJ-45 connectors with built-in magnetic and status LEDs.
-  *
-  * At the De-Assertion of Reset:
-  *   PHY ADD[2:0]:001
-  *   CONFIG[2:0]:001,Mode:RMII
-  *   Duplex Mode:Half Duplex
-  *   Isolate Mode:Disable
-  *   Speed Mode:100Mbps
-  *   Nway Auto-Negotiation:Enable
-  *
-  * The KSZ8051 PHY interrtup is available on PE30 INT_ETH1
-  */
+#ifdef CONFIG_SAMA5_EMACA
+  /* ETH1: Ethernet 10/100 (EMAC A) Port
+   *
+   * The main board contains a MICREL PHY device (KSZ8051) operating at 10/100 Mbps.
+   * The board supports MII and RMII interface modes.
+   *
+   * The two independent PHY devices embedded on CM and MB boards are connected to
+   * independent RJ-45 connectors with built-in magnetic and status LEDs.
+   *
+   * At the De-Assertion of Reset:
+   *   PHY ADD[2:0]:001
+   *   CONFIG[2:0]:001,Mode:RMII
+   *   Duplex Mode:Half Duplex
+   *   Isolate Mode:Disable
+   *   Speed Mode:100Mbps
+   *   Nway Auto-Negotiation:Enable
+   *
+   * The KSZ8051 PHY interrupt is available on PE30 INT_ETH1.  The sense of
+   * the interrupt is configurable but is, by default, active low.
+   */
 
 #define PIO_INT_ETH1 (PIO_INPUT | PIO_CFG_PULLUP | PIO_CFG_DEGLITCH | \
-                      PIO_INT_BOTHEDGES | PIO_PORT_PIOE | PIO_PIN30)
+                      PIO_INT_FALLING | PIO_PORT_PIOE | PIO_PIN30)
 #define IRQ_INT_ETH1 SAM_IRQ_PE30
 
 #endif
 
-#ifdef CONFIG_SAMA4_GMAC
+#ifdef CONFIG_SAMA5_GMAC
   /* ETH0: Tri-Speed Ethernet PHY
    *
    * The SAMA5D3 series-CM board is equipped with a MICREL PHY devices (MICREL
@@ -533,14 +582,51 @@
    * activity indicators. These signals can be used to connect to a 10/100/1000
    * BaseT RJ45 connector integrated on the main board.
    *
-   * The KSZ9021/31 interrupt is available on PB35 INT_GETH0
+   * The KSZ9021/31 interrupt is available on PB35 INT_GETH0.  The sense of
+   * the interrupt is configurable but is, by default, active low.
    */
 
 #define PIO_INT_ETH0 (PIO_INPUT | PIO_CFG_PULLUP | PIO_CFG_DEGLITCH | \
-                      PIO_INT_BOTHEDGES | PIO_PORT_PIOB | PIO_PIN25)
+                      PIO_INT_FALLING | PIO_PORT_PIOB | PIO_PIN25)
 #define IRQ_INT_ETH0 SAM_IRQ_PB25
 
 #endif
+
+/* WM8904 Audio Codec ***************************************************************/
+/* SAMA5D3-EK Interface
+ *   ------------- ---------------- -----------------
+ *   WM8904        SAMA5D3          NuttX Pin Name
+ *   ------------- ---------------- -----------------
+ *    3 SDA        PA30 TWD0        PIO_TWI0_D
+ *    2 SCLK       PA31 TWCK0       PIO_TWI0_CK
+ *   28 MCLK       PD30 PCK0        PIO_PMC_PCK0
+ *   29 BCLK/GPIO4 PC16 TK          PIO_SSC0_TK
+ *   "" "        " PC19 RK          PIO_SSC0_RK
+ *   30 LRCLK      PC17 TF          PIO_SSC0_TF
+ *   "" "   "      PC20 RF          PIO_SSC0_RF
+ *   31 ADCDAT     PC21 RD          PIO_SSC0_RD
+ *   32 DACDAT     PC18 TD          PIO_SSC0_TD
+ *    1 IRQ/GPIO1  PD16 INT_AUDIO   N/A
+ *   ------------- ---------------- -----------------
+ */
+
+/* Audio Interrupt. All interrupts are default, active high level.  Pull down
+ * internally in the WM8904.  So we want no pull-up/downs and we want to
+ * interrupt on the high level.
+ */
+
+#define PIO_INT_WM8904 (PIO_INPUT | PIO_CFG_DEFAULT | PIO_CFG_DEGLITCH | \
+                        PIO_INT_HIGHLEVEL | PIO_PORT_PIOD | PIO_PIN16)
+#define IRQ_INT_WM8904 SAM_IRQ_PD16
+
+/* The MW8904 communicates on TWI0, I2C address 0x1a for control operations */
+
+#define WM8904_TWI_BUS      0
+#define WM8904_I2C_ADDRESS  0x1a
+
+/* The MW8904 transfers data on SSC0 */
+
+#define WM8904_SSC_BUS      0
 
 /* SPI Chip Selects *****************************************************************/
 /* Both the Ronetix and Embest versions of the SAMAD3x CPU modules include an
@@ -582,7 +668,7 @@
  * Name: sam_spiinitialize
  *
  * Description:
- *   Called to configure SPI chip select PIO pins for the SAMA4D3x-EK board.
+ *   Called to configure SPI chip select PIO pins for the SAMA5D3x-EK board.
  *
  ************************************************************************************/
 
@@ -735,6 +821,27 @@ int sam_usbhost_initialize(void);
 #ifdef HAVE_NETWORK
 void weak_function sam_netinitialize(void);
 #endif
+
+/****************************************************************************
+ * Name: sam_wm8904_initialize
+ *
+ * Description:
+ *   This function is called by platform-specific, setup logic to configure
+ *   and register the WM8904 device.  This function will register the driver
+ *   as /dev/wm8904[x] where x is determined by the minor device number.
+ *
+ * Input Parameters:
+ *   minor - The input device minor number
+ *
+ * Returned Value:
+ *   Zero is returned on success.  Otherwise, a negated errno value is
+ *   returned to indicate the nature of the failure.
+ *
+ ****************************************************************************/
+
+#ifdef HAVE_WM8904
+int sam_wm8904_initialize(int minor);
+#endif /* HAVE_WM8904 */
 
 /************************************************************************************
  * Name: board_led_initialize

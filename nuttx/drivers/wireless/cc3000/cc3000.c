@@ -271,9 +271,9 @@ static void usdelay(long ustimeout)
 static inline void cc3000_configspi(FAR struct spi_dev_s *spi)
 {
   ndbg("Mode: %d Bits: 8 Frequency: %d\n",
-       CONFIG_CC3000_SPIMODE, CONFIG_CC3000_SPI_FREQUENCY);
+       CONFIG_CC3000_SPI_MODE, CONFIG_CC3000_SPI_FREQUENCY);
 
-  SPI_SETMODE(spi, CONFIG_CC3000_SPIMODE);
+  SPI_SETMODE(spi, CONFIG_CC3000_SPI_MODE);
   SPI_SETBITS(spi, 8);
   SPI_SETFREQUENCY(spi, CONFIG_CC3000_SPI_FREQUENCY);
 }
@@ -446,15 +446,33 @@ static inline int cc3000_wait_ready(FAR struct cc3000_dev_s *priv)
 }
 
 /****************************************************************************
+ * Name: cc3000_pollnotify
+ ****************************************************************************/
+
+#ifndef CONFIG_DISABLE_POLL
+static void cc3000_pollnotify(FAR struct cc3000_dev_s *priv, uint32_t type)
+{
+  int i;
+
+  for (i = 0; i < CONFIG_CC3000_NPOLLWAITERS; i++)
+    {
+      struct pollfd *fds = priv->fds[i];
+      if (fds)
+        {
+          fds->revents |= type;
+          nllvdbg("Report events: %02x\n", fds->revents);
+          sem_post(fds->sem);
+        }
+    }
+}
+#endif
+
+/****************************************************************************
  * Name: cc3000_notify
  ****************************************************************************/
 
 static void cc3000_notify(FAR struct cc3000_dev_s *priv)
 {
-#ifndef CONFIG_DISABLE_POLL
-  int i;
-#endif
-
   /* If there are threads waiting for read data, then signal one of them
    * that the read data is available.
    */
@@ -475,16 +493,7 @@ static void cc3000_notify(FAR struct cc3000_dev_s *priv)
    */
 
 #ifndef CONFIG_DISABLE_POLL
-  for (i = 0; i < CONFIG_CC3000_NPOLLWAITERS; i++)
-    {
-      struct pollfd *fds = priv->fds[i];
-      if (fds)
-        {
-          fds->revents |= POLLIN;
-          nllvdbg("Report events: %02x\n", fds->revents);
-          sem_post(fds->sem);
-        }
-    }
+  cc3000_pollnotify(priv, POLLIN);
 #endif
 }
 
@@ -610,23 +619,15 @@ static void * select_thread_func(FAR void *arg)
 
 static void * cc3000_worker(FAR void *arg)
 {
-  FAR struct cc3000_dev_s    *priv = (FAR struct cc3000_dev_s *)arg;
-  FAR struct cc3000_config_s *config;
-  int                         ret;
+  FAR struct cc3000_dev_s *priv = (FAR struct cc3000_dev_s *)arg;
+  int ret;
 
-  ASSERT(priv != NULL);
-
-  /* Get a pointer the callbacks for convenience (and so the code is not so
-   * ugly).
-   */
-
-  config = priv->config;
-  DEBUGASSERT(config != NULL);
+  ASSERT(priv != NULL && priv->config != NULL);
 
   /* We have started  release our creator*/
 
   sem_post(&priv->readysem);
-  while(1)
+  while (1)
     {
       PROBE(0,1);
       CHECK_GUARD(priv);
@@ -686,9 +687,11 @@ static void * cc3000_worker(FAR void *arg)
                      * Will it fit?
                      */
 
-                    if (data_to_recv >= priv->rx_buffer_max_len){
-                        lowsyslog("data_to_recv %d",data_to_recv);
-                    }
+                    if (data_to_recv >= priv->rx_buffer_max_len
+                      {
+                        lowsyslog(LOG_INFO, "data_to_recv %d", data_to_recv);
+                      }
+
                     DEBUGASSERT(data_to_recv < priv->rx_buffer_max_len);
                     SPI_RECVBLOCK(priv->spi, priv->rx_buffer.pbuffer, data_to_recv);
                   }
@@ -705,7 +708,8 @@ static void * cc3000_worker(FAR void *arg)
                     priv->rx_buffer.len = data_to_recv;
 
                     ret = mq_send(priv->queue, &priv->rx_buffer, sizeof(priv->rx_buffer), 1);
-                    DEBUGASSERT(ret>=0);
+                    DEBUGASSERT(ret >= 0);
+                    UNUSED(ret);
 
                     /* Notify any waiters that new CC3000 data is available */
 
@@ -714,9 +718,11 @@ static void * cc3000_worker(FAR void *arg)
                     /* Give up driver */
 
                     cc3000_devgive(priv);
+
                     nllvdbg("Wait On Completion\n");
                     sem_wait(priv->wrkwaitsem);
-                    nllvdbg("Completed S:%d irq :%d\n",priv->state,priv->config->irq_read(priv->config));
+                    nllvdbg("Completed S:%d irq :%d\n",
+                            priv->state, priv->config->irq_read(priv->config));
 
                     sem_getvalue(&priv->irqsem, &count);
                     if (priv->config->irq_read(priv->config) && count==0)
@@ -731,17 +737,17 @@ static void * cc3000_worker(FAR void *arg)
 
                     continue;
                   }
-              } /* eSPI_STATE_WRITE_DONE or eSPI_STATE_IDLE */
+              }
               break;
 
             default:
               nllvdbg("default: State%d\n",priv->state);
               break;
-            } /* end switch */
-        } /* end if */
+            }
+        }
 
       cc3000_devgive(priv);
-    } /* while(1) */
+    }
 
   return OK;
 }
@@ -890,7 +896,7 @@ static int cc3000_open(FAR struct file *filep)
 
       /* Do late allocation with hopes of realloc not fragmenting */
 
-      priv->rx_buffer.pbuffer =  kmalloc(priv->rx_buffer_max_len);
+      priv->rx_buffer.pbuffer =  kmm_malloc(priv->rx_buffer_max_len);
       DEBUGASSERT(priv->rx_buffer.pbuffer);
       if (!priv->rx_buffer.pbuffer)
         {
@@ -979,7 +985,7 @@ static int cc3000_close(FAR struct file *filep)
       mq_close(priv->queue);
       priv->queue = 0;
 
-      kfree(priv->rx_buffer.pbuffer);
+      kmm_free(priv->rx_buffer.pbuffer);
       priv->rx_buffer.pbuffer = 0;
 
     }
@@ -1339,7 +1345,7 @@ static int cc3000_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           rv = priv->rx_buffer_max_len;
           flags = irqsave();
           priv->rx_buffer_max_len = *psize;
-          priv->rx_buffer.pbuffer = krealloc(priv->rx_buffer.pbuffer,*psize);
+          priv->rx_buffer.pbuffer = kmm_realloc(priv->rx_buffer.pbuffer,*psize);
           irqrestore(flags);
           DEBUGASSERT(priv->rx_buffer.pbuffer);
           *psize = rv;
@@ -1424,7 +1430,7 @@ static int cc3000_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       /* Should we immediately notify on any of the requested events? */
 
-      if (priv->rx_buffer_len)
+      if (priv->rx_buffer.len)
         {
           cc3000_notify(priv);
         }
@@ -1497,10 +1503,10 @@ int cc3000_register(FAR struct spi_dev_s *spi,
 #ifndef CONFIG_CC3000_MULTIPLE
   priv = &g_cc3000;
 #else
-  priv = (FAR struct cc3000_dev_s *)kmalloc(sizeof(struct cc3000_dev_s));
+  priv = (FAR struct cc3000_dev_s *)kmm_malloc(sizeof(struct cc3000_dev_s));
   if (!priv)
     {
-      ndbg("kmalloc(%d) failed\n", sizeof(struct cc3000_dev_s));
+      ndbg("kmm_malloc(%d) failed\n", sizeof(struct cc3000_dev_s));
       return -ENOMEM;
     }
 #endif
@@ -1594,7 +1600,7 @@ errout_with_priv:
 #endif
 
 #ifdef CONFIG_CC3000_MULTIPLE
-  kfree(priv);
+  kmm_free(priv);
 #endif
   return ret;
 }

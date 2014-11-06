@@ -1,7 +1,7 @@
 /****************************************************************************
  *  arch/mips/src/mips32/up_unblocktask.c
  *
- *   Copyright (C) 2011, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2011, 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,9 @@
 
 #include <nuttx/arch.h>
 
-#include "os_internal.h"
-#include "clock_internal.h"
+#include "sched/sched.h"
+#include "group/group.h"
+#include "clock/clock.h"
 #include "up_internal.h"
 
 /****************************************************************************
@@ -77,7 +78,7 @@
  *   tcb: Refers to the tcb to be unblocked.  This tcb is
  *     in one of the waiting tasks lists.  It must be moved to
  *     the ready-to-run list and, if it is the highest priority
- *     ready to run taks, executed.
+ *     ready to run task, executed.
  *
  ****************************************************************************/
 
@@ -99,7 +100,7 @@ void up_unblock_task(struct tcb_s *tcb)
    */
 
 #if CONFIG_RR_INTERVAL > 0
-  tcb->timeslice = CONFIG_RR_INTERVAL / MSEC_PER_TICK;
+  tcb->timeslice = MSEC2TICK(CONFIG_RR_INTERVAL);
 #endif
 
   /* Add the task in the correct location in the prioritized
@@ -111,7 +112,7 @@ void up_unblock_task(struct tcb_s *tcb)
       /* The currently active task has changed! We need to do
        * a context switch to the new task.
        *
-       * Are we in an interrupt handler? 
+       * Are we in an interrupt handler?
        */
 
       if (current_regs)
@@ -122,13 +123,15 @@ void up_unblock_task(struct tcb_s *tcb)
 
           up_savestate(rtcb->xcp.regs);
 
-          /* Restore the exception context of the rtcb at the (new) head 
+          /* Restore the exception context of the rtcb at the (new) head
            * of the g_readytorun task list.
            */
 
           rtcb = (struct tcb_s*)g_readytorun.head;
 
-          /* Then switch contexts */
+          /* Then switch contexts.  Any necessary address environment
+           * changes will be made when the interrupt returns.
+           */
 
           up_restorestate(rtcb->xcp.regs);
         }
@@ -137,11 +140,24 @@ void up_unblock_task(struct tcb_s *tcb)
 
       else
         {
-          /* Switch context to the context of the task at the head of the
-           * ready to run list.
+          /* Restore the exception context of the new task that is ready to
+           * run (probably tcb).  This is the new rtcb at the head of the
+           * g_readytorun task list.
            */
 
           struct tcb_s *nexttcb = (struct tcb_s*)g_readytorun.head;
+
+#ifdef CONFIG_ARCH_ADDRENV
+         /* Make sure that the address environment for the previously
+          * running task is closed down gracefully (data caches dump,
+          * MMU flushed) and set up the address environment for the new
+          * thread at the head of the ready-to-run list.
+          */
+
+         (void)group_addrenv(nexttcb);
+#endif
+          /* Then switch contexts */
+
           up_switchcontext(rtcb->xcp.regs, nexttcb->xcp.regs);
 
           /* up_switchcontext forces a context switch to the task at the

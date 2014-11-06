@@ -47,7 +47,7 @@
 #include <arch/board/board.h>
 
 #include "chip/switch.h"
-#include "os_internal.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 
 #ifndef CONFIG_DISABLE_SIGNALS
@@ -105,7 +105,7 @@ void up_sigdeliver(void)
   regs[XCPT_I]  = rtcb->xcp.saved_i;
 
   /* Get a local copy of the sigdeliver function pointer.  We do this so
-   * that we can nullify the sigdeliver function pointer in the TCB and 
+   * that we can nullify the sigdeliver function pointer in the TCB and
    * accept more signal deliveries while processing the current pending
    * signals.
    */

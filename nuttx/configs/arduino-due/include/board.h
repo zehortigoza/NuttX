@@ -45,7 +45,7 @@
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #  include <stdbool.h>
-#  ifdef CONFIG_GPIO_IRQ
+#  ifdef CONFIG_SAM34_GPIO_IRQ
 #    include <arch/irq.h>
 #  endif
 #endif
@@ -63,6 +63,10 @@
  *   Master Clock (MCK): Source = PLLACK, Prescalar = 1 to generate MCK = 84MHz
  *   CPU clock: 84MHz
  */
+
+#define BOARD_32KOSC_FREQUENCY     (32768)
+#define BOARD_SCLK_FREQUENCY       (BOARD_32KOSC_FREQUENCY)
+#define BOARD_MAINOSC_FREQUENCY    (12000000)  /* MAINOSC: 12MHz crystal on-board */
 
 /* Main oscillator register settings.
  *
@@ -97,7 +101,6 @@
 
 /* Resulting frequencies */
 
-#define BOARD_MAINOSC_FREQUENCY    (12000000)  /* MAINOSC: 12MHz crystal on-board */
 #define BOARD_PLLA_FREQUENCY       (168000000) /* PLLACK:  14 * 12Mhz / 1 */
 #define BOARD_MCK_FREQUENCY        (84000000)  /* MCK:     PLLACK / 2 */
 #define BOARD_CPU_FREQUENCY        (84000000)  /* CPU:     MCK */

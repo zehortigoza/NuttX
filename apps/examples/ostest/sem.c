@@ -33,17 +33,33 @@
  *
  ***********************************************************************/
 
+/***********************************************************************
+ * Included Files
+ ***********************************************************************/
+
 #include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <sched.h>
 #include "ostest.h"
 
+/***********************************************************************
+ * Pre-processor Definitions
+ ***********************************************************************/
+
 #ifndef NULL
 # define NULL (void*)0
 #endif
 
+/***********************************************************************
+ * Private Data
+ ***********************************************************************/
+
 static sem_t sem;
+
+/***********************************************************************
+ * Private Functions
+ ***********************************************************************/
 
 static void *waiter_func(void *parameter)
 {
@@ -137,6 +153,10 @@ static void *poster_func(void *parameter)
   return NULL;
 
 }
+
+/***********************************************************************
+ * Public Functions
+ ***********************************************************************/
 
 void sem_test(void)
 {
@@ -235,7 +255,7 @@ void sem_test(void)
       printf("          Canceling waiter threads\n");
 
       pthread_cancel(waiter_thread1);
-      pthread_cancel(waiter_thread2); 
+      pthread_cancel(waiter_thread2);
     }
 
 #ifdef SDCC

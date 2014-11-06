@@ -45,7 +45,7 @@
         <i>1.3.3 <a href="#nxtk1">NX Tool Kit (<code>NXTK</code>)</a></i><br>
         <i>1.3.4 <a href="#nxfonts1">NX Fonts Support (<code>NXFONTS</code>)</a></i><br>
         <i>1.3.5 <a href="#nxwidgets1">NX Widgets (<code>NxWidgets</code>)</a></i><br>
-        <i>1.3.6 <a href="#nxconsole1">NX Console Driver (<code>NxConsole</code>)</a></i>
+        <i>1.3.6 <a href="#nxterm1">NX Terminal Driver (<code>NxTerm</code>)</a></i>
       </ul>
     </p>
   </ul>
@@ -191,7 +191,7 @@
       <i><b>B.4</b> <a href="#nxmuconfig">NX Multi-User (Only) Configuration Settings</a></i><br>
       <i><b>B.5</b> <a href="#nxtkconfig">NXTK Configuration Settings</a></i><br>
       <i><b>B.6</b> <a href="#nxfpmtsconfig">NXFONTS Configuration Settings</a></i><br>
-      <i><b>B.7</b> <a href="#nxconsoleconfig">NxConsole Configuration Settings</a></i>
+      <i><b>B.7</b> <a href="#nxtermconfig">NxTerm Configuration Settings</a></i>
     </ul>
   </p>
   <p>
@@ -326,7 +326,7 @@
 <p>
   NX is organized into 6 (and perhaps someday 7 or 8) logical modules.
   These logical modules also correspond to the directory organization.
-  That NuttX directory organization is discussed in 
+  That NuttX directory organization is discussed in
   <a href="#grapicsdirs">Appendix B</a> of this document.
   The logic modules are discussed in the following sub-paragraphs.
 </p>
@@ -403,12 +403,12 @@
   NxWidgets is built on top of the core NuttX graphics subsystem, but is not a part of the core graphics subystems.
 </p>
 
-<h3>1.3.6 <a name="nxconsole1">NX Console Driver (<code>NxConsole</code>)</a></h3>
+<h3>1.3.6 <a name="nxterm1">NX Terminal Driver (<code>NxTerm</code>)</a></h3>
 
 <p>
-  NxConsole is a write-only character device (not shown) that is built on top of an NX window.
+  NxTerm is a write-only character device (not shown) that is built on top of an NX window.
   This character device can be used to provide <code>stdout</code> and <code>stderr</code> and, hence, can provide the output side of NuttX console.
-  NxConsole is only available when the multi-user NX implementation is selected (<code>CONFIG_NX_MULTIUSER</code>).
+  NxTerm is only available when the multi-user NX implementation is selected (<code>CONFIG_NX_MULTIUSER</code>).
 </p>
 
 <table width ="100%">
@@ -622,7 +622,7 @@ void nxgl_rectunion(FAR struct nxgl_rect_s *dest,
 </pre></ul>
 <p>
   <b>Description:</b>
-  Given two rectanges, <code>src1</code> and <code>src2</code>, return the larger rectangle that 
+  Given two rectanges, <code>src1</code> and <code>src2</code>, return the larger rectangle that
   contains both, <code>dest</code>.
 </p>
 
@@ -766,7 +766,7 @@ int nxgl_splitline(FAR struct nxgl_vector_s *vector, FAR struct nxgl_trapezoid_s
   <b>Description:</b>
   In the general case, a line with width can be represented as a parallelogram with a triangle at the top and bottom.
   Triangles and parallelograms are both degenerate versions of a trapezoid.
-  This function breaks a wide line into triangles and trapezoids. 
+  This function breaks a wide line into triangles and trapezoids.
   This function also detects other degenerate cases:
 </p>
 <ol>
@@ -801,7 +801,7 @@ int nxgl_splitline(FAR struct nxgl_vector_s *vector, FAR struct nxgl_trapezoid_s
 </p>
 <ul>
   <p>
-    <code>0</code>: Line successfully broken up into three trapezoids. 
+    <code>0</code>: Line successfully broken up into three trapezoids.
     Values in <code>traps[0]</code>, <code>traps[1]</code>, and <code>traps[2]</code> are valid.
   </p>
   <p>
@@ -923,7 +923,7 @@ struct nx_callback_s
                    FAR const struct nxgl_point_s *pos,
                    FAR const struct nxgl_rect_s *bounds,
                    FAR void *arg);
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
   void (*mousein)(NXWINDOW hwnd, FAR const struct nxgl_point_s *pos,
                   uint8_t buttons, FAR void *arg);
 #endif
@@ -1001,7 +1001,7 @@ void position(NXWINDOW hwnd, FAR const struct nxgl_size_s *size,
 <h4>2.3.3.3 <a name="nxcbmousein"><code>mousein()</code></a></h4>
 <p><b>Callback Function Prototype:</b></p>
 <ul><pre>
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
 void mousein(NXWINDOW hwnd, FAR const struct nxgl_point_s *pos,
              uint8_t buttons, FAR void *arg);
 #endif
@@ -1551,7 +1551,7 @@ int nx_setposition(NXWINDOW hwnd, FAR struct nxgl_point_s *pos);
   <ul><dl>
     <dt><code>hwnd</code>
     <dd>The handle returned by <a href="#nxopenwindow"><code>nx_openwindow()</code></a>.
-      This handle must not have been created by 
+      This handle must not have been created by
       <a href="#nxrequestbkgd"><code>nx_requestbkgd()</code></a>.
     <dt><code>pos</code>
     <dd>The new position of the window
@@ -1579,7 +1579,7 @@ int nx_setsize(NXWINDOW hwnd, FAR struct nxgl_size_s *size);
   <ul><dl>
     <dt><code>hwnd</code>
     <dd>The handle returned by <a href="#nxopenwindow"><code>nx_openwindow()</code></a>.
-      This handle must not have been created by 
+      This handle must not have been created by
       <a href="#nxrequestbkgd"><code>nx_requestbkgd()</code></a>.
     <dt><code>size</code>
     <dd>The new size of the window (in pixels).
@@ -1607,7 +1607,7 @@ int nx_raise(NXWINDOW hwnd);
   <ul><dl>
     <dt><code>hwnd</code>
     <dd>The handle returned by <a href="#nxopenwindow"><code>nx_openwindow()</code></a>.
-      This handle must not have been created by 
+      This handle must not have been created by
       <a href="#nxrequestbkgd"><code>nx_requestbkgd()</code></a>.
     <dt><code></code>
     <dd>
@@ -1635,7 +1635,7 @@ int nx_lower(NXWINDOW hwnd);
   <ul><dl>
     <dt><code>hwnd</code>
     <dd>The handle returned by <a href="#nxopenwindow"><code>nx_openwindow()</code></a>.
-      This handle must not have been created by 
+      This handle must not have been created by
       <a href="#nxrequestbkgd"><code>nx_requestbkgd()</code></a>.
     <dt><code></code>
     <dd>
@@ -1987,7 +1987,7 @@ int nx_kbdin(NXHANDLE handle, uint8_t nch, FAR const uint8_t *ch);
 #include &lt;nuttx/nx/nxglib.h&gt;
 #include &lt;nuttx/nx/nx.h&gt;
 
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
 int nx_mousein(NXHANDLE handle, nxgl_coord_t x, nxgl_coord_t y, uint8_t buttons);
 #endif
 </pre></ul>
@@ -3132,7 +3132,7 @@ int nxf_convert_32bpp(FAR uint32_t *dest, uint16_t height,
 
 <p><b>Building <code>apps/examples/nx</code></b>.
   Testing was performed using the Linux/Cygwin-based NuttX simulator.
-  Instructions are provided for building that simulation are provided in 
+  Instructions are provided for building that simulation are provided in
   <a href="#testcoverage">Appendix C</a> of this document.
 </p>
 
@@ -3204,9 +3204,9 @@ int nxf_convert_32bpp(FAR uint32_t *dest, uint16_t height,
     <dt><code>nuttx/../nxwidgets</code>
       <dd>The <a href="NxWidgets.html">NxWidgets</a> code is provided as a separate package located outside of the NuttX source tree (probably at this location).
 
-    <dt><code>graphics/nxconsole</code>
-      <dd>The NxConsole driver is built on top of NX and works with either the single-user or multi-user NX version.
-      See <code>include/nuttx/nx/nxconsole.h</code>.
+    <dt><code>graphics/nxterm</code>
+      <dd>The NxTerm driver is built on top of NX and works with either the single-user or multi-user NX version.
+      See <code>include/nuttx/nx/nxterm.h</code>.
   </dl>
   <p><small>
     <sup>1<up>There is no nxsu sub-directory in nuttx/libnx.
@@ -3259,8 +3259,8 @@ int nxf_convert_32bpp(FAR uint32_t *dest, uint16_t height,
 
 <ul>
   <dl>
-    <dt><code>CONFIG_NX_MOUSE</code>:
-      <dd>Build in support for mouse input.
+    <dt><code>CONFIG_NX_XYINPUT</code>:
+      <dd>Build in support for an X/Y input such as a mouse or a touscreen.
     <dt><code>CONFIG_NX_KBD</code>:
       <dd>Build in support of keypad/keyboard input.
     <dt><code>CONFIG_NX_WRITEONLY</code>:
@@ -3299,7 +3299,7 @@ int nxf_convert_32bpp(FAR uint32_t *dest, uint16_t height,
       <dd>Specify the colors of the border used with framed windows.
     <dt><code>CONFIG_NXTK_BORDERCOLOR2</code>
       <dd>The shadow side color and so is normally darker.
-    <dt><code>CONFIG_NXTK_BORDERCOLOR3</code> 
+    <dt><code>CONFIG_NXTK_BORDERCOLOR3</code>
       <dd>The shiny side color and so is normally brighter.
       The default is medium, dark, and light grey, respectively
     <dt><code>CONFIG_NXTK_AUTORAISE</code>:
@@ -3370,68 +3370,68 @@ int nxf_convert_32bpp(FAR uint32_t *dest, uint16_t height,
   </dl>
 </ul>
 
-<h2>B.7 <a name="nxconsoleconfig">NxConsole Configuration Settings</a></h2>
+<h2>B.7 <a name="nxtermconfig">NxTerm Configuration Settings</a></h2>
 
-<p>General NxConsole settings.</p>
+<p>General NxTerm settings.</p>
 <ul>
   <dl>
-    <dt><code>CONFIG_NXCONSOLE</code>:
-      <dd>Enables building of the NxConsole driver.
+    <dt><code>CONFIG_NXTERM</code>:
+      <dd>Enables building of the NxTerm driver.
   </dl>
 </ul>
 
-<p>NxConsole output text/graphics options:</p>
+<p>NxTerm output text/graphics options:</p>
 <ul>
   <dl>
-    <dt><code>CONFIG_NXCONSOLE_BPP</code>:
-      <dd>Currently, NxConsole supports only a single pixel depth.
+    <dt><code>CONFIG_NXTERM_BPP</code>:
+      <dd>Currently, NxTerm supports only a single pixel depth.
       This configuration setting must be provided to support that single pixel depth.
       Default: The smallest enabled pixel depth. (see <code>CONFIG_NX_DISABLE_*BPP</code>)
-    <dt><code>CONFIG_NXCONSOLE_CURSORCHAR</code>:
+    <dt><code>CONFIG_NXTERM_CURSORCHAR</code>:
       <dd>The bitmap code to use as the cursor.  Default '_'
-    <dt><code>CONFIG_NXCONSOLE_MXCHARS</code>:
-      <dd>NxConsole needs to remember every character written to the console so that it can redraw the window.
+    <dt><code>CONFIG_NXTERM_MXCHARS</code>:
+      <dd>NxTerm needs to remember every character written to the console so that it can redraw the window.
       This setting determines the size of some internal memory allocations used to hold the character data.
       Default: 128.
-    <dt><code>CONFIG_NXCONSOLE_CACHESIZE</code>:
+    <dt><code>CONFIG_NXTERM_CACHESIZE</code>:
       <dd>
-      NxConsole supports caching of rendered fonts.
+      NxTerm supports caching of rendered fonts.
       This font caching is required for two reasons:
       (1) First, it improves text performance, but more importantly
       (2) it preserves the font memory.
       Since the NX server runs on a separate server thread, it requires that the rendered font memory persist until the server has a chance to render the font.
       Unfortunately, the font cache would be quite large if all fonts were saved.
-      The <code>CONFIG_NXCONSOLE_CACHESIZE</code> setting will control the size of the font cache (in number of glyphs).
+      The <code>CONFIG_NXTERM_CACHESIZE</code> setting will control the size of the font cache (in number of glyphs).
       Only that number of the most recently used glyphs will be retained.
       Default: 16.
       <blockquote>
-        NOTE: There can still be a race condition between the NxConsole driver and the
+        NOTE: There can still be a race condition between the NxTerm driver and the
         NX task.  If you every see character corruption (especially when printing
-        a lot of data or scrolling), then increasing the value of <code>CONFIG_NXCONSOLE_CACHESIZE</code>
+        a lot of data or scrolling), then increasing the value of <code>CONFIG_NXTERM_CACHESIZE</code>
         is something that you should try.
-        Alternatively, you can reduce the size of <code>CONFIG_MQ_MAXMSGSIZE</code> which will force NxConsole task to pace the server task.
-        <code>CONFIG_NXCONSOLE_CACHESIZE</code> should be larger than <code>CONFIG_MQ_MAXMSGSIZE</code> in any event.
+        Alternatively, you can reduce the size of <code>CONFIG_MQ_MAXMSGSIZE</code> which will force NxTerm task to pace the server task.
+        <code>CONFIG_NXTERM_CACHESIZE</code> should be larger than <code>CONFIG_MQ_MAXMSGSIZE</code> in any event.
       </blockquote>
-    <dt><code>CONFIG_NXCONSOLE_LINESEPARATION</code>:
+    <dt><code>CONFIG_NXTERM_LINESEPARATION</code>:
       <dd>This the space (in rows) between each row of test.  Default: 0
-    <dt><code>CONFIG_NXCONSOLE_NOWRAP</code>:
+    <dt><code>CONFIG_NXTERM_NOWRAP</code>:
       <dd>By default, lines will wrap when the test reaches the right hand side of the window.
       This setting can be defining to change this behavior so that the text is simply truncated until a new line is  encountered.
   </dl>
 </ul>
 
-<p>NxConsole input options:</p>
+<p>NxTerm input options:</p>
 <ul>
   <dl>
-    <dt><code>CONFIG_NXCONSOLE_NXKBDIN</code>:
+    <dt><code>CONFIG_NXTERM_NXKBDIN</code>:
       <dd>Take input from the NX keyboard input callback.
       By default, keyboard input is taken from stdin (<code>/dev/console</code>).
-      If this option is set, then the interface<code>nxcon_kdbin()</code> is enabled. 
+      If this option is set, then the interface<code>nxterm_kdbin()</code> is enabled.
       That interface may be driven by window callback functions so that keyboard input <i>only</i> goes to the top window.
-    <dt><code>CONFIG__NXCONSOLE_KBDBUFSIZE</code>:
-      <dd>If <code>CONFIG_NXCONSOLE_NXKBDIN</code> is enabled, then this value may be used to
+    <dt><code>CONFIG__NXTERM_KBDBUFSIZE</code>:
+      <dd>If <code>CONFIG_NXTERM_NXKBDIN</code> is enabled, then this value may be used to
       define the size of the per-window keyboard input buffer.  Default: 16
-    <dt><code>CONFIG_NXCONSOLE_NPOLLWAITERS</code>:
+    <dt><code>CONFIG_NXTERM_NPOLLWAITERS</code>:
       <dd>The number of threads that can be waiting for read data available.
       Default: 4
   </dl>
@@ -3467,7 +3467,7 @@ int nxf_convert_32bpp(FAR uint32_t *dest, uint16_t height,
     <p>
       Locate a font in BDF format.
       There are many good BDF bitmap fonts bundled with X-11.
-      See <a href="http://www.cl.cam.ac.uk/~mgk25/ucs-fonts.html">this link</a>, as an example, 
+      See <a href="http://www.cl.cam.ac.uk/~mgk25/ucs-fonts.html">this link</a>, as an example,
     </p>
   </li>
   <li>
@@ -3703,10 +3703,10 @@ sudo ln -s libXext.so.6.4.0 libXext.so
           This is because the sim target is based upon some assembly language setjmp/longjmp logic that only works on 32-bit systems.
         </p>
         <p><small>
-          <b>NOTE</b>: There is a workaround in this case: 
+          <b>NOTE</b>: There is a workaround in this case:
           You can build for 32-bit execution on a 64-bit machine by adding <code>-m3</code> to the <code>CFLAGS</code> and <code>-m32 -m elf_i386</code> to the <code>LDFLAGS</code>.
           See the patch file <code>0001-Quick-hacks-to-build-sim-nsh-ostest-on-x86_64-as-32-.patch</code>
-          that can be found in NuttX <a href="http://tech.groups.yahoo.com/group/nuttx/files">files</a>.
+          that can be found in NuttX <a href="https://groups.yahoo.com/neo/groups/nuttx/files">files</a>.
         </small></p>
         </li>
         <li><p>

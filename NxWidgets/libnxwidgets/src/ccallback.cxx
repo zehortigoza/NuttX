@@ -44,8 +44,8 @@
 #include <stdbool.h>
 #include <debug.h>
 
-#ifdef CONFIG_NXCONSOLE_NXKBDIN
-#  include <nuttx/nx/nxconsole.h>
+#ifdef CONFIG_NXTERM_NXKBDIN
+#  include <nuttx/nx/nxterm.h>
 #endif
 
 #include "cwidgetcontrol.hxx"
@@ -77,7 +77,7 @@ CCallback::CCallback(CWidgetControl *widgetControl)
 
   m_callbacks.redraw   = redraw;
   m_callbacks.position = position;
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
   m_callbacks.mousein  = newMouseEvent;
 #endif
 #ifdef CONFIG_NX_KBD
@@ -87,8 +87,8 @@ CCallback::CCallback(CWidgetControl *widgetControl)
 
   // Keyboard input is initially direct to the widgets within the window
 
-#ifdef CONFIG_NXCONSOLE_NXKBDIN
-  m_nxconsole          = (NXCONSOLE)0;
+#ifdef CONFIG_NXTERM_NXKBDIN
+  m_nxterm             = (NXTERM)0;
 #endif
 }
 
@@ -165,7 +165,7 @@ void CCallback::position(NXHANDLE hwnd,
   * nxtk_openwindow, or nxtk_opentoolbar).
   */
 
-#ifdef CONFIG_NX_MOUSE
+#ifdef CONFIG_NX_XYINPUT
 void CCallback::newMouseEvent(NXHANDLE hwnd,
                               FAR const struct nxgl_point_s *pos,
                               uint8_t buttons, FAR void *arg)
@@ -181,7 +181,7 @@ void CCallback::newMouseEvent(NXHANDLE hwnd,
 
   This->m_widgetControl->newMouseEvent(pos, buttons);
 }
-#endif /* CONFIG_NX_MOUSE */
+#endif /* CONFIG_NX_XYINPUT */
 
 /**
  * New keyboard/keypad data is available for the window.  The new keyboard
@@ -206,15 +206,15 @@ void CCallback::newKeyboardEvent(NXHANDLE hwnd, uint8_t nCh,
   CCallback *This = (CCallback *)arg;
 
   // Is NX keyboard input being directed to the widgets within the window
-  // (default) OR is NX keyboard input being re-directed to an NxConsole
+  // (default) OR is NX keyboard input being re-directed to an NxTerm
   // driver?
 
-#ifdef CONFIG_NXCONSOLE_NXKBDIN
-  if (This->m_nxconsole)
+#ifdef CONFIG_NXTERM_NXKBDIN
+  if (This->m_nxterm)
     {
-      // Keyboard input is going to an NxConsole
+      // Keyboard input is going to an NxTerm
 
-      nxcon_kbdin(This->m_nxconsole, str, nCh);
+      nxterm_kbdin(This->m_nxterm, str, nCh);
     }
   else
 #endif

@@ -1,7 +1,7 @@
 /****************************************************************************
  *  arch/mips/src/mips32/up_releasepending.c
  *
- *   Copyright (C) 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2011, 2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,8 @@
 
 #include <nuttx/arch.h>
 
-#include "os_internal.h"
+#include "sched/sched.h"
+#include "group/group.h"
 #include "up_internal.h"
 
 /****************************************************************************
@@ -99,14 +100,16 @@ void up_release_pending(void)
 
            up_savestate(rtcb->xcp.regs);
 
-          /* Restore the exception context of the rtcb at the (new) head 
+          /* Restore the exception context of the rtcb at the (new) head
            * of the g_readytorun task list.
            */
 
           rtcb = (struct tcb_s*)g_readytorun.head;
           slldbg("New Active Task TCB=%p\n", rtcb);
 
-          /* Then switch contexts */
+          /* Then switch contexts.  Any necessary address environment
+           * changes will be made when the interrupt returns.
+           */
 
           up_restorestate(rtcb->xcp.regs);
         }
@@ -120,6 +123,18 @@ void up_release_pending(void)
            */
 
           struct tcb_s *nexttcb = (struct tcb_s*)g_readytorun.head;
+
+#ifdef CONFIG_ARCH_ADDRENV
+          /* Make sure that the address environment for the previously
+           * running task is closed down gracefully (data caches dump,
+           * MMU flushed) and set up the address environment for the new
+           * thread at the head of the ready-to-run list.
+           */
+
+          (void)group_addrenv(nexttcb);
+#endif
+          /* Then switch contexts */
+
           up_switchcontext(rtcb->xcp.regs, nexttcb->xcp.regs);
 
           /* up_switchcontext forces a context switch to the task at the

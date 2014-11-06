@@ -2,7 +2,7 @@
  * arch/arm/src/armv7-a/mmu.h
  * CP15 MMU register definitions
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * References:
@@ -62,14 +62,14 @@
  ************************************************************************************/
 /* Configuration ********************************************************************/
 
-#ifdef CONFIG_PAGING
+#if defined(CONFIG_PAGING) || defined(CONFIG_ARCH_ADDRENV)
 
 /* Sanity check -- we cannot be using a ROM page table and supporting on-
  * demand paging.
  */
 
 #ifdef CONFIG_ARCH_ROMPGTABLE
-#  error "Cannot support both CONFIG_PAGING and CONFIG_ARCH_ROMPGTABLE"
+#  error "Cannot support both CONFIG_PAGING/CONFIG_ARCH_ADDRENV and CONFIG_ARCH_ROMPGTABLE"
 #endif
 #endif /* CONFIG_PAGING */
 
@@ -270,8 +270,8 @@
 #define PMD_PTE_NS           (1 << 3)     /* Bit 3:  Non-secure bit */
                                           /* Bit 4:  Should be zero (SBZ) */
 #define PMD_PTE_DOM_SHIFT    (5)          /* Bits 5-8: Domain */
-#define PMD_PTE_DOM_MASK     (15 << PMD_PTE_DOMAIN_SHIFT)
-#  define PMD_PTE_DOM(n)     ((n) << PMD_PTE_DOMAIN_SHIFT)
+#define PMD_PTE_DOM_MASK     (15 << PMD_PTE_DOM_SHIFT)
+#  define PMD_PTE_DOM(n)     ((n) << PMD_PTE_DOM_SHIFT)
                                           /* Bit 9:  Not implemented */
 #define PMD_PTE_PADDR_MASK   (0xfffffc00) /* Bits 10-31: Page table base address */
 
@@ -296,7 +296,7 @@
 #define PMD_SECT_PXN         (1 << 0)     /* Bit 0:  Privileged execute-never bit */
                                           /* Bits 0-1: Type of mapping */
 #define PMD_SECT_B           (1 << 2)     /* Bit 2:  Bufferable bit */
-#define PMD_SECT_C           (1 << 3)     /* Bit 3:  Cacheable bit*/
+#define PMD_SECT_C           (1 << 3)     /* Bit 3:  Cacheable bit */
 #define PMD_SECT_XN          (1 << 4)     /* Bit 4:  Execute-never bit */
 #define PMD_SECT_DOM_SHIFT   (5)          /* Bits 5-8: Domain */
 #define PMD_SECT_DOM_MASK    (15 << PMD_SECT_DOM_SHIFT)
@@ -333,17 +333,25 @@
  *
  * Key:
  *
- *   WR    - Read/write addess allowed
+ *   WR    - Read/write address allowed
  *   R     - Read-only access allowed
  *   0,1,2 - At PL0, PL1, and/or PL2
  *
  *   PL0   - User privilege level
- *   PL1   - Privilieged mode
+ *   PL1   - Privileged mode
  *   PL2   - Software executing in Hyp mode
  */
 
 #ifdef CONFIG_AFE_ENABLE
-/* AP[2:1] access permissions model.  AP[0] is used as an access flag: */
+/* AP[2:1] access permissions model.  AP[0] is used as an access flag:
+ *
+ * AP[2] AP[1]   PL1        PL0        Description
+ * ----- ----- ----------- ---------- --------------------------------
+ *   0     0   Read/write  No access  Access only at PL1
+ *   0     1   Read/write  Read/write Full access
+ *   1     0   Read-only   No access  Read-only for PL1
+ *   1     1   Read-only   Read-only  Read-only at any privilege level
+ */
 
 #  define PMD_SECT_AP_RW1     (0)
 #  define PMD_SECT_AP_RW01    (PMD_SECT_AP1)
@@ -351,7 +359,19 @@
 #  define PMD_SECT_AP_R01     (PMD_SECT_AP1 | PMD_SECT_AP2)
 
 #else
-/* AP[2:0] access permissions control, Short-descriptor format only */
+/* AP[2:0] access permissions control, Short-descriptor format only:
+ *
+ * AP[2] AP[1] AP[0]  PL1/2       PL0        Description
+ * ----- ----- ----- ----------- ---------- --------------------------------
+ *   0     0     0   No access   No access  All accesses generate faults
+ *   0     0     1   Read/write  No access  Access only at PL1 and higher
+ *   0     1     0   Read/write  Read-only  Writes at PL0 generate faults
+ *   0     1     1   Read/write  Read/write Full access
+ *   1     0     0     ----        ---      Reserved
+ *   1     0     1   Read-only   No access  Read-only for PL1 and higher
+ *   1     1     0   Read-only   Read-only  (deprecated)
+ *   1     1     1   Read-only   Read-only  Read-only at any privilege level
+ */
 
 #  define PMD_SECT_AP_NONE    (0)
 #  define PMD_SECT_AP_RW12    (PMD_SECT_AP0)
@@ -405,6 +425,7 @@
 #define PTE_LARGE_TEX_SHIFT  (12)         /* Bits 12-14: Memory region attribute bits */
 #define PTE_LARGE_TEX_MASK   (7 << PTE_LARGE_TEX_SHIFT)
 #define PTE_LARGE_XN         (1 << 15)    /* Bit 15: Execute-never bit */
+#define PTE_LARGE_FLAG_MASK  (0x0000f03f) /* Bits 0-15: MMU flags (mostly) */
 #define PTE_LARGE_PADDR_MASK (0xffff0000) /* Bits 16-31: Large page base address, PA[31:16] */
 
 /* Small page -- 4Kb */
@@ -413,21 +434,30 @@
                                           /* Bit 2:  Bufferable bit */
                                           /* Bit 3:  Cacheable bit */
                                           /* Bits 4-5: Access Permissions bits AP[0:1] */
+#define PTE_SMALL_FLAG_MASK  (0x0000003f) /* Bits 0-11: MMU flags (mostly) */
 #define PTE_SMALL_PADDR_MASK (0xfffff000) /* Bits 12-31: Small page base address, PA[31:12] */
 
 /* Level 2 Translation Table Access Permissions:
  *
- * WR    - Read/write addess allowed
+ * WR    - Read/write access allowed
  * R     - Read-only access allowed
  * 0,1,2 - At PL0, PL1, and/or PL2
  *
  * PL0   - User privilege level
- * PL1   - Privilieged mode
+ * PL1   - Privileged mode
  * PL2   - Software executing in Hyp mode
  */
 
 #ifdef CONFIG_AFE_ENABLE
-/* AP[2:1] access permissions model.  AP[0] is used as an access flag: */
+/* AP[2:1] access permissions model.  AP[0] is used as an access flag:
+ *
+ * AP[2] AP[1]   PL1        PL0        Description
+ * ----- ----- ----------- ---------- --------------------------------
+ *   0     0   Read/write  No access  Access only at PL1
+ *   0     1   Read/write  Read/write Full access
+ *   1     0   Read-only   No access  Read-only for PL1
+ *   1     1   Read-only   Read-only  Read-only at any privilege level
+ */
 
 #  define PTE_AP_RW1         (0)
 #  define PTE_AP_RW01        (PTE_AP1)
@@ -435,7 +465,19 @@
 #  define PTE_AP_R01         (PTE_AP1 | PTE_AP2)
 
 #else
-/* AP[2:0] access permissions control, Short-descriptor format only */
+/* AP[2:0] access permissions control, Short-descriptor format only:
+ *
+ * AP[2] AP[1] AP[0]  PL1/2       PL0        Description
+ * ----- ----- ----- ----------- ---------- --------------------------------
+ *   0     0     0   No access   No access  All accesses generate faults
+ *   0     0     1   Read/write  No access  Access only at PL1 and higher
+ *   0     1     0   Read/write  Read-only  Writes at PL0 generate faults
+ *   0     1     1   Read/write  Read/write Full access
+ *   1     0     0     ----        ---      Reserved
+ *   1     0     1   Read-only   No access  Read-only for PL1 and higher
+ *   1     1     0   Read-only   Read-only  (deprecated)
+ *   1     1     1   Read-only   Read-only  Read-only at any privilege level
+ */
 
 #  define PTE_AP_NONE        (0)
 #  define PTE_AP_RW12        (PTE_AP0)
@@ -498,26 +540,39 @@
  *   NMRR[19:18] = 0b00, Region is Non-cacheable
  *   NMRR[21:20] = 0b10, Region is Write-Through, no Write-Allocate
  *   NMRR[23:22] = 0b11, Region is Write-Back, no Write-Allocate
+ *
+ * Interpretation of Cacheable (C) and Bufferable (B) Bits:
+ *
+ *         Write-Through  Write-Back    Write-Through/Write-Back
+ *  C   B  Cache          Only Cache    Cache
+ * --- --- -------------- ------------- -------------------------
+ *  0   0  Uncached/      Uncached/     Uncached/
+ *         Unbuffered     Unbuffered    Unbuffered
+ *  0   1  Uncached/      Uncached/     Uncached/
+ *         Buffered       Buffered      Buffered
+ *  1   0  Cached/        UNPREDICTABLE Write-Through cached
+ *         Unbuffered                   Buffered
+ *  1   1  Cached/        Cached/       Write-Back cached
+ *         Buffered       Buffered      Buffered
  */
 
 #define PMD_STRONGLY_ORDERED (0)
 #define PMD_DEVICE           (PMD_SECT_B)
-#define PMD_WRITE_THROUGH    (PMD_SECT_C)
-#define PMD_WRITE_BACK       (PMD_SECT_B | PMD_SECT_C)
+#define PMD_CACHEABLE        (PMD_SECT_B | PMD_SECT_C)
 
 #define PTE_STRONGLY_ORDER   (0)
 #define PTE_DEVICE           (PTE_B)
 #define PTE_WRITE_THROUGH    (PTE_C)
 #define PTE_WRITE_BACK       (PTE_B | PTE_C)
 
-/* Default MMU flags for RAM memory, IO, vector region
+/* Default MMU flags for RAM memory, IO, vector sections (level 1)
  *
  * REVISIT:  Here we expect all threads to be running at PL1
  */
 
-#define MMU_ROMFLAGS         (PMD_TYPE_SECT | PMD_SECT_AP_R1 | PMD_WRITE_THROUGH | \
+#define MMU_ROMFLAGS         (PMD_TYPE_SECT | PMD_SECT_AP_R1 | PMD_CACHEABLE | \
                               PMD_SECT_DOM(0))
-#define MMU_MEMFLAGS         (PMD_TYPE_SECT | PMD_SECT_AP_RW1 | PMD_WRITE_BACK | \
+#define MMU_MEMFLAGS         (PMD_TYPE_SECT | PMD_SECT_AP_RW1 | PMD_CACHEABLE | \
                               PMD_SECT_DOM(0))
 #define MMU_IOFLAGS          (PMD_TYPE_SECT | PMD_SECT_AP_RW1 | PMD_DEVICE | \
                               PMD_SECT_DOM(0) | PMD_SECT_XN)
@@ -525,12 +580,38 @@
                               PMD_STRONGLY_ORDERED | PMD_SECT_DOM(0) | \
                               PMD_SECT_XN)
 
-#define MMU_L1_VECTORFLAGS   (PMD_TYPE_PTE | PMD_PTE_PXN | PMD_PTE_DOM(0))
-#define MMU_L2_VECTORFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_THROUGH | PTE_AP_RW1)
+/* MMU Flags for each type memory region (level 1 and 2) */
+
+#define MMU_L1_TEXTFLAGS      (PMD_TYPE_PTE | PMD_PTE_DOM(0))
+
+#define MMU_L2_KTEXTFLAGS     (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_R1)
+#ifdef CONFIG_AFE_ENABLE
+#  define MMU_L2_UTEXTFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_RW01)
+#else
+#  define MMU_L2_UTEXTFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_RW12_R0)
+#endif
+
+#define MMU_L1_DATAFLAGS      (PMD_TYPE_PTE | PMD_PTE_PXN | PMD_PTE_DOM(0))
+#define MMU_L2_UDATAFLAGS     (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_RW01)
+#define MMU_L2_KDATAFLAGS     (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_RW1)
+#define MMU_L2_UALLOCFLAGS    (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_RW01)
+#define MMU_L2_KALLOCFLAGS    (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_RW1)
+
+#define MMU_L1_PGTABFLAGS     (PMD_TYPE_PTE | PMD_PTE_PXN | PTE_WRITE_THROUGH | \
+                               PMD_PTE_DOM(0))
+#define MMU_L2_PGTABFLAGS     (PTE_TYPE_SMALL | PTE_WRITE_THROUGH | PTE_AP_RW1)
+
+#define MMU_L1_VECTORFLAGS    (PMD_TYPE_PTE | PMD_PTE_PXN | PMD_PTE_DOM(0))
+
+#define MMU_L2_VECTRWFLAGS    (PTE_TYPE_SMALL | PTE_WRITE_THROUGH | PTE_AP_RW1)
+#define MMU_L2_VECTROFLAGS    (PTE_TYPE_SMALL | PTE_WRITE_THROUGH | PTE_AP_R1)
+#define MMU_L2_VECTORFLAGS    MMU_L2_VECTRWFLAGS
 
 /* Mapped section size */
 
-#define SECTION_SIZE          (1 << 20)   /* 1Mb */
+#define SECTION_SHIFT         (20)
+#define SECTION_SIZE          (1 << SECTION_SHIFT)   /* 1Mb */
+#define SECTION_MASK          (SECTION_SIZE - 1)
 
 /* The Cortex-A5 supports two translation table base address registers.  In
  * this, implementation, only Translation Table Base Register 0 (TTBR0) is
@@ -564,7 +645,7 @@
 #  undef  PGTABLE_L2_VBASE
 #  define PGTABLE_L2_VBASE (PGTABLE_BASE_VADDR+PGTABLE_L2_OFFSET)
 
-#endif /* CONFIG_PAGING */
+#endif /* PGTABLE_BASE_VADDR */
 
 /* MMU flags ************************************************************************/
 
@@ -587,20 +668,6 @@
 /* Mask to get the page table physical address from an L1 entry */
 
 #define PG_L1_PADDRMASK       PMD_SECT_PADDR_MASK
-
-/* MMU Flags for each type memory region. */
-
-#define MMU_L1_TEXTFLAGS      (PMD_TYPE_PTE | PMD_PTE_DOM(0))
-#define MMU_L2_TEXTFLAGS      (PTE_TYPE_SMALL | PTE_WRITE_THROUGH | PTE_AP_R1)
-#define MMU_L1_DATAFLAGS      (PMD_TYPE_PTE | PMD_PTE_PXN | PMD_PTE_DOM(0))
-#define MMU_L2_DATAFLAGS      (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_RW1)
-#define MMU_L2_ALLOCFLAGS     (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_AP_RW1)
-#define MMU_L1_PGTABFLAGS     (PMD_TYPE_PTE | PMD_PTE_PXN | PTE_WRITE_THROUGH | \
-                               PMD_PTE_DOM(0))
-#define MMU_L2_PGTABFLAGS     (PTE_TYPE_SMALL | PTE_WRITE_THROUGH | PTE_AP_RW1)
-
-#define MMU_L2_VECTRWFLAGS    (PTE_TYPE_SMALL | PTE_WRITE_THROUGH | PTE_AP_RW1)
-#define MMU_L2_VECTROFLAGS    (PTE_TYPE_SMALL | PTE_WRITE_THROUGH | PTE_AP_R1)
 
 /* Addresses of Memory Regions ******************************************************/
 
@@ -655,7 +722,7 @@
 /* Page Table Info ******************************************************************/
 
 /* The number of pages in the in the page table (PG_PGTABLE_NPAGES).  We
- * position the pagetable PTEs just after the data section PTEs.
+ * position the page table PTEs just after the data section PTEs.
  */
 
 #define PG_PGTABLE_NPAGES       (PGTABLE_SIZE >> PAGESHIFT)
@@ -737,7 +804,7 @@
 
 /* Page Management ******************************************************************/
 
-/* For page managment purposes, the following summarize the "heap" of
+/* For page management purposes, the following summarize the "heap" of
  * free pages, operations on free pages and the L2 page table.
  *
  * PG_POOL_VA2L1OFFSET(va)  - Given a virtual address, return the L1 table
@@ -765,7 +832,7 @@
  *                            Index 0 corresponds to the first L2 page table
  *                            entry for the first page in the virtual paged
  *                            text address space.
- * PG_POOL_NDX2VA(ndx)      - Performs the opposite conversion.. convests
+ * PG_POOL_NDX2VA(ndx)      - Performs the opposite conversion.. converts
  *                            an index into a virtual address in the paged
  *                            text region (the address at the beginning of
  *                            the page).
@@ -939,7 +1006,7 @@ struct section_mapping_s
  * Description:
  *   Write several, contiguous L2 page table entries.  npages entries will be
  *   written. This macro is used when CONFIG_PAGING is enable.  This case,
- *   it is used asfollows:
+ *   it is used as follows:
  *
  *	ldr	r0, =PGTABLE_L2_BASE_PADDR	<-- Address in L2 table
  *	ldr	r1, =PG_LOCKED_PBASE		<-- Physical page memory address
@@ -1015,7 +1082,7 @@ struct section_mapping_s
  *	ldr	r1, =PG_L2_PGTABLE_PADDR	<-- Physical address of L2 page table
  *	ldr	r2, =PG_PGTABLE_NPAGES		<-- Total number of pages
  *	ldr	r3, =PG_PGTABLE_NPAGE1		<-- Number of pages in the first PTE
- *      ldr	r4, =MMU_L1_PGTABFLAGS		<-- L1 MMU flags
+ *	ldr	r4, =MMU_L1_PGTABFLAGS		<-- L1 MMU flags
  *	pg_l1span r0, r1, r2, r3, r4, r4
  *
  * Inputs (unmodified unless noted):
@@ -1234,9 +1301,9 @@ static inline void cp14_wrttb(unsigned int ttb)
  * Name: mmu_l1_getentry
  *
  * Description:
- *   Given a virtual address, return the valule of the corresponding L1 table entry.
+ *   Given a virtual address, return the value of the corresponding L1 table entry.
  *
- * Input Paramters:
+ * Input Parameters:
  *   vaddr - The virtual address to be mapped.
  *
  ************************************************************************************/
@@ -1258,9 +1325,9 @@ static inline uint32_t mmu_l1_getentry(uint32_t vaddr)
  *
  * Description:
  *   Given a address of the beginning of an L2 page table and a virtual address,
- *   return the varlue of the corresponding L2 page table entry.
+ *   return the value of the corresponding L2 page table entry.
  *
- * Input Paramters:
+ * Input Parameters:
  *   l2vaddr - The virtual address of the beginning of the L2 page table
  *   vaddr - The virtual address to be mapped.
  *
@@ -1310,7 +1377,7 @@ extern "C" {
  *   Set a one level 1 translation table entry.  Only a single L1 page table is
  *   supported.
  *
- * Input Paramters:
+ * Input Parameters:
  *   paddr - The physical address to be mapped.  Must be aligned to a 1MB address
  *     boundary
  *   vaddr - The virtual address to be mapped.  Must be aligned to a 1MB address
@@ -1321,6 +1388,39 @@ extern "C" {
 
 #ifndef CONFIG_ARCH_ROMPGTABLE
 void mmu_l1_setentry(uint32_t paddr, uint32_t vaddr, uint32_t mmuflags);
+#endif
+
+/****************************************************************************
+ * Name: mmu_l1_restore
+ *
+ * Description:
+ *   Restore one L1 table entry previously returned by mmu_l1_getentry() (or
+ *   any other encoded L1 page table value).
+ *
+ * Input Parameters:
+ *   vaddr - A virtual address to be mapped
+ *   l1entry - The value to write into the page table entry
+ *
+ ****************************************************************************/
+
+#if !defined(CONFIG_ARCH_ROMPGTABLE) && defined(CONFIG_ARCH_ADDRENV)
+void mmu_l1_restore(uintptr_t vaddr, uint32_t l1entry);
+#endif
+
+/************************************************************************************
+ * Name: mmu_l1_clrentry
+ *
+ * Description:
+ *   Unmap one L1 region by writing zero into the L1 page table entry and by
+ *   flushing caches and TLBs appropriately.
+ *
+ * Input Parameters:
+ *   vaddr - A virtual address within the L1 address region to be unmapped.
+ *
+ ************************************************************************************/
+
+#if !defined (CONFIG_ARCH_ROMPGTABLE) && defined(CONFIG_ARCH_ADDRENV)
+#  define mmu_l1_clrentry(v) mmu_l1_restore(v,0)
 #endif
 
 /************************************************************************************

@@ -624,7 +624,7 @@ static inline int avr_epNsend(FAR struct avr_ep_s *privep,
     }
 
   /* Send the USB data.  The outer loop handles for each packet of data
-   * (including zero-length packets) 
+   * (including zero-length packets)
    */
 
   do
@@ -1531,7 +1531,7 @@ static inline void avr_ep0setup(void)
               case USB_REQ_RECIPIENT_ENDPOINT:
                 if (g_usbdev.paddrset != 0 &&
                     value == USB_FEATURE_ENDPOINTHALT &&
-                    len == 0 && 
+                    len == 0 &&
                     (privep = avr_epfindbyaddr(index)) != NULL)
                   {
                     avr_epstall(&privep->ep, false);
@@ -1579,7 +1579,7 @@ static inline void avr_ep0setup(void)
               case USB_REQ_RECIPIENT_ENDPOINT:
                 if (g_usbdev.paddrset != 0 &&
                     value == USB_FEATURE_ENDPOINTHALT &&
-                    len == 0 && 
+                    len == 0 &&
                     (privep = avr_epfindbyaddr(index)) != NULL)
                   {
                     avr_epstall(&privep->ep, true);
@@ -2287,7 +2287,7 @@ static FAR struct usbdev_req_s *avr_epallocreq(FAR struct usbdev_ep_s *ep)
 #endif
   usbtrace(TRACE_EPALLOCREQ, ((FAR struct avr_ep_s *)ep)->ep.eplog);
 
-  privreq = (FAR struct avr_req_s *)kmalloc(sizeof(struct avr_req_s));
+  privreq = (FAR struct avr_req_s *)kmm_malloc(sizeof(struct avr_req_s));
   if (!privreq)
     {
       usbtrace(TRACE_DEVERROR(AVR_TRACEERR_ALLOCFAIL), 0);
@@ -2320,7 +2320,7 @@ static void avr_epfreereq(FAR struct usbdev_ep_s *ep,
 #endif
 
   usbtrace(TRACE_EPFREEREQ, ((FAR struct avr_ep_s *)ep)->ep.eplog);
-  kfree(privreq);
+  kmm_free(privreq);
 }
 
 /*******************************************************************************
@@ -2339,7 +2339,7 @@ static void *avr_epallocbuffer(FAR struct usbdev_ep_s *ep, unsigned bytes)
 #ifdef CONFIG_USBDEV_DMAMEMORY
   return usbdev_dma_alloc(bytes);
 #else
-  return kmalloc(bytes);
+  return kmm_malloc(bytes);
 #endif
 }
 #endif
@@ -2360,7 +2360,7 @@ static void avr_epfreebuffer(FAR struct usbdev_ep_s *ep, FAR void *buf)
 #ifdef CONFIG_USBDEV_DMAMEMORY
   usbdev_dma_free(buf);
 #else
-  kfree(buf);
+  kmm_free(buf);
 #endif
 }
 #endif
@@ -2493,8 +2493,8 @@ static int avr_epcancel(FAR struct usbdev_ep_s *ep,
 
   usbtrace(TRACE_EPCANCEL, privep->ep.eplog);
 
-  /* FIXME: if the request is the first, then we need to flush the EP otherwise 
-   * just remove it from the list but ... all other implementations cancel all 
+  /* FIXME: if the request is the first, then we need to flush the EP otherwise
+   * just remove it from the list but ... all other implementations cancel all
    * requests ... */
 
   flags = irqsave();
@@ -2716,7 +2716,7 @@ static int avr_wakeup(struct usbdev_s *dev)
  * Name: avr_selfpowered
  *
  * Description:
- *   Sets/clears the device selfpowered feature 
+ *   Sets/clears the device selfpowered feature
  *
  *******************************************************************************/
 
@@ -2949,7 +2949,7 @@ int usbdev_unregister(struct usbdevclass_driver_s *driver)
  *
  * Description:
  *   Sample VBUS to see if there are changes in our connection status.  There
- *   is actually an interrupt to signal this case so it should not be necessary 
+ *   is actually an interrupt to signal this case so it should not be necessary
  *   to poll our connection status.  However, on certain "noisy" systems, VBUS
  *   may bounce and provide inaccurate information in the interrupt handler
  *   (especially if a relay is used to switch VBUS!).  This poll is, then,

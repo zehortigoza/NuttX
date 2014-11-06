@@ -55,7 +55,6 @@
 #include <arch/serial.h>
 
 #include "chip/chip.h"
-#include "os_internal.h"
 #include "up_internal.h"
 
 #ifdef USE_SERIALDRIVER
@@ -122,6 +121,9 @@ static const struct uart_ops_s g_uart_ops =
   z8_receive,        /* receive */
   z8_rxint,          /* rxint */
   z8_rxavailable,    /* rxavailable */
+#ifdef CONFIG_SERIAL_IFLOWCONTROL
+  NULL,              /* rxflowcontrol */
+#endif
   z8_send,           /* send */
   z8_txint,          /* txint */
   z8_txready,        /* txready */
@@ -244,7 +246,7 @@ static uart_dev_t g_uart1port =
 /****************************************************************************
  * Name: z8_putuart
  ****************************************************************************/
- 
+
 static inline void z8_putuart(FAR struct z8_uart_s *priv, uint8_t value,
                               uint8_t offset)
 {
@@ -254,7 +256,7 @@ static inline void z8_putuart(FAR struct z8_uart_s *priv, uint8_t value,
 /****************************************************************************
  * Name: z8_getuart
  ****************************************************************************/
- 
+
 static inline uint8_t z8_getuart(FAR struct z8_uart_s *priv, uint8_t offset)
 {
   return getreg8(*(priv->uartbase + offset));
@@ -338,7 +340,7 @@ void z8_uartconfigure(void)
 
 #ifdef EZ8_UART1
   /* Configure GPIO Port D pins 4 & 5 for alternate function */
-  
+
   putreg8(0x02, PAADDR);
   val = getreg8(PDCTL) | 0x30;    /* Set bits in alternate function register */
   putreg8(val, PDCTL);
@@ -759,7 +761,7 @@ int up_putc(int ch)
   uint8_t  state;
 
   /* Keep interrupts disabled so that we do not interfere with normal
-   * driver operation 
+   * driver operation
    */
 
   state = z8_disableuartirq(&CONSOLE_DEV);

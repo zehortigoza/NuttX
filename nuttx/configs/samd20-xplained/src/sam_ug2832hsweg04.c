@@ -81,7 +81,7 @@
  *                            SPI MISO               SPI MISO
  *  ----------------- ---------------------- ----------------------
  *  18 SPI_SCK        18 PA07 SERCOM0 PAD[3] 18 PA19 SERCOM1 PAD[3]
- *                            SPI SCK                SPI SCK 
+ *                            SPI SCK                SPI SCK
  *  ----------------- ---------------------- ----------------------
  *  19 GND            19      GND               GND
  *  ----------------- ---------------------- ----------------------
@@ -144,8 +144,8 @@
 /* Debug ********************************************************************/
 
 #ifdef CONFIG_DEBUG_LCD
-#  define lcddbg(format, arg...)   dbg(format, ##arg)
-#  define lcdvdbg(format, arg...)  vdbg(format, ##arg)
+#  define lcddbg(format, ...)   dbg(format, ##__VA_ARGS__)
+#  define lcdvdbg(format, ...)  vdbg(format, ##__VA_ARGS__)
 #else
 #  define lcddbg(x...)
 #  define lcdvdbg(x...)
@@ -171,7 +171,7 @@ FAR struct lcd_dev_s *up_nxdrvinit(unsigned int devno)
   /* Configure the OLED PORTs. This initial configuration is RESET low,
    * putting the OLED into reset state.
    */
- 
+
   (void)sam_configport(PORT_OLED_RST);
 
   /* Wait a bit then release the OLED from the reset state */

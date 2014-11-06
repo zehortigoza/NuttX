@@ -46,7 +46,7 @@
  * a kernel build.
  */
 
-#if defined(CONFIG_NUTTX_KERNEL) && defined(__KERNEL__)
+#if defined(CONFIG_LIB_SYSCALL)
 
 /****************************************************************************
  * Pre-processor definitions
@@ -75,6 +75,9 @@ uintptr_t STUB_sched_setscheduler(int nbr, uintptr_t parm1, uintptr_t parm2,
             uintptr_t parm3);
 uintptr_t STUB_sched_unlock(int nbr);
 uintptr_t STUB_sched_yield(int nbr);
+
+/* Semaphores */
+
 uintptr_t STUB_sem_close(int nbr, uintptr_t parm1);
 uintptr_t STUB_sem_destroy(int nbr, uintptr_t parm1);
 uintptr_t STUB_sem_open(int nbr, uintptr_t parm1, uintptr_t parm2,
@@ -85,6 +88,7 @@ uintptr_t STUB_sem_trywait(int nbr, uintptr_t parm1);
 uintptr_t STUB_sem_unlink(int nbr, uintptr_t parm1);
 uintptr_t STUB_sem_wait(int nbr, uintptr_t parm1);
 uintptr_t STUB_set_errno(int nbr, uintptr_t parm1);
+uintptr_t STUB_pgalloc(int nbr, uintptr_t parm1, uintptr_t parm2);
 uintptr_t STUB_task_create(int nbr, uintptr_t parm1, uintptr_t parm2,
             uintptr_t parm3, uintptr_t parm4, uintptr_t parm5);
 uintptr_t STUB_task_delete(int nbr, uintptr_t parm1);
@@ -113,9 +117,6 @@ uintptr_t STUB_posix_spawnp(int nbr, uintptr_t parm1, uintptr_t parm2,
             uintptr_t parm3, uintptr_t parm4, uintptr_t parm5,
             uintptr_t parm6);
 uintptr_t STUB_execv(int nbr, uintptr_t parm1, uintptr_t parm2);
-uintptr_t STUB_execl(int nbr, uintptr_t parm1, uintptr_t parm2,
-            uintptr_t parm3, uintptr_t parm4, uintptr_t parm5,
-            uintptr_t parm6);
 
 /* The following are only defined is signals are supported in the NuttX
  * configuration.
@@ -162,14 +163,23 @@ uintptr_t STUB_timer_settime(int nbr, uintptr_t parm1, uintptr_t parm2,
 uintptr_t STUB_close(int nbr, uintptr_t parm1);
 uintptr_t STUB_ioctl(int nbr, uintptr_t parm1, uintptr_t parm2,
             uintptr_t parm3);
-uintptr_t STUB_poll(int nbr, uintptr_t parm1, uintptr_t parm2,
-            uintptr_t parm3);
 uintptr_t STUB_read(int nbr, uintptr_t parm1, uintptr_t parm2,
+            uintptr_t parm3);
+uintptr_t STUB_write(int nbr, uintptr_t parm1, uintptr_t parm2,
+            uintptr_t parm3);
+uintptr_t STUB_pread(int nbr, uintptr_t parm1, uintptr_t parm2,
+            uintptr_t parm3, uintptr_t parm4);
+uintptr_t STUB_pwrite(int nbr, uintptr_t parm1, uintptr_t parm2,
+            uintptr_t parm3, uintptr_t parm4);
+uintptr_t STUB_poll(int nbr, uintptr_t parm1, uintptr_t parm2,
             uintptr_t parm3);
 uintptr_t STUB_select(int nbr, uintptr_t parm1, uintptr_t parm2,
             uintptr_t parm3, uintptr_t parm4, uintptr_t parm5);
-uintptr_t STUB_write(int nbr, uintptr_t parm1, uintptr_t parm2,
-            uintptr_t parm3);
+
+uintptr_t STUB_aio_read(int nbr, uintptr_t parm1);
+uintptr_t STUB_aio_write(int nbr, uintptr_t parm1);
+uintptr_t STUB_aio_fsync(int nbr, uintptr_t parm1, uintptr_t parm2);
+uintptr_t STUB_aio_cancel(int nbr, uintptr_t parm1, uintptr_t parm2);
 
 /* The following are defined if file descriptors are enabled */
 
@@ -211,6 +221,16 @@ uintptr_t STUB_rename(int nbr, uintptr_t parm1, uintptr_t parm2);
 uintptr_t STUB_rmdir(int nbr, uintptr_t parm1);
 uintptr_t STUB_umount(int nbr, uintptr_t parm1);
 uintptr_t STUB_unlink(int nbr, uintptr_t parm1);
+
+/* Shared memory interfaces */
+
+uintptr_t STUB_shmget(int nbr, uintptr_t parm1, uintptr_t parm2,
+            uintptr_t parm3);
+uintptr_t STUB_shmat(int nbr, uintptr_t parm1, uintptr_t parm2,
+            uintptr_t parm3);
+uintptr_t STUB_shmctl(int nbr, uintptr_t parm1, uintptr_t parm2,
+            uintptr_t parm3);
+uintptr_t STUB_shmdt(int nbr, uintptr_t parm1);
 
 /* The following are defined if pthreads are enabled */
 
@@ -341,5 +361,4 @@ const uintptr_t g_stublookup[SYS_nsyscalls] =
  * Public Functions
  ****************************************************************************/
 
-#endif /* CONFIG_NUTTX_KERNEL && __KERNEL__ */
-
+#endif /* CONFIG_LIB_SYSCALL */

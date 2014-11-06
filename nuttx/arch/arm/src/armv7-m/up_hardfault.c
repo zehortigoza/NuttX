@@ -48,7 +48,6 @@
 #include <arch/irq.h>
 
 #include "up_arch.h"
-#include "os_internal.h"
 #include "nvic.h"
 #include "up_internal.h"
 
@@ -61,7 +60,7 @@
  */
 
 #ifdef CONFIG_DEBUG_HARDFAULT
-# define hfdbg(format, arg...) lldbg(format, ##arg)
+# define hfdbg(format, ...) lldbg(format, ##__VA_ARGS__)
 #else
 # define hfdbg(x...)
 #endif
@@ -109,7 +108,7 @@ int up_hardfault(int irq, FAR void *context)
    * use the BASEPRI register if you have external memory.
    */
 
-#ifdef CONFIG_NUTTX_KERNEL
+#ifdef CONFIG_BUILD_PROTECTED
   /* In the kernel build, SVCalls are expected in either the base, kernel
    * FLASH region or in the user FLASH region.
    */

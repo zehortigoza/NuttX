@@ -1,5 +1,5 @@
 /****************************************************************************
- * up_exit.c
+ * arch/sim/src/up_exit.c
  *
  *   Copyright (C) 2007-2009 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -44,11 +44,12 @@
 
 #include <nuttx/arch.h>
 
-#include "os_internal.h"
+#include "task/task.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 
 /****************************************************************************
- * Private Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /****************************************************************************
@@ -78,7 +79,7 @@ void _exit(int status)
 {
   struct tcb_s* tcb;
 
-  sdbg("TCB=%p exitting\n", tcb);
+  sdbg("TCB=%p exiting\n", tcb);
 
   /* Destroy the task at the head of the ready to run list. */
 

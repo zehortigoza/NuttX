@@ -291,7 +291,7 @@ Toolchains
   well. This toolchain can be downloded from the Penguino website:
   http://wiki.pinguino.cc/index.php/Main_Page#Download . There is some general
   information about using the Penguino mips-elf toolchain in this thread:
-  http://tech.groups.yahoo.com/group/nuttx/message/1821
+  https://groups.yahoo.com/neo/groups/nuttx/conversations/messages/1821
 
   See also configs/mirtoo/README.txt.  There is an experimental (untested)
   configuration for the Mirtoo platform in that directory.
@@ -317,7 +317,7 @@ Toolchains
 
   Even then, there are more warnings from the linker and some undefined symbols
   for non-NuttX code that resides in the unused Microchip libraries.  See this
-  email thread at http://tech.groups.yahoo.com/group/nuttx/message/1458 for more
+  email thread at https://groups.yahoo.com/neo/groups/nuttx/conversations/messages/1458 for more
   information.  You will have to solve at least this undefined symbol problem if
   you want to used the XC32 toolchain.
 
@@ -487,10 +487,6 @@ PIC32MX Configuration Options
     CONFIG_RAM_START - The start address of installed DRAM
 
        CONFIG_RAM_START=0xa0000000
-
-    CONFIG_ARCH_IRQPRIO - The PIC32MXx supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
 
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
@@ -936,7 +932,7 @@ Where <subdir> is one of the following:
 
         Logging is currently can be set up to use any amount of memory (here 8KB):
 
-          CONFIG_RAMLOG_CONSOLE_BUFSIZE=8192
+          CONFIG_RAMLOG_BUFSIZE=8192
 
         STATUS:
           2013-7-4:  This configuration was last verified.

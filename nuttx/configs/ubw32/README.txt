@@ -170,7 +170,7 @@ MAX3232 Connection
   RX  -- J4 pin 30: U1RX/RF2
   GND -- J4 pin 40: GND
   Vcc -- J4 pin 39: 5V
- 
+
 Toolchains
 ==========
 
@@ -229,7 +229,7 @@ Toolchains
   well. This toolchain can be downloded from the Pinguino website:
   http://wiki.pinguino.cc/index.php/Main_Page#Download . There is some general
   information about using the Pinguino mips-elf toolchain in this thread:
-  http://tech.groups.yahoo.com/group/nuttx/message/1821
+  https://groups.yahoo.com/neo/groups/nuttx/conversations/messages/1821
 
   See also configs/mirtoo/README.txt.  There is an experimental (untested)
   configuration for the Mirtoo platform in that directory.
@@ -256,13 +256,13 @@ Toolchains
 
   Even then, there are more warnings from the linker and some undefined symbols
   for non-NuttX code that resides in the unused Microchip libraries.  See this
-  email thread at http://tech.groups.yahoo.com/group/nuttx/message/1458 for more
+  email thread at https://groups.yahoo.com/neo/groups/nuttx/conversations/messages/1458 for more
   information.  You will have to solve at least this undefined symbol problem if
   you want to used the XC32 toolchain.
 
   Windows Native Toolchains
   -------------------------
-  
+
   NOTE:  There are several limitations to using a Windows based toolchain in a
   Cygwin environment.  The three biggest are:
 
@@ -342,7 +342,7 @@ LEDs
   ----- ----- -------------------------------------------------------------
   LABEL COLOR CONTROL
   ----- ----- -------------------------------------------------------------
-  USB   Green   RF3. This could be used by software if USB is not used. 
+  USB   Green   RF3. This could be used by software if USB is not used.
                      Otherwise, RF3 is used as the USBID signal.
   LED1  While   RE2, Pulled up.  Low value illuminates
   LED2  Red     RE1, Pulled up.  Low value illuminates
@@ -369,7 +369,7 @@ Buttons
 
     RE6 User switch
     RE7 Program switch
- 
+
 PIC32MX Configuration Options
 =============================
 
@@ -421,10 +421,6 @@ PIC32MX Configuration Options
     CONFIG_RAM_START - The start address of installed DRAM
 
        CONFIG_RAM_START=0xa0000000
-
-    CONFIG_ARCH_IRQPRIO - The PIC32MXx supports interrupt prioritization
-
-       CONFIG_ARCH_IRQPRIO=y
 
     CONFIG_ARCH_LEDS - Use LEDs to show state. Unique to boards that
        have LEDs
@@ -493,7 +489,7 @@ PIC32MX Configuration Options
       CONFIG_PIC32MX_CODEWP - Default 1 (disabled)
     DEVCFG1: (All settings determined by selections in board.h)
     DEVCFG2: (All settings determined by selections in board.h)
-    DEVCFG3: 
+    DEVCFG3:
       CONFIG_PIC32MX_USBIDO - USB USBID Selection.  Default 1 if USB enabled
         (USBID pin is controlled by the USB module), but 0 (GPIO) otherwise.
       CONFIG_PIC32MX_VBUSIO - USB VBUSON Selection (Default 1 if USB enabled
@@ -604,7 +600,7 @@ Where <subdir> is one of the following:
        RX  -- J4 pin 30: U1RX/RF2
        GND -- J4 pin 40: GND
        Vcc -- J4 pin 39: 5V
- 
+
     3. USB Configuations
 
        Several USB device configurations can be enabled and included

@@ -140,7 +140,7 @@ static const struct cmdmap_s g_cmdmap[] =
 # endif
 #endif
 
-#if defined (CONFIG_RTC) && !defined(CONFIG_DISABLE_CLOCK) && !defined(CONFIG_NSH_DISABLE_DATE)
+#if defined (CONFIG_RTC) && !defined(CONFIG_NSH_DISABLE_DATE)
   { "date",     cmd_date,     1, 3, "[-s \"MMM DD HH:MM:SS YYYY\"]" },
 #endif
 
@@ -292,7 +292,7 @@ static const struct cmdmap_s g_cmdmap[] =
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && CONFIG_NFILE_DESCRIPTORS > 0 && defined(CONFIG_FS_READABLE)
 # ifndef CONFIG_NSH_DISABLE_MOUNT
-#  ifdef CONFIG_NUTTX_KERNEL
+#if defined(CONFIG_BUILD_PROTECTED) || defined(CONFIG_BUILD_KERNEL)
   { "mount",    cmd_mount,    5, 5, "-t <fstype> [<block-device>] <mount-point>" },
 #    else
   { "mount",    cmd_mount,    1, 5, "[-t <fstype> [<block-device>] <mount-point>]" },
@@ -317,8 +317,7 @@ static const struct cmdmap_s g_cmdmap[] =
 #  endif
 #endif
 
-#if defined(CONFIG_NET) && defined(CONFIG_NET_ICMP) && defined(CONFIG_NET_ICMP_PING) && \
-   !defined(CONFIG_DISABLE_CLOCK) && !defined(CONFIG_DISABLE_SIGNALS)
+#if defined(CONFIG_NET) && defined(CONFIG_NET_ICMP) && defined(CONFIG_NET_ICMP_PING) && !defined(CONFIG_DISABLE_SIGNALS)
 # ifndef CONFIG_NSH_DISABLE_PING
   { "ping",     cmd_ping,     2, 6, "[-c <count>] [-i <interval>] <ip-address>" },
 # endif

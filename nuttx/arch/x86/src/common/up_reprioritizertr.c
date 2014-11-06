@@ -1,7 +1,7 @@
 /****************************************************************************
  *  arch/arm/src/arm/up_reprioritizertr.c
  *
- *   Copyright (C) 2011, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2011, 2013-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,8 @@
 #include <debug.h>
 #include <nuttx/arch.h>
 
-#include "os_internal.h"
+#include "sched/sched.h"
+#include "group/group.h"
 #include "up_internal.h"
 
 /****************************************************************************
@@ -69,7 +70,7 @@
  *
  * Description:
  *   Called when the priority of a running or
- *   ready-to-run task changes and the reprioritization will 
+ *   ready-to-run task changes and the reprioritization will
  *   cause a context switch.  Two cases:
  *
  *   1) The priority of the currently running task drops and the next
@@ -152,14 +153,16 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
 
                up_savestate(rtcb->xcp.regs);
 
-              /* Restore the exception context of the rtcb at the (new) head 
+              /* Restore the exception context of the rtcb at the (new) head
                * of the g_readytorun task list.
                */
 
               rtcb = (struct tcb_s*)g_readytorun.head;
               slldbg("New Active Task TCB=%p\n", rtcb);
 
-              /* Then switch contexts */
+              /* Then switch contexts.  Any necessary address environment
+               * changes will be made when the interrupt returns.
+               */
 
               up_restorestate(rtcb->xcp.regs);
             }
@@ -171,13 +174,22 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
 
           else if (!up_saveusercontext(rtcb->xcp.regs))
             {
-              /* Restore the exception context of the rtcb at the (new) head 
+              /* Restore the exception context of the rtcb at the (new) head
                * of the g_readytorun task list.
                */
 
               rtcb = (struct tcb_s*)g_readytorun.head;
               slldbg("New Active Task TCB=%p\n", rtcb);
 
+#ifdef CONFIG_ARCH_ADDRENV
+              /* Make sure that the address environment for the previously
+               * running task is closed down gracefully (data caches dump,
+               * MMU flushed) and set up the address environment for the new
+               * thread at the head of the ready-to-run list.
+               */
+
+              (void)group_addrenv(rtcb);
+#endif
               /* Then switch contexts */
 
               up_fullcontextrestore(rtcb->xcp.regs);

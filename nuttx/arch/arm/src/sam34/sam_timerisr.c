@@ -46,7 +46,7 @@
 #include <arch/board/board.h>
 
 #include "nvic.h"
-#include "clock_internal.h"
+#include "clock/clock.h"
 #include "up_internal.h"
 #include "up_arch.h"
 
@@ -66,8 +66,8 @@
 #if defined(CONFIG_ARCH_CHIP_SAM3U) || defined(CONFIG_ARCH_CHIP_SAM3X) || \
     defined(CONFIG_ARCH_CHIP_SAM3A)
 #  define SAM_SYSTICK_CLOCK  BOARD_MCK_FREQUENCY  /* Frequency of the main clock */
-#elif defined(CONFIG_ARCH_CHIP_SAM4L) || defined(CONFIG_ARCH_CHIP_SAM4S) || \
-      defined(CONFIG_ARCH_CHIP_SAM4E)
+#elif defined(CONFIG_ARCH_CHIP_SAM4L) || defined(CONFIG_ARCH_CHIP_SAM4CM) || \
+      defined(CONFIG_ARCH_CHIP_SAM4S) || defined(CONFIG_ARCH_CHIP_SAM4E)
 #  define SAM_SYSTICK_CLOCK  BOARD_CPU_FREQUENCY  /* CPU frequency */
 #else
 #  error Unrecognized SAM architecture
@@ -129,15 +129,15 @@ int up_timerisr(int irq, uint32_t *regs)
 }
 
 /****************************************************************************
- * Function:  up_timerinit
+ * Function:  up_timer_initialize
  *
  * Description:
- *   This function is called during start-up to initialize
- *   the timer interrupt.
+ *   This function is called during start-up to initialize the timer
+ *   interrupt.
  *
  ****************************************************************************/
 
-void up_timerinit(void)
+void up_timer_initialize(void)
 {
   uint32_t regval;
 
@@ -163,6 +163,7 @@ void up_timerinit(void)
   /* Configure SysTick to interrupt at the requested rate */
 
   putreg32(SYSTICK_RELOAD, NVIC_SYSTICK_RELOAD);
+  putreg32(0, NVIC_SYSTICK_CURRENT);
 
   /* Attach the timer interrupt vector */
 

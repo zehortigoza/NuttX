@@ -91,6 +91,7 @@ static struct binfmt_s g_nxflatbinfmt =
 {
   NULL,                /* next */
   nxflat_loadbinary,   /* load */
+  NULL,                /* unload */
 };
 
 /****************************************************************************
@@ -198,18 +199,18 @@ static int nxflat_loadbinary(struct binary_s *binp)
    * a memory leak?
    */
 
-#ifdef CONFIG_ADDRENV
+#ifdef CONFIG_ARCH_ADDRENV
 #  warning "REVISIT"
 #else
   binp->alloc[0]  = (void*)loadinfo.dspace;
 #endif
 
-#ifdef CONFIG_ADDRENV
-  /* Save the address environment.  This will be needed when the module is
-   * executed for the up_addrenv_assign() call.
+#ifdef CONFIG_ARCH_ADDRENV
+  /* Save the address environment in the binfmt structure.  This will be
+   * needed when the module is executed.
    */
 
-  binp->addrenv   = loadinfo.addrenv;
+  up_addrenv_clone(&loadinfo.addrenv, &binp->addrenv);
 #endif
 
   nxflat_dumpbuffer("Entry code", (FAR const uint8_t*)binp->entrypt,
@@ -234,9 +235,9 @@ errout:
  * Name: nxflat_initialize
  *
  * Description:
- *   NXFLAT support is built unconditionally.  However, it order to
+ *   NXFLAT support is built unconditionally.  However, in order to
  *   use this binary format, this function must be called during system
- *   format in order to register the NXFLAT binary format.
+ *   initialization in order to register the NXFLAT binary format.
  *
  * Returned Value:
  *   This is a NuttX internal function so it follows the convention that

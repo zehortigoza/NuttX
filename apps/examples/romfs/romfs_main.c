@@ -455,13 +455,17 @@ static void checkdirectories(struct node_s *entry)
  * Name: romfs_main
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int romfs_main(int argc, char *argv[])
+#endif
 {
    int  ret;
 
   /* Create a RAM disk for the test */
 
-  ret = romdisk_register(CONFIG_EXAMPLES_ROMFS_RAMDEVNO, testdir_img, 
+  ret = romdisk_register(CONFIG_EXAMPLES_ROMFS_RAMDEVNO, testdir_img,
                          NSECTORS(testdir_img_len), CONFIG_EXAMPLES_ROMFS_SECTORSIZE);
   if (ret < 0)
     {

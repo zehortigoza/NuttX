@@ -39,27 +39,26 @@
 
 #include <nuttx/config.h>
 
+/* Output debug info -- even if debug is not selected. */
+
+#undef  CONFIG_DEBUG
+#undef  CONFIG_DEBUG_VERBOSE
+#define CONFIG_DEBUG 1
+#define CONFIG_DEBUG_VERBOSE 1
+
 #include <debug.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 
 #include "chip/switch.h"
-#include "os_internal.h"
 #include "up_internal.h"
 
-/****************************************************************************
- * Definitions
- ****************************************************************************/
-
-/* Output debug info if stack dump is selected -- even if 
- * debug is not selected.
- */
-
 #ifdef CONFIG_ARCH_STACKDUMP
-# undef  lldbg
-# define lldbg lowsyslog
-#endif
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
 
 /****************************************************************************
  * Private Data
@@ -73,7 +72,6 @@
  * Name: z80_registerdump
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_STACKDUMP
 static void ez80_registerdump(void)
 {
   if (current_regs)
@@ -99,4 +97,5 @@ static void ez80_registerdump(void)
 #endif
     }
 }
-#endif
+
+#endif /* CONFIG_ARCH_STACKDUMP */

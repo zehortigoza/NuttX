@@ -54,6 +54,10 @@ ifeq ($(CONFIG_EXAMPLES_CONFIGDATA),y)
 CONFIGURED_APPS += examples/configdata
 endif
 
+ifeq ($(CONFIG_EXAMPLES_CPUHOG),y)
+CONFIGURED_APPS += examples/cpuhog
+endif
+
 ifeq ($(CONFIG_EXAMPLES_CXXTEST),y)
 CONFIGURED_APPS += examples/cxxtest
 endif
@@ -126,6 +130,14 @@ ifeq ($(CONFIG_EXAMPLES_MTDPART),y)
 CONFIGURED_APPS += examples/mtdpart
 endif
 
+ifeq ($(CONFIG_EXAMPLES_MTDRWB),y)
+CONFIGURED_APPS += examples/mtdrwb
+endif
+
+ifeq ($(CONFIG_EXAMPLES_NETPKT),y)
+CONFIGURED_APPS += examples/netpkt
+endif
+
 ifeq ($(CONFIG_EXAMPLES_NETTEST),y)
 CONFIGURED_APPS += examples/nettest
 endif
@@ -146,8 +158,8 @@ ifeq ($(CONFIG_EXAMPLES_NX),y)
 CONFIGURED_APPS += examples/nx
 endif
 
-ifeq ($(CONFIG_EXAMPLES_NXCONSOLE),y)
-CONFIGURED_APPS += examples/nxconsole
+ifeq ($(CONFIG_EXAMPLES_NXTERM),y)
+CONFIGURED_APPS += examples/nxterm
 endif
 
 ifeq ($(CONFIG_EXAMPLES_NXFFS),y)
@@ -222,6 +234,14 @@ ifeq ($(CONFIG_EXAMPLES_SENDMAIL),y)
 CONFIGURED_APPS += examples/sendmail
 endif
 
+ifeq ($(CONFIG_EXAMPLES_SERIALBLASTER),y)
+CONFIGURED_APPS += examples/serialblaster
+endif
+
+ifeq ($(CONFIG_EXAMPLES_SERIALRX),y)
+CONFIGURED_APPS += examples/serialrx
+endif
+
 ifeq ($(CONFIG_EXAMPLES_SERLOOP),y)
 CONFIGURED_APPS += examples/serloop
 endif
@@ -266,10 +286,6 @@ ifeq ($(CONFIG_EXAMPLES_UDP),y)
 CONFIGURED_APPS += examples/udp
 endif
 
-ifeq ($(CONFIG_EXAMPLES_UIP),y)
-CONFIGURED_APPS += examples/uip
-endif
-
 ifeq ($(CONFIG_EXAMPLES_USBSERIAL),y)
 CONFIGURED_APPS += examples/usbserial
 endif
@@ -280,6 +296,10 @@ endif
 
 ifeq ($(CONFIG_EXAMPLES_WATCHDOG),y)
 CONFIGURED_APPS += examples/watchdog
+endif
+
+ifeq ($(CONFIG_EXAMPLES_WEBSERVER),y)
+CONFIGURED_APPS += examples/webserver
 endif
 
 ifeq ($(CONFIG_EXAMPLES_WGET),y)

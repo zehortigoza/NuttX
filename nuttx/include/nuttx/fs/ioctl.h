@@ -1,7 +1,7 @@
 /****************************************************************************
  * include/nuttx/fs/ioctl.h
  *
- *   Copyright (C) 2008, 2009, 2011-2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2008, 2009, 2011-2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 #include <nuttx/config.h>
 
 /****************************************************************************
- * Pre-Processor Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 /* General ioctl definitions ************************************************/
 /* Each NuttX ioctl commands are uint16_t's consisting of an 8-bit type
@@ -70,6 +70,7 @@
 #define _SLCDIOCBASE    (0x1100) /* Segment LCD ioctl commands */
 #define _WLIOCBASE      (0x1200) /* Wireless modules ioctl commands */
 #define _CFGDIOCBASE    (0x1300) /* Config Data device (app config) ioctl commands */
+#define _TCIOCBASE      (0x1400) /* Timer ioctl commands */
 
 /* Macros used to manage ioctl commands */
 
@@ -92,6 +93,11 @@
 
 #define _WDIOCVALID(c)  (_IOC_TYPE(c)==_WDIOCBASE)
 #define _WDIOC(nr)      _IOC(_WDIOCBASE,nr)
+
+/* Timer driver ioctl commands *******************************************/
+
+#define _TCIOCVALID(c)  (_IOC_TYPE(c)==_TCIOCBASE)
+#define _TCIOC(nr)      _IOC(_TCIOCBASE,nr)
 
 /* NuttX file system ioctl definitions **************************************/
 
@@ -135,6 +141,10 @@
 #define DIOC_RELPRIV    _DIOC(0x0003)     /* IN:  None
                                            * OUT: None, reference obtained by
                                            *      FIOC_GETPRIV released.
+                                           */
+
+#define DIOC_SETKEY     _DIOC(0X0004)     /* IN:  Encryption key
+                                           * OUT: None
                                            */
 
 /* NuttX block driver ioctl definitions *************************************/
@@ -184,6 +194,13 @@
                                            * IN:  Pointer to sector write data (the
                                            *      logical secor number and write
                                            *      buffer address
+                                           * OUT: None (ioctl return value provides
+                                           *      success/failure indication). */
+#define BIOC_GETPROCFSD _BIOC(0x000A)     /* Get ProcFS data specific to the
+                                           * block device.
+                                           * IN:  Pointer to a struct defined for
+                                           *      the block to load with it's
+                                           *      ProcFS data.
                                            * OUT: None (ioctl return value provides
                                            *      success/failure indication). */
 

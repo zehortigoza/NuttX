@@ -43,7 +43,11 @@
  * Public Functions
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+int main(int argc, FAR char *argv[])
+#else
 int poweroff_main(int argc, char *argv[])
+#endif
 {
   /* TODO:
    *  - replace this by sending general system signal to shutdown, where i.e. nsh
@@ -51,10 +55,10 @@ int poweroff_main(int argc, char *argv[])
    *    a new process with nsh poweroff)
    *  - wait for some time (~0.5 second for VSN), that SDcard is flashed and synced
    *  - call poweroff
-   * 
+   *
    * TODO on boot:
    *  - if external key is pressed, do not start the nsh! but wait until it is released
-   *    (to get rid of bad mounts of the sdcard etc.) this could be handled in the 
+   *    (to get rid of bad mounts of the sdcard etc.) this could be handled in the
    *    button driver immediately on system boot
    */
 

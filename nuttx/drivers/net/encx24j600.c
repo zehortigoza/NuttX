@@ -1,7 +1,7 @@
 /****************************************************************************
  * drivers/net/encx24j600.c
  *
- *   Copyright (C) 2013-1014 UVC Ingenieure. All rights reserved.
+ *   Copyright (C) 2013-2014 UVC Ingenieure. All rights reserved.
  *   Author: Max Holtzberg <mh@uvc.de>
  *
  * References:
@@ -56,20 +56,21 @@
 #include <time.h>
 #include <string.h>
 #include <debug.h>
-#include <wdog.h>
 #include <errno.h>
 #include <queue.h>
 
-#include <nuttx/irq.h>
+#include <arpa/inet.h>
+
 #include <nuttx/arch.h>
+#include <nuttx/irq.h>
+#include <nuttx/wdog.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/clock.h>
+#include <nuttx/net/net.h>
+#include <nuttx/net/arp.h>
+#include <nuttx/net/netdev.h>
 #include <nuttx/net/encx24j600.h>
-
-#include <nuttx/net/uip/uip.h>
-#include <nuttx/net/uip/uip-arp.h>
-#include <nuttx/net/uip/uip-arch.h>
 
 #include "encx24j600.h"
 
@@ -178,17 +179,23 @@
 
 /* This is a helper pointer for accessing the contents of the Ethernet header */
 
-#define BUF ((struct uip_eth_hdr *)priv->dev.d_buf)
+#define BUF ((struct eth_hdr_s *)priv->dev.d_buf)
 
 /* Debug ********************************************************************/
 
 #ifdef CONFIG_ENCX24J600_REGDEBUG
-#  define enc_wrdump(a,v)   lowsyslog("ENCX24J600: %02x<-%04x\n", a, v);
-#  define enc_rddump(a,v)   lowsyslog("ENCX24J600: %02x->%04x\n", a, v);
-#  define enc_bfsdump(a,m)  lowsyslog("ENCX24J600: %02x|=%04x\n", a, m);
-#  define enc_bfcdump(a,m)  lowsyslog("ENCX24J600: %02x&=~%04x\n", a, m);
-#  define enc_cmddump(c)    lowsyslog("ENCX24J600: CMD: %02x\n", c);
-#  define enc_bmdump(c,b,s) lowsyslog("ENCX24J600: CMD: %02x buffer: %p length: %d\n", c,b,s);
+#  define enc_wrdump(a,v) \
+   lowsyslog(LOG_DEBUG, "ENCX24J600: %02x<-%04x\n", a, v);
+#  define enc_rddump(a,v) \
+   lowsyslog(LOG_DEBUG, "ENCX24J600: %02x->%04x\n", a, v);
+#  define enc_bfsdump(a,m) \
+   lowsyslog(LOG_DEBUG, "ENCX24J600: %02x|=%04x\n", a, m);
+#  define enc_bfcdump(a,m) \
+   lowsyslog(LOG_DEBUG, "ENCX24J600: %02x&=~%04x\n", a, m);
+#  define enc_cmddump(c) \
+   lowsyslog(LOG_DEBUG, "ENCX24J600: CMD: %02x\n", c);
+#  define enc_bmdump(c,b,s) \
+   lowsyslog(LOG_DEBUG, "ENCX24J600: CMD: %02x buffer: %p length: %d\n", c,b,s);
 #else
 #  define enc_wrdump(a,v)
 #  define enc_rddump(a,v)
@@ -260,7 +267,7 @@ struct enc_driver_s
 
   /* This holds the information visible to uIP/NuttX */
 
-  struct uip_driver_s   dev;           /* Interface understood by uIP */
+  struct net_driver_s   dev;           /* Interface understood by uIP */
 
   /* Statistics */
 
@@ -328,7 +335,7 @@ static void enc_wrphy(FAR struct enc_driver_s *priv, uint8_t phyaddr,
 
 static int  enc_txenqueue(FAR struct enc_driver_s *priv);
 static int  enc_transmit(FAR struct enc_driver_s *priv);
-static int  enc_uiptxpoll(struct uip_driver_s *dev);
+static int  enc_txpoll(struct net_driver_s *dev);
 
 /* Common RX logic */
 
@@ -355,13 +362,13 @@ static void enc_polltimer(int argc, uint32_t arg, ...);
 
 /* NuttX callback functions */
 
-static int  enc_ifup(struct uip_driver_s *dev);
-static int  enc_ifdown(struct uip_driver_s *dev);
-static int  enc_txavail(struct uip_driver_s *dev);
-static int  enc_rxavail(struct uip_driver_s *dev);
+static int  enc_ifup(struct net_driver_s *dev);
+static int  enc_ifdown(struct net_driver_s *dev);
+static int  enc_txavail(struct net_driver_s *dev);
+static int  enc_rxavail(struct net_driver_s *dev);
 #ifdef CONFIG_NET_IGMP
-static int  enc_addmac(struct uip_driver_s *dev, FAR const uint8_t *mac);
-static int  enc_rmmac(struct uip_driver_s *dev, FAR const uint8_t *mac);
+static int  enc_addmac(struct net_driver_s *dev, FAR const uint8_t *mac);
+static int  enc_rmmac(struct net_driver_s *dev, FAR const uint8_t *mac);
 #endif
 
 /* Initialization */
@@ -802,25 +809,25 @@ static void enc_bfc(FAR struct enc_driver_s *priv, uint16_t ctrlreg,
 #if 0 /* Sometimes useful */
 static void enc_rxdump(FAR struct enc_driver_s *priv)
 {
-  lowsyslog("Rx Registers:\n");
-  lowsyslog("  EIE:      %02x EIR:      %02x\n",
+  lowsyslog(LOG_DEBUG, "Rx Registers:\n");
+  lowsyslog(LOG_DEBUG, "  EIE:      %02x EIR:      %02x\n",
             enc_rdgreg(priv, ENC_EIE), enc_rdgreg(priv, ENC_EIR));
-  lowsyslog("  ESTAT:    %02x ECON1:    %02x ECON2:    %02x\n",
+  lowsyslog(LOG_DEBUG, "  ESTAT:    %02x ECON1:    %02x ECON2:    %02x\n",
             enc_rdgreg(priv, ENC_ESTAT), enc_rdgreg(priv, ENC_ECON1),
             enc_rdgreg(priv, ENC_ECON2));
-  lowsyslog("  ERXST:    %02x %02x\n",
+  lowsyslog(LOG_DEBUG, "  ERXST:    %02x %02x\n",
             enc_rdbreg(priv, ENC_ERXSTH), enc_rdbreg(priv, ENC_ERXSTL));
-  lowsyslog("  ERXND:    %02x %02x\n",
+  lowsyslog(LOG_DEBUG, "  ERXND:    %02x %02x\n",
             enc_rdbreg(priv, ENC_ERXNDH), enc_rdbreg(priv, ENC_ERXNDL));
-  lowsyslog("  ERXRDPT:  %02x %02x\n",
+  lowsyslog(LOG_DEBUG, "  ERXRDPT:  %02x %02x\n",
             enc_rdbreg(priv, ENC_ERXRDPTH), enc_rdbreg(priv, ENC_ERXRDPTL));
-  lowsyslog("  ERXFCON:  %02x EPKTCNT:  %02x\n",
+  lowsyslog(LOG_DEBUG, "  ERXFCON:  %02x EPKTCNT:  %02x\n",
             enc_rdbreg(priv, ENC_ERXFCON), enc_rdbreg(priv, ENC_EPKTCNT));
-  lowsyslog("  MACON1:   %02x MACON3:   %02x\n",
+  lowsyslog(LOG_DEBUG, "  MACON1:   %02x MACON3:   %02x\n",
             enc_rdbreg(priv, ENC_MACON1), enc_rdbreg(priv, ENC_MACON3));
-  lowsyslog("  MAMXFL:   %02x %02x\n",
+  lowsyslog(LOG_DEBUG, "  MAMXFL:   %02x %02x\n",
             enc_rdbreg(priv, ENC_MAMXFLH), enc_rdbreg(priv, ENC_MAMXFLL));
-  lowsyslog("  MAADR:    %02x:%02x:%02x:%02x:%02x:%02x\n",
+  lowsyslog(LOG_DEBUG, "  MAADR:    %02x:%02x:%02x:%02x:%02x:%02x\n",
             enc_rdbreg(priv, ENC_MAADR1), enc_rdbreg(priv, ENC_MAADR2),
             enc_rdbreg(priv, ENC_MAADR3), enc_rdbreg(priv, ENC_MAADR4),
             enc_rdbreg(priv, ENC_MAADR5), enc_rdbreg(priv, ENC_MAADR6));
@@ -830,27 +837,27 @@ static void enc_rxdump(FAR struct enc_driver_s *priv)
 #if 0 /* Sometimes useful */
 static void enc_txdump(FAR struct enc_driver_s *priv)
 {
-  lowsyslog("Tx Registers:\n");
-  lowsyslog("  EIE:      %02x EIR:      %02x ESTAT:    %02x\n",
+  lowsyslog(LOG_DEBUG, "Tx Registers:\n");
+  lowsyslog(LOG_DEBUG, "  EIE:      %02x EIR:      %02x ESTAT:    %02x\n",
             enc_rdgreg(priv, ENC_EIE), enc_rdgreg(priv, ENC_EIR),);
-  lowsyslog("  ESTAT:    %02x ECON1:    %02x\n",
+  lowsyslog(LOG_DEBUG, "  ESTAT:    %02x ECON1:    %02x\n",
             enc_rdgreg(priv, ENC_ESTAT), enc_rdgreg(priv, ENC_ECON1));
-  lowsyslog("  ETXST:    %02x %02x\n",
+  lowsyslog(LOG_DEBUG, "  ETXST:    %02x %02x\n",
             enc_rdbreg(priv, ENC_ETXSTH), enc_rdbreg(priv, ENC_ETXSTL));
-  lowsyslog("  ETXND:    %02x %02x\n",
+  lowsyslog(LOG_DEBUG, "  ETXND:    %02x %02x\n",
             enc_rdbreg(priv, ENC_ETXNDH), enc_rdbreg(priv, ENC_ETXNDL));
-  lowsyslog("  MACON1:   %02x MACON3:   %02x MACON4:   %02x\n",
+  lowsyslog(LOG_DEBUG, "  MACON1:   %02x MACON3:   %02x MACON4:   %02x\n",
             enc_rdbreg(priv, ENC_MACON1), enc_rdbreg(priv, ENC_MACON3),
             enc_rdbreg(priv, ENC_MACON4));
-  lowsyslog("  MACON1:   %02x MACON3:   %02x MACON4:   %02x\n",
+  lowsyslog(LOG_DEBUG, "  MACON1:   %02x MACON3:   %02x MACON4:   %02x\n",
             enc_rdbreg(priv, ENC_MACON1), enc_rdbreg(priv, ENC_MACON3),
             enc_rdbreg(priv, ENC_MACON4));
-  lowsyslog("  MABBIPG:  %02x MAIPG %02x %02x\n",
+  lowsyslog(LOG_DEBUG, "  MABBIPG:  %02x MAIPG %02x %02x\n",
             enc_rdbreg(priv, ENC_MABBIPG), enc_rdbreg(priv, ENC_MAIPGH),
             enc_rdbreg(priv, ENC_MAIPGL));
-  lowsyslog("  MACLCON1: %02x MACLCON2:   %02x\n",
+  lowsyslog(LOG_DEBUG, "  MACLCON1: %02x MACLCON2:   %02x\n",
             enc_rdbreg(priv, ENC_MACLCON1), enc_rdbreg(priv, ENC_MACLCON2));
-  lowsyslog("  MAMXFL:   %02x %02x\n",
+  lowsyslog(LOG_DEBUG, "  MAMXFL:   %02x %02x\n",
             enc_rdbreg(priv, ENC_MAMXFLH), enc_rdbreg(priv, ENC_MAMXFLL));
 }
 #endif
@@ -1175,11 +1182,11 @@ static int enc_txenqueue(FAR struct enc_driver_s *priv)
 }
 
 /****************************************************************************
- * Function: enc_uiptxpoll
+ * Function: enc_txpoll
  *
  * Description:
  *   Enqueues uIP packets if available.
- *   This is a callback from uip_poll().  uip_poll() may be called:
+ *   This is a callback from devif_poll().  devif_poll() may be called:
  *
  *   1. When the preceding TX packet send is complete,
  *   2. When the preceding TX packet send timedout and the interface is reset
@@ -1196,7 +1203,7 @@ static int enc_txenqueue(FAR struct enc_driver_s *priv)
  *
  ****************************************************************************/
 
-static int enc_uiptxpoll(struct uip_driver_s *dev)
+static int enc_txpoll(struct net_driver_s *dev)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)dev->d_private;
   int ret = OK;
@@ -1209,7 +1216,7 @@ static int enc_uiptxpoll(struct uip_driver_s *dev)
 
   if (priv->dev.d_len > 0)
     {
-      uip_arp_out(&priv->dev);
+      arp_out(&priv->dev);
 
       ret = enc_txenqueue(priv);
     }
@@ -1303,9 +1310,9 @@ static void enc_txif(FAR struct enc_driver_s *priv)
 
       wd_cancel(priv->txtimeout);
 
-      /* Poll for uip packets */
+      /* Poll for TX packets from the networking layer */
 
-      uip_poll(&priv->dev, enc_uiptxpoll);
+      devif_poll(&priv->dev, enc_txpoll);
     }
   else
     {
@@ -1319,7 +1326,7 @@ static void enc_txif(FAR struct enc_driver_s *priv)
  * Function: enc_rxldpkt
  *
  * Description:
- *   Load packet from the enc's RX buffer to the uip d_buf.
+ *   Load packet from the enc's RX buffer to the driver d_buf.
  *
  * Parameters:
  *   priv  - Reference to the driver state structure
@@ -1489,15 +1496,15 @@ static void enc_rxdispatch(FAR struct enc_driver_s *priv)
       /* We only accept IP packets of the configured type and ARP packets */
 
 #ifdef CONFIG_NET_IPv6
-      if (BUF->type == HTONS(UIP_ETHTYPE_IP6))
+      if (BUF->type == HTONS(ETHTYPE_IP6))
 #else
-      if (BUF->type == HTONS(UIP_ETHTYPE_IP))
+      if (BUF->type == HTONS(ETHTYPE_IP))
 #endif
         {
           nllvdbg("Try to process IP packet (%02x)\n", BUF->type);
 
-          uip_arp_ipin(&priv->dev);
-          ret = uip_input(&priv->dev);
+          arp_ipin(&priv->dev);
+          ret = devif_input(&priv->dev);
 
           if (ret == OK || (clock_systimer() - descr->ts) > ENC_RXTIMEOUT)
             {
@@ -1514,14 +1521,14 @@ static void enc_rxdispatch(FAR struct enc_driver_s *priv)
 
           if (priv->dev.d_len > 0)
             {
-              uip_arp_out(&priv->dev);
+              arp_out(&priv->dev);
               enc_txenqueue(priv);
             }
         }
-      else if (BUF->type == htons(UIP_ETHTYPE_ARP))
+      else if (BUF->type == htons(ETHTYPE_ARP))
         {
           nllvdbg("ARP packet received (%02x)\n", BUF->type);
-          uip_arp_arpin(&priv->dev);
+          arp_arpin(&priv->dev);
 
           /* ARP packets are freed immediately */
 
@@ -1649,7 +1656,7 @@ static void enc_pktif(FAR struct enc_driver_s *priv)
 
       /* Check for a usable packet length (4 added for the CRC) */
 
-      else if (pktlen > (CONFIG_NET_BUFSIZE + 4) || pktlen <= (UIP_LLH_LEN + 4))
+      else if (pktlen > (CONFIG_NET_BUFSIZE + 4) || pktlen <= (NET_LL_HDRLEN + 4))
         {
           nlldbg("Bad packet size dropped (%d)\n", pktlen);
 
@@ -1762,14 +1769,14 @@ static void enc_rxabtif(FAR struct enc_driver_s *priv)
 static void enc_irqworker(FAR void *arg)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)arg;
-  uip_lock_t lock;
+  net_lock_t lock;
   uint16_t eir;
 
   DEBUGASSERT(priv);
 
   /* Get exclusive access to both uIP and the SPI bus. */
 
-  lock = uip_lock();
+  lock = net_lock();
   enc_lock(priv);
 
   /* A good practice is for the host controller to clear the Global Interrupt
@@ -1915,7 +1922,7 @@ static void enc_irqworker(FAR void *arg)
   /* Release lock on the SPI bus and uIP */
 
   enc_unlock(priv);
-  uip_unlock(lock);
+  net_unlock(lock);
 }
 
 /****************************************************************************
@@ -1977,7 +1984,7 @@ static int enc_interrupt(int irq, FAR void *context)
 static void enc_toworker(FAR void *arg)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)arg;
-  uip_lock_t lock;
+  net_lock_t lock;
   int ret;
 
   nlldbg("Tx timeout\n");
@@ -1985,7 +1992,7 @@ static void enc_toworker(FAR void *arg)
 
   /* Get exclusive access to uIP. */
 
-  lock = uip_lock();
+  lock = net_lock();
 
   /* Increment statistics and dump debug info */
 
@@ -2005,11 +2012,11 @@ static void enc_toworker(FAR void *arg)
 
   /* Then poll uIP for new XMIT data */
 
-  (void)uip_poll(&priv->dev, enc_uiptxpoll);
+  (void)devif_poll(&priv->dev, enc_txpoll);
 
   /* Release uIP */
 
-  uip_unlock(lock);
+  net_unlock(lock);
 }
 
 /****************************************************************************
@@ -2073,13 +2080,13 @@ static void enc_txtimeout(int argc, uint32_t arg, ...)
 static void enc_pollworker(FAR void *arg)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)arg;
-  uip_lock_t lock;
+  net_lock_t lock;
 
   DEBUGASSERT(priv);
 
   /* Get exclusive access to both uIP and the SPI bus. */
 
-  lock = uip_lock();
+  lock = net_lock();
   enc_lock(priv);
 
   /* Verify that the hardware is ready to send another packet.  The driver
@@ -2095,13 +2102,13 @@ static void enc_pollworker(FAR void *arg)
        * in progress, we will missing TCP time state updates?
        */
 
-      (void)uip_timer(&priv->dev, enc_uiptxpoll, ENC_POLLHSEC);
+      (void)devif_timer(&priv->dev, enc_txpoll, ENC_POLLHSEC);
     }
 
   /* Release lock on the SPI bus and uIP */
 
   enc_unlock(priv);
-  uip_unlock(lock);
+  net_unlock(lock);
 
   /* Setup the watchdog poll timer again */
 
@@ -2165,7 +2172,7 @@ static void enc_polltimer(int argc, uint32_t arg, ...)
  *
  ****************************************************************************/
 
-static int enc_ifup(struct uip_driver_s *dev)
+static int enc_ifup(struct net_driver_s *dev)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)dev->d_private;
   int ret;
@@ -2239,7 +2246,7 @@ static int enc_ifup(struct uip_driver_s *dev)
  *
  ****************************************************************************/
 
-static int enc_ifdown(struct uip_driver_s *dev)
+static int enc_ifdown(struct net_driver_s *dev)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)dev->d_private;
   irqstate_t flags;
@@ -2297,7 +2304,7 @@ static int enc_ifdown(struct uip_driver_s *dev)
  *
  ****************************************************************************/
 
-static int enc_txavail(struct uip_driver_s *dev)
+static int enc_txavail(struct net_driver_s *dev)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)dev->d_private;
   irqstate_t flags;
@@ -2321,7 +2328,7 @@ static int enc_txavail(struct uip_driver_s *dev)
         {
           /* The interface is up and TX is idle; poll uIP for new XMIT data */
 
-          (void)uip_poll(&priv->dev, enc_uiptxpoll);
+          (void)devif_poll(&priv->dev, enc_txpoll);
         }
     }
 
@@ -2352,7 +2359,7 @@ static int enc_txavail(struct uip_driver_s *dev)
  *
  ****************************************************************************/
 
-static int enc_rxavail(struct uip_driver_s *dev)
+static int enc_rxavail(struct net_driver_s *dev)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)dev->d_private;
 
@@ -2384,7 +2391,7 @@ static int enc_rxavail(struct uip_driver_s *dev)
  ****************************************************************************/
 
 #ifdef CONFIG_NET_IGMP
-static int enc_addmac(struct uip_driver_s *dev, FAR const uint8_t *mac)
+static int enc_addmac(struct net_driver_s *dev, FAR const uint8_t *mac)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)dev->d_private;
 
@@ -2422,7 +2429,7 @@ static int enc_addmac(struct uip_driver_s *dev, FAR const uint8_t *mac)
  ****************************************************************************/
 
 #ifdef CONFIG_NET_IGMP
-static int enc_rmmac(struct uip_driver_s *dev, FAR const uint8_t *mac)
+static int enc_rmmac(struct net_driver_s *dev, FAR const uint8_t *mac)
 {
   FAR struct enc_driver_s *priv = (FAR struct enc_driver_s *)dev->d_private;
 

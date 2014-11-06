@@ -1,5 +1,5 @@
 /****************************************************************************
- * up_tapdev.c
+ * arch/sim/src/up_tapdev.c
  *
  *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -61,28 +61,30 @@
 #include <linux/if_tun.h>
 #include <linux/net.h>
 
-extern int syslog(const char *format, ...);
-extern int uipdriver_setmacaddr(unsigned char *macaddr);
-
 /****************************************************************************
- * Private Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 #define TAPDEV_DEBUG    1
 
 #define DEVTAP          "/dev/net/tun"
 
-#ifndef CONFIG_EXAMPLES_UIP_DHCPC
-#  define UIP_IPADDR0   192
-#  define UIP_IPADDR1   168
-#  define UIP_IPADDR2   0
-#  define UIP_IPADDR3   128
+#ifndef CONFIG_EXAMPLES_WEBSERVER_DHCPC
+#  define TAP_IPADDR0   192
+#  define TAP_IPADDR1   168
+#  define TAP_IPADDR2   0
+#  define TAP_IPADDR3   128
 #else
-#  define UIP_IPADDR0   0
-#  define UIP_IPADDR1   0
-#  define UIP_IPADDR2   0
-#  define UIP_IPADDR3   0
+#  define TAP_IPADDR0   0
+#  define TAP_IPADDR1   0
+#  define TAP_IPADDR2   0
+#  define TAP_IPADDR3   0
 #endif
+
+/* Syslog priority (must match definitions in nuttx/include/syslog.h) */
+
+#define LOG_INFO      1  /* Informational message */
+#define LOG_ERR       4  /* Error conditions */
 
 /****************************************************************************
  * Private Types
@@ -104,6 +106,13 @@ struct sel_arg_struct
  ****************************************************************************/
 
 /****************************************************************************
+ * NuttX Domain Public Function Prototypes
+ ****************************************************************************/
+
+int syslog(int priority, const char *format, ...);
+int netdriver_setmacaddr(unsigned char *macaddr);
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -119,8 +128,9 @@ static int gtapdevfd;
 #ifdef TAPDEV_DEBUG
 static inline void dump_ethhdr(const char *msg, unsigned char *buf, int buflen)
 {
-  syslog("TAPDEV: %s %d bytes\n", msg, buflen);
-  syslog("        %02x:%02x:%02x:%02x:%02x:%02x %02x:%02x:%02x:%02x:%02x:%02x %02x%02x\n",
+  syslog(LOG_INFO, "TAPDEV: %s %d bytes\n", msg, buflen);
+  syslog(LOG_INFO,
+         "        %02x:%02x:%02x:%02x:%02x:%02x %02x:%02x:%02x:%02x:%02x:%02x %02x%02x\n",
          buf[0], buf[1], buf[2], buf[3], buf[4],  buf[5],
          buf[6], buf[7], buf[8], buf[9], buf[10], buf[11],
 #ifdef CONFIG_ENDIAN_BIG
@@ -157,7 +167,7 @@ static int up_setmacaddr(void)
         {
           /* Set the MAC address */
 
-          ret = uipdriver_setmacaddr(&req.ifr_hwaddr.sa_data);
+          ret = netdriver_setmacaddr(&req.ifr_hwaddr.sa_data);
         }
     }
 
@@ -179,7 +189,7 @@ void tapdev_init(void)
   gtapdevfd = open(DEVTAP, O_RDWR, 0644);
   if (gtapdevfd < 0)
     {
-      syslog("TAPDEV: open failed: %d\n", -gtapdevfd );
+      syslog(LOG_ERR, "TAPDEV: open failed: %d\n", -gtapdevfd );
       return;
     }
 
@@ -190,14 +200,14 @@ void tapdev_init(void)
   ret = ioctl(gtapdevfd, TUNSETIFF, (unsigned long) &ifr);
   if (ret < 0)
     {
-      syslog("TAPDEV: ioctl failed: %d\n", -ret );
+      syslog(LOG_ERR, "TAPDEV: ioctl failed: %d\n", -ret );
       return;
    }
 
   /* Assign an IPv4 address to the tap device */
 
   snprintf(buf, sizeof(buf), "/sbin/ifconfig tap0 inet %d.%d.%d.%d\n",
-           UIP_IPADDR0, UIP_IPADDR1, UIP_IPADDR2, UIP_IPADDR3);
+           TAP_IPADDR0, TAP_IPADDR1, TAP_IPADDR2, TAP_IPADDR3);
   system(buf);
 
   /* Set the MAC address */
@@ -227,7 +237,7 @@ unsigned int tapdev_read(unsigned char *buf, unsigned int buflen)
   FD_SET(gtapdevfd, &fdset);
 
   ret = select(gtapdevfd + 1, &fdset, NULL, NULL, &tv);
-  if(ret == 0)
+  if (ret == 0)
     {
       return 0;
     }
@@ -235,7 +245,7 @@ unsigned int tapdev_read(unsigned char *buf, unsigned int buflen)
   ret = read(gtapdevfd, buf, buflen);
   if (ret < 0)
     {
-      syslog("TAPDEV: read failed: %d\n", -ret);
+      syslog(LOG_ERR, "TAPDEV: read failed: %d\n", -ret);
       return 0;
     }
 
@@ -247,12 +257,12 @@ void tapdev_send(unsigned char *buf, unsigned int buflen)
 {
   int ret;
 #ifdef TAPDEV_DEBUG
-  syslog("tapdev_send: sending %d bytes\n", buflen);
+  syslog(LOG_INFO, "tapdev_send: sending %d bytes\n", buflen);
 
   gdrop++;
-  if(gdrop % 8 == 7)
+  if (gdrop % 8 == 7)
     {
-      syslog("Dropped a packet!\n");
+      syslog(LOG_ERR, "TAPDEV: Dropped a packet!\n");
       return;
     }
 #endif
@@ -260,7 +270,7 @@ void tapdev_send(unsigned char *buf, unsigned int buflen)
   ret = write(gtapdevfd, buf, buflen);
   if (ret < 0)
     {
-      syslog("TAPDEV: write failed: %d", -ret);
+      syslog(LOG_ERR, "TAPDEV: write failed: %d", -ret);
       exit(1);
     }
   dump_ethhdr("write", buf, buflen);

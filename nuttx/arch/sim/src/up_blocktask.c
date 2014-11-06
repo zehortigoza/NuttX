@@ -1,5 +1,5 @@
 /****************************************************************************
- * up_blocktask.c
+ * arch/sim/src/up_blocktask.c
  *
  *   Copyright (C) 2007-2009, 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -45,11 +45,11 @@
 
 #include <nuttx/arch.h>
 
-#include "os_internal.h"
+#include "sched/sched.h"
 #include "up_internal.h"
 
 /****************************************************************************
- * Private Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /****************************************************************************
@@ -129,7 +129,7 @@ void up_block_task(struct tcb_s *tcb, tstate_t task_state)
 
       if (!up_setjmp(rtcb->xcp.regs))
         {
-          /* Restore the exception context of the rtcb at the (new) head 
+          /* Restore the exception context of the rtcb at the (new) head
            * of the g_readytorun task list.
            */
 
