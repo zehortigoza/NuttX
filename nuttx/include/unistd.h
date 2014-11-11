@@ -190,7 +190,7 @@ FAR char **getoptargp(void); /* Optional argument following option */
 int       *getoptindp(void); /* Index into argv */
 int       *getoptoptp(void); /* unrecognized option character */
 
-#define access(...) (0)
+int access(const char *path, int amode);
 
 #undef EXTERN
 #if defined(__cplusplus)
