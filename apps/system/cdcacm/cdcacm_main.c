@@ -122,14 +122,10 @@ int sercon_main(int argc, char *argv[])
  *
  * Description:
  *   This is a program entry point that will disconnect the CDC/ACM serial
-#ifdef CONFIG_BUILD_KERNEL
  *   device.
-int main(int argc, FAR char **argv)
  *
-#else
  ****************************************************************************/
-
-#endif
+#ifndef CONFIG_BUILD_KERNEL
 int serdis_main(int argc, char *argv[])
 {
   /* First check if the USB mass storage device is already connected */
@@ -153,3 +149,4 @@ int serdis_main(int argc, char *argv[])
    printf("serdis: Disconnected\n");
    return EXIT_SUCCESS;
 }
+#endif
