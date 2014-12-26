@@ -9,8 +9,8 @@ Make.dep
 .*.swp
 core
 .gdbinit
+travis_output
 cscope.out
 .cproject
 .project
 .settings
-
