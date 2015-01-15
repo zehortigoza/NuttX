@@ -76,12 +76,14 @@
 #define IP_FLAG_DONTFRAG  0x4000
 #define IP_FLAG_MOREFRAGS 0x2000
 
-/* Header sizes */
+/* IP Header sizes */
+
+#ifdef CONFIG_NET_IPv4
+#  define IPv4_HDRLEN     20    /* Size of IPv4 header */
+#endif
 
 #ifdef CONFIG_NET_IPv6
-# define IP_HDRLEN        40    /* Size of IP header */
-#else
-# define IP_HDRLEN        20    /* Size of IP header */
+#  define IPv6_HDRLEN     40    /* Size of IPv6 header */
 #endif
 
 /****************************************************************************
@@ -99,27 +101,11 @@ typedef net_ip6addr_t net_ipaddr_t;
 typedef net_ip4addr_t net_ipaddr_t;
 #endif
 
-/* The IP header */
+#ifdef CONFIG_NET_IPv4
+/* The IPv4 header */
 
 struct net_iphdr_s
 {
-#ifdef CONFIG_NET_IPv6
-
-  /* IPv6 Ip header */
-
-  uint8_t  vtc;             /* Bits 0-3: version, bits 4-7: traffic class (MS) */
-  uint8_t  tcf;             /* Bits 0-3: traffic class (LS), 4-bits: flow label (MS) */
-  uint16_t flow;            /* 16-bit flow label (LS) */
-  uint8_t  len[2];          /* 16-bit Payload length */
-  uint8_t  proto;           /*  8-bit Next header (same as IPv4 protocol field) */
-  uint8_t  ttl;             /*  8-bit Hop limit (like IPv4 TTL field) */
-  net_ip6addr_t srcipaddr;  /* 128-bit Source address */
-  net_ip6addr_t destipaddr; /* 128-bit Destination address */
-
-#else /* CONFIG_NET_IPv6 */
-
-  /* IPv4 IP header */
-
   uint8_t  vhl;             /*  8-bit Version (4) and header length (5 or 6) */
   uint8_t  tos;             /*  8-bit Type of service (e.g., 6=TCP) */
   uint8_t  len[2];          /* 16-bit Total length */
@@ -130,9 +116,24 @@ struct net_iphdr_s
   uint16_t ipchksum;        /* 16-bit Header checksum */
   uint16_t srcipaddr[2];    /* 32-bit Source IP address */
   uint16_t destipaddr[2];   /* 32-bit Destination IP address */
-
-#endif /* CONFIG_NET_IPv6 */
 };
+#endif
+
+#ifdef CONFIG_NET_IPv6
+/* The IPv6 header */
+
+struct net_ipv6hdr_s
+{
+  uint8_t  vtc;             /* Bits 0-3: version, bits 4-7: traffic class (MS) */
+  uint8_t  tcf;             /* Bits 0-3: traffic class (LS), 4-bits: flow label (MS) */
+  uint16_t flow;            /* 16-bit flow label (LS) */
+  uint8_t  len[2];          /* 16-bit Payload length */
+  uint8_t  proto;           /*  8-bit Next header (same as IPv4 protocol field) */
+  uint8_t  ttl;             /*  8-bit Hop limit (like IPv4 TTL field) */
+  net_ip6addr_t srcipaddr;  /* 128-bit Source address */
+  net_ip6addr_t destipaddr; /* 128-bit Destination address */
+};
+#endif
 
 /****************************************************************************
  * Public Data
@@ -218,19 +219,25 @@ struct net_iphdr_s
  * src The source from where to copy.
  */
 
-#ifndef CONFIG_NET_IPv6
-#  define net_ipaddr_copy(dest, src) \
+#define net_ipv4addr_copy(dest, src) \
    do { \
      (dest) = (in_addr_t)(src); \
    } while (0)
-#  define net_ipaddr_hdrcopy(dest, src) \
+#define net_ipv4addr_hdrcopy(dest, src) \
    do { \
      ((uint16_t*)(dest))[0] = ((uint16_t*)(src))[0]; \
      ((uint16_t*)(dest))[1] = ((uint16_t*)(src))[1]; \
    } while (0)
+
+#define net_ipv6addr_copy(dest, src)    memcpy(&dest, &src, sizeof(net_ip6addr_t))
+#define net_ipv6addr_hdrcopy(dest, src) net_ipv6addr_copy(dest, src)
+
+#ifndef CONFIG_NET_IPv6
+#  define net_ipaddr_copy(dest, src)    net_ipv4addr_copy(dest, src)
+#  define net_ipaddr_hdrcopy(dest, src) net_ipv4addr_hdrcopy(dest, src)
 #else /* !CONFIG_NET_IPv6 */
-#  define net_ipaddr_copy(dest, src)    memcpy(&dest, &src, sizeof(net_ip6addr_t))
-#  define net_ipaddr_hdrcopy(dest, src) net_ipaddr_copy(dest, src)
+#  define net_ipaddr_copy(dest, src)    net_ipv6addr_copy(dest, src)
+#  define net_ipaddr_hdrcopy(dest, src) net_ipv6addr_hdrcopy(dest, src)
 #endif /* !CONFIG_NET_IPv6 */
 
 /* Compare two IP addresses
@@ -249,17 +256,23 @@ struct net_iphdr_s
  * addr2 The second IP address.
  */
 
-#ifndef CONFIG_NET_IPv6
-#  define net_ipaddr_cmp(addr1, addr2) \
-     (addr1 == addr2)
-#  define net_ipaddr_hdrcmp(addr1, addr2) \
-     net_ipaddr_cmp(net_ip4addr_conv32(addr1), net_ip4addr_conv32(addr2))
-#else /* !CONFIG_NET_IPv6 */
-#  define net_ipaddr_cmp(addr1, addr2) \
-     (memcmp(&addr1, &addr2, sizeof(net_ip6addr_t)) == 0)
-#  define net_ipaddr_hdrcmp(addr1, addr2) \
-     net_ipaddr_cmp(addr, addr2)
-#endif /* !CONFIG_NET_IPv6 */
+#define net_ipv4addr_cmp(addr1, addr2) \
+  (addr1 == addr2)
+#define net_ipv4addr_hdrcmp(addr1, addr2) \
+  net_ipv4addr_cmp(net_ip4addr_conv32(addr1), net_ip4addr_conv32(addr2))
+
+#define net_ipv6addr_cmp(addr1, addr2) \
+  (memcmp(&addr1, &addr2, sizeof(net_ip6addr_t)) == 0)
+#define net_ipv6addr_hdrcmp(addr1, addr2) \
+  net_ipv6addr_cmp(addr1, addr2)
+
+#if defined(CONFIG_NET_IPv4)
+#  define net_ipaddr_cmp(addr1, addr2)    net_ipv4addr_cmp(addr1, addr2)
+#  define net_ipaddr_hdrcmp(addr1, addr2) net_ipv4addr_hdrcmp(addr1, addr2)
+#elif defined(CONFIG_NET_IPv6)
+#  define net_ipaddr_cmp(addr1, addr2)    net_ipv6addr_cmp(addr1, addr2)
+#  define net_ipaddr_hdrcmp(addr1, addr2) net_ipv6addr_hdrcmp(addr1, addr2)
+#endif
 
 /* Compare two IP addresses under a netmask.  The mask is used to mask
  * out the bits that are to be compared:  Buts within the mask much

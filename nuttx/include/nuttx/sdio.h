@@ -62,12 +62,26 @@
 #define SDIOWAIT_TRANSFERDONE  (1 << 2) /* Bit 2: Data transfer/DMA done */
 #define SDIOWAIT_TIMEOUT       (1 << 3) /* Bit 3: Timeout */
 #define SDIOWAIT_ERROR         (1 << 4) /* Bit 4: Some other error occurred */
-#if defined(CONFIG_MMCSD_HAVE_SDIOWAIT_WRCOMPLETE)
-#define SDIOWAIT_WRCOMPLETE    (1 << 5) /* Bit 5: Hardware Write Completion */
-# define SDIOWAIT_ALLEVENTS     0x3f
+
+/* SDIOWAIT_WRCOMPLETE (optional) : Certain SDIO driver can use D0 busy
+ *   signalling to detect Write Complete.  Used of D0 busy signalling will
+ *   avoid potentially very long (600Ms+) busy waiting in the MMCSD driver.
+ *
+ *   To implement D0 Busy signalling, the underlying SDIO driver must be
+ *   capable of switching the the D0 GPIO to be a rising edge sensitive
+ *   interrupt pin. It must then, condition that pin to detect the rising
+ *   edge on receipt of SDWAIT_WRCOMPLETE in the SDIO_WAITENABLE call and
+ *   return it back to regular SDIO mode, when either the ISR fires or pin
+ *   is found to be high in the SDIO_EVENTWAIT call.
+ */
+
+#if defined(CONFIG_MMCSD_SDIOWAIT_WRCOMPLETE)
+#  define SDIOWAIT_WRCOMPLETE  (1 << 5) /* Bit 5: Hardware Write Completion */
+#  define SDIOWAIT_ALLEVENTS   0x3f
 #else
-# define SDIOWAIT_ALLEVENTS     0x1f
+#  define SDIOWAIT_ALLEVENTS   0x1f
 #endif
+
 /* Media events are used for enable/disable registered event callbacks */
 
 #define SDIOMEDIA_EJECTED       (1 << 0) /* Bit 0: Mmedia removed */

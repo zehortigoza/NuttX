@@ -225,7 +225,7 @@ typedef int (*devif_poll_callback_t)(FAR struct net_driver_s *dev);
  * These functions are used by a network device driver for interacting
  * with uIP.
  *
- * Process an incoming packet.
+ * Process an incoming IP packet.
  *
  * This function should be called when the device driver has received
  * a packet from the network. The packet from the device driver must
@@ -243,7 +243,7 @@ typedef int (*devif_poll_callback_t)(FAR struct net_driver_s *dev);
  *     dev->d_len = devicedriver_poll();
  *     if (dev->d_len > 0)
  *       {
- *         devif_input(dev);
+ *         ipv4_input(dev);
  *         if (dev->d_len > 0)
  *           {
  *             devicedriver_send();
@@ -262,7 +262,7 @@ typedef int (*devif_poll_callback_t)(FAR struct net_driver_s *dev);
  *         if (BUF->type == HTONS(ETHTYPE_IP))
  *           {
  *             arp_ipin();
- *             devif_input(dev);
+ *             ipv4_input(dev);
  *             if (dev->d_len > 0)
  *               {
  *                 arp_out();
@@ -280,7 +280,13 @@ typedef int (*devif_poll_callback_t)(FAR struct net_driver_s *dev);
  *
  ****************************************************************************/
 
-int devif_input(FAR struct net_driver_s *dev);
+#ifdef CONFIG_NET_IPv4
+int ipv4_input(FAR struct net_driver_s *dev);
+#endif
+
+#ifdef CONFIG_NET_IPv6
+int ipv6_input(FAR struct net_driver_s *dev);
+#endif
 
 /****************************************************************************
  * Polling of connections
@@ -401,22 +407,44 @@ uint16_t net_chksum(FAR uint16_t *data, uint16_t len);
 void net_incr32(FAR uint8_t *op32, uint16_t op16);
 
 /****************************************************************************
- * Name: ip_chksum
+ * Name: ipv4_chksum
  *
  * Description:
- *   Calculate the IP header checksum of the packet header in d_buf.
+ *   Calculate the IPv4 header checksum of the packet header in d_buf.
  *
- *   The IP header checksum is the Internet checksum of the 20 bytes of
- *   the IP header.
+ *   The IPv4 header checksum is the Internet checksum of the 20 bytes of
+ *   the IPv4 header.
  *
  *   If CONFIG_NET_ARCH_CHKSUM is defined, then this function must be
  *   provided by architecture-specific logic.
  *
  * Returned Value:
- *   The IP header checksum of the IP header in the d_buf buffer.
+ *   The IPv4 header checksum of the IPv4 header in the d_buf buffer.
  *
  ****************************************************************************/
 
-uint16_t ip_chksum(FAR struct net_driver_s *dev);
+#ifdef CONFIG_NET_IPv4
+uint16_t ipv4_chksum(FAR struct net_driver_s *dev);
+#endif
 
+/****************************************************************************
+ * Name: ipv6_chksum
+ *
+ * Description:
+ *   Calculate the IPv6 header checksum of the packet header in d_buf.
+ *
+ *   The IPv6 header checksum is the Internet checksum of the 40 bytes of
+ *   the IPv6 header.
+ *
+ *   If CONFIG_NET_ARCH_CHKSUM is defined, then this function must be
+ *   provided by architecture-specific logic.
+ *
+ * Returned Value:
+ *   The IPv6 header checksum of the IPv6 header in the d_buf buffer.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_IPv6
+uint16_t ipv6_chksum(FAR struct net_driver_s *dev);
+#endif
 #endif /* __INCLUDE_NUTTX_NET_NETDEV_H */
