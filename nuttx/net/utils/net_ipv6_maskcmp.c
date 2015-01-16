@@ -1,7 +1,7 @@
 /****************************************************************************
- * net/netdev/netdev_txnotify.c
+ * net/utils/net_ipv6_maskcmp.c
  *
- *   Copyright (C) 2007-2009, 2012, 2014 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,81 +38,74 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#if defined(CONFIG_NET) && CONFIG_NSOCKET_DESCRIPTORS > 0
 
-#include <sys/types.h>
-#include <string.h>
-#include <errno.h>
-#include <debug.h>
-
-#include <nuttx/net/netdev.h>
+#include <nuttx/clock.h>
 #include <nuttx/net/ip.h>
 
-#include "netdev/netdev.h"
+#include "utils/utils.h"
+
+#ifdef CONFIG_NET_IPv6
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Private Types
- ****************************************************************************/
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Global Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Function: netdev_txnotify
+ * Function: net_timeval2dsec
  *
  * Description:
- *   Notify the device driver that new TX data is available.
+ *   Compare two IP addresses under a netmask.  The mask is used to mask
+ *   out the bits that are to be compared:  Buts within the mask much
+ *   match exactly; bits outside if the mask are ignored.
+ *
+ * Example:
+ *
+ *   net_ipv6addr_t ipaddr1;
+ *   net_ipv6addr_t ipaddr2;
+ *   net_ipv6addr_t mask;
+ *
+ *   net_ipv6addr(&mask, 255,255,255,0);
+ *   net_ipv6addr(&ipaddr1, 192,16,1,2);
+ *   net_iv6paddr(&ipaddr2, 192,16,1,3);
+ *   if (net_ipv6addr_maskcmp(ipaddr1, ipaddr2, &mask))
+ *     {
+ *       printf("They are the same");
+ *     }
  *
  * Parameters:
- *   ripaddr - The remote address to send the data
+ *   addr1 - The first IP address.
+ *   addr2 - The second IP address.
+ *   mask  - The netmask.
  *
  * Returned Value:
- *  None
- *
- * Assumptions:
- *  Called from normal user mode
+ *   True if the address under the mask are equal
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_MULTILINK
-void netdev_txnotify(const net_ipaddr_t lipaddr, const net_ipaddr_t ripaddr)
-#else
-void netdev_txnotify(const net_ipaddr_t ripaddr)
-#endif
+bool net_ipv6addr_maskcmp(const net_ipv6addr_t addr1,
+                          const net_ipv6addr_t addr2,
+                          const net_ipv6addr_t mask)
 {
-  FAR struct net_driver_s *dev;
+  int i;
 
-  /* Find the device driver that serves the subnet of the remote address */
+  /* Start from the "bottom" where the addresses will most likely differ */
 
-#ifdef CONFIG_NET_MULTILINK
-  dev = netdev_findby_ipv4addr(lipaddr, ripaddr);
-#else
-  dev = netdev_findby_ipv4addr(ripaddr);
-#endif
-
-  if (dev && dev->d_txavail)
+  for (i = 7; i >= 0; i--)
     {
-      /* Notify the device driver that new TX data is available. */
+      /* Same? */
 
-      (void)dev->d_txavail(dev);
+      if ((addr1[i] & mask[i]) != (addr2[i] & mask[i]))
+        {
+          /* No.. the addresses are different */
+
+          return false;
+        }
     }
+
+  /* The addresses are the same */
+
+  return true;
 }
 
-#endif /* CONFIG_NET && CONFIG_NSOCKET_DESCRIPTORS */
+#endif /* CONFIG_NET_IPv6 */
+

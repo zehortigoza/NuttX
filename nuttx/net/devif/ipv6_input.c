@@ -198,7 +198,7 @@ int ipv6_input(FAR struct net_driver_s *dev)
   if (pbuf->proto == IP_PROTO_UDP &&
       net_ipv6addr_cmp(pbuf->destipaddr, g_alloneaddr))
     {
-      return udp_input(dev);
+      return udp_ipv6_input(dev);
     }
 
   /* In most other cases, the device must be assigned a non-zero IP
@@ -251,13 +251,13 @@ int ipv6_input(FAR struct net_driver_s *dev)
     {
 #ifdef CONFIG_NET_TCP
       case IP_PROTO_TCP:   /* TCP input */
-        tcp_input(dev);
+        tcp_ipv6_input(dev);
         break;
 #endif
 
 #ifdef CONFIG_NET_UDP
       case IP_PROTO_UDP:   /* UDP input */
-        udp_input(dev);
+        udp_ipv6_input(dev);
         break;
 #endif
 
