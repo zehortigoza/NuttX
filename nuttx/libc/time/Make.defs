@@ -43,6 +43,9 @@ CSRCS += lib_localtime.c
 else
 CSRCS += lib_mktime.c lib_gmtime.c lib_gmtimer.c
 endif
+ifdef CONFIG_TIME_EXTENDED
+CSRCS += lib_dayofweek.c
+endif
 
 # Add the time directory to the build
 
