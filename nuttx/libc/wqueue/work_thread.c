@@ -161,6 +161,13 @@ static void work_process(FAR struct wqueue_s *wqueue)
           irqrestore(flags);
           worker(arg);
 
+          /* Yield scheduling once - we need this as the work queue items will else
+           * always execute before tasks which have become ready to run in the meantime.
+           * If no same or higher priority task is ready this will have no effect, if a
+           * task is ready we will return here after it executed.
+           */
+          sched_yield();
+
           /* Now, unfortunately, since we re-enabled interrupts we don't
            * know the state of the work list and we will have to start
            * back at the head of the list.
