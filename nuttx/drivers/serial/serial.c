@@ -219,26 +219,48 @@ static int uart_putxmitchar(FAR uart_dev_t *dev, int ch, bool oktoblock)
 
           flags = irqsave();
 
+          /* Check again...  In certain race conditions an interrupt may
+           * have occurred between the test at the top of the loop and
+           * entering the critical section and the TX buffer may no longer
+           * be full.
+           *
+           * NOTE: On certain devices, such as USB CDC/ACM, the entire TX
+           * buffer may have been emptied in this race condition.  In that
+           * case, the logic would hang below waiting for space in the TX
+           * buffer without this test.
+           */
+
+          if (nexthead != dev->xmit.tail)
+            {
+              ret = OK;
+            }
+
 #ifdef CONFIG_SERIAL_REMOVABLE
           /* Check if the removable device is no longer connected while we
            * have interrupts off.  We do not want the transition to occur
            * as a race condition before we begin the wait.
            */
 
-          if (dev->disconnected)
+          else if (dev->disconnected)
             {
               ret = -ENOTCONN;
             }
-          else
 #endif
+          else
             {
+              /* Inform the interrupt level logic that we are waiting. */
+
+              dev->xmitwaiting = true;
+
               /* Wait for some characters to be sent from the buffer with
                * the TX interrupt enabled.  When the TX interrupt is
                * enabled, uart_xmitchars should execute and remove some
                * of the data from the TX buffer.
+               *
+               * NOTE that interrupts will be re-enabled while we wait for
++              * the semaphore.
                */
 
-              dev->xmitwaiting = true;
               uart_enabletxint(dev);
               ret = uart_takesem(&dev->xmitsem, true);
               uart_disabletxint(dev);
@@ -764,12 +786,16 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       switch (cmd)
         {
 
+         /* Get the number of bytes that may be read from the RX buffer
+         * (without waiting)
+         */
+
           case FIONREAD:
           {
             int count;
             irqstate_t state = irqsave();
 
-            /* determine the number of bytes available in the buffer */
+            /* determine the number of bytes available in the RX buffer */
 
             if (dev->recv.tail <= dev->recv.head)
               { 
@@ -788,15 +814,42 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             break;
           }
 
+          /* Get the number of bytes that have been written to the TX buffer. */
+
           case FIONWRITE:
           {
             int count;
             irqstate_t state = irqsave();
 
-            /* determine the number of bytes free in the buffer */
+            /* Determine the number of bytes waiting in the TX buffer */
+
+            if (dev->xmit.tail <= dev->xmit.head)
+              {
+                count = dev->xmit.head - dev->xmit.tail;
+              }
+            else
+              {
+                count = dev->xmit.size - (dev->xmit.tail - dev->xmit.head);
+              }
+
+            irqrestore(state);
+
+            *(FAR int *)((uintptr_t)arg) = count;
+            ret = 0;
+          }
+          break;
+
+        /* Get the number of free bytes in the TX buffer */
+
+        case FIONSPACE:
+          {
+            int count;
+            irqstate_t flags = irqsave();
+
+            /* Determine the number of bytes free in the TX buffer */
 
             if (dev->xmit.head < dev->xmit.tail)
-              { 
+              {
                 count = dev->xmit.tail - dev->xmit.head - 1;
               }
             else
@@ -804,15 +857,14 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                 count = dev->xmit.size - (dev->xmit.head - dev->xmit.tail) - 1;
               }
 
-            irqrestore(state);
+            irqrestore(flags);
 
-            *(int *)arg = count;
+            *(FAR int *)((uintptr_t)arg) = count;
             ret = 0;
-
-            break;
           }
-        }
-    }
+          break;
+      }
+  }
 
   /* Append any higher level TTY flags */
 

@@ -119,9 +119,11 @@
 */
 
 #define FIONWRITE       _FIOC(0x0005)     /* IN:  Location to return value (int *)
-* OUT: Bytes writable to this fd
-*/
-
+                                           * OUT: Number bytes in send queue
+                                           */
+#define FIONSPACE       _FIOC(0x0007)     /* IN:  Location to return value (int *)
+                                           * OUT: Free space in send queue.
+                                           */
 /* NuttX file system ioctl definitions **************************************/
 
 #define _DIOCVALID(c)   (_IOC_TYPE(c)==_DIOCBASE)
