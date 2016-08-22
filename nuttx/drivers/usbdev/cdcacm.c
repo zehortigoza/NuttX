@@ -2022,8 +2022,8 @@ static int cdcuart_ioctl(FAR struct file *filep,int cmd,unsigned long arg)
             break;
           }
 
-        return ret;
-      }
+  return ret;
+}
 
 /****************************************************************************
  * Name: cdcuart_rxint
