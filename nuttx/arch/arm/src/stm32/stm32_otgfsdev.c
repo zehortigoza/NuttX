@@ -4055,7 +4055,7 @@ static void stm32_epout_disable(FAR struct stm32_ep_s *privep)
   while ((stm32_getreg(regaddr) & OTGFS_DOEPINT_EPDISD) == 0);
 #else
   /* REVISIT: */
-  up_mdelay(50);
+  up_mdelay(10);
 #endif
 
   /* Clear the EPDISD interrupt indication */
@@ -4487,7 +4487,7 @@ static int stm32_epout_setstall(FAR struct stm32_ep_s *privep)
   while ((stm32_getreg(regaddr) & OTGFS_DOEPINT_EPDISD) == 0);
 #else
   /* REVISIT: */
-  up_mdelay(50);
+  up_mdelay(10);
 #endif
 
   /* Disable Global OUT NAK mode */
@@ -4928,7 +4928,6 @@ static int stm32_pullup(struct usbdev_s *dev, bool enable)
     }
 
   stm32_putreg(regval, STM32_OTGFS_DCTL);
-  up_mdelay(3);
 
   irqrestore(flags);
   return OK;
@@ -5621,6 +5620,7 @@ int usbdev_unregister(struct usbdevclass_driver_s *driver)
 
   flags = irqsave();
   stm32_usbreset(priv);
+  irqrestore(flags);
 
   /* Unbind the class driver */
 
@@ -5628,6 +5628,7 @@ int usbdev_unregister(struct usbdevclass_driver_s *driver)
 
   /* Disable USB controller interrupts */
 
+  flags = irqsave();
   up_disable_irq(STM32_IRQ_OTGFS);
 
   /* Disconnect device */
